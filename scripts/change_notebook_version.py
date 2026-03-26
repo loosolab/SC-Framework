@@ -39,7 +39,7 @@ def update_version(notebook: str, ver: str, force: bool) -> None:
 
 def update_notebooks(repo_path: str, ver: str, force: bool) -> None:
     """
-    Loops recursivly through given directory and updates the sc_framework version for every notebook.
+    Loops recursively through given directory and updates the sc_framework version for every notebook.
 
     Parameters
     ----------
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
         prog="change_notebook_version",
-        description="Loops recursivly through given directory and updates the sc_framework version for every notebook."
+        description="Loops recursively through given directory and updates the sc_framework version for every notebook."
     )
     parser.add_argument("path", type=str, help="Directory containing notebooks.")
     parser.add_argument("version", type=str, help="New version.")

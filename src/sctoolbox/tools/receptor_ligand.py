@@ -43,15 +43,16 @@ logger = settings.logger
 
 @deco.log_anndata
 @beartype
-def download_db(adata: sc.AnnData,
-                db_path: str,
-                ligand_column: str,
-                receptor_column: str,
-                sep: str = "\t",
-                inplace: bool = False,
-                overwrite: bool = False,
-                remove_duplicates: bool = True,
-                report: Optional[Tuple[str, str]] = None) -> Optional[sc.AnnData]:
+def download_db(  # noqa: C901
+    adata: sc.AnnData,
+    db_path: str,
+    ligand_column: str,
+    receptor_column: str,
+    sep: str = "\t",
+    inplace: bool = False,
+    overwrite: bool = False,
+    remove_duplicates: bool = True,
+    report: Optional[Tuple[str, str]] = None) -> Optional[sc.AnnData]:
     r"""
     Download table of receptor-ligand interactions and store in adata.
 
@@ -64,16 +65,22 @@ def download_db(adata: sc.AnnData,
         Either a path to a database table e.g.:
         - Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
         - Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
+        - Zebrafish: https://connectomedb.org/downloads/Current-Release/CSV/ConnectomeDB2025_zebrafish.csv
         or the name of a database available in the LIANA package:
         - https://liana-py.readthedocs.io/en/latest/notebooks/prior_knowledge.html#Ligand-Receptor-Interactions
     ligand_column : str
         Name of the column with ligand gene names.
-        Use 'ligand_gene_symbol' for the urls provided above. For LIANA databases use 'ligand'.
+        Use 'ligand_gene_symbol' for the urls provided above.
+        For LIANA databases use 'ligand'.
+        For ConnectomeDB zebrafish use 'ligand'.
     receptor_column : str
         Name of column with receptor gene names.
-        Use 'receptor_gene_symbol' for the urls provided above. For LIANA databases use 'receptor'.
+        Use 'receptor_gene_symbol' for the urls provided above.
+        For LIANA databases use 'receptor'.
+        For ConnectomeDB zebrafish use 'receptor'.
     sep : str, default '\t'
         Separator of database table.
+        Use sep=',' for ConnectomeDB CSV files.
     inplace : bool, default False
         Whether to copy `adata` or modify it inplace.
     overwrite : bool, default False
@@ -82,10 +89,6 @@ def download_db(adata: sc.AnnData,
         If True, removes duplicate receptor-ligand combinations.
     report : Optional[Tuple[str, str]]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
-
-    Notes
-    -----
-    This will remove all information stored in adata.uns['receptor-ligand']
 
     Returns
     -------
@@ -99,9 +102,13 @@ def download_db(adata: sc.AnnData,
         1: If ligand_column is not in database.
         2: If receptor_column is not in database.
         3: If db_path is neither a file nor a LIANA resource.
+
+    Notes
+    -----
+    This will remove all information stored in adata.uns['receptor-ligand']
     """
 
-    # datbase already existing?
+    # database already existing?
     if not overwrite and "receptor-ligand" in adata.uns and "database" in adata.uns["receptor-ligand"]:
         warnings.warn("Database already exists! Skipping. Set `overwrite=True` to replace.")
 
@@ -124,6 +131,11 @@ def download_db(adata: sc.AnnData,
         else:
             raise ValueError(f"{db_path} is neither a valid file nor on of the available LIANA resources ({liana_res.show_resources()}).")
 
+    # Handling ConnectomeDB format (has 'LR Pair' column, e.g. 'si:dkey-46g23.5 lrp1ab' <Ligand Receptor>
+    if 'LR Pair' in database.columns and ligand_column == 'ligand' and receptor_column == 'receptor':
+        # Split 'LR Pair' into ligand and receptor columns
+        database[['ligand', 'receptor']] = database['LR Pair'].str.split(n=1, expand=True)
+
     # check column names in table
     if ligand_column not in database.columns:
         raise ValueError(f"Ligand column '{ligand_column}' not found in database! Available columns: {database.columns}")
@@ -139,7 +151,7 @@ def download_db(adata: sc.AnnData,
 
     modified_adata = adata if inplace else adata.copy()
 
-    # setup dict to store information old data will be overwriten!
+    # setup dict to store information old data will be overwritten!
     modified_adata.uns['receptor-ligand'] = dict()
 
     modified_adata.uns['receptor-ligand']['database_path'] = db_path
@@ -229,7 +241,11 @@ def calculate_interaction_table(adata: sc.AnnData,  # noqa: C901
     # test if database gene columns overlap with adata.var genes
     if (not set(adata.uns["receptor-ligand"]["database"][r_col]) & set(index)
             or not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)):
-        raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.var['{gene_index}']. Please make sure to select gene ids or symbols in all columns.")
+        raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.var['{gene_index}']. "
+                        f"No overlap found between database genes and your data. "
+                        f"This may occur if: (1) gene IDs/symbols don't match (use .var index or a column with matching IDs), "
+                        f"or (2) you're using a database for the wrong organism (e.g., human/mouse database with zebrafish data). "
+                        f"For zebrafish, consider using: https://connectomedb.org/downloads/Current-Release/CSV/ConnectomeDB2025_zebrafish.csv")
 
     # ----- compute cluster means and expression percentage for each gene -----
     # gene mean expression per cluster
@@ -251,10 +267,10 @@ def calculate_interaction_table(adata: sc.AnnData,  # noqa: C901
         # -- compute expression percentage --
         # get nonzero expression count for all genes
         _, cols = cluster_layer.nonzero()
-        gene_occurence = Counter(cols)
+        gene_occurrence = Counter(cols)
 
         cl_percent_expression[cluster] = 0
-        cl_percent_expression.iloc[list(gene_occurence.keys()), cl_percent_expression.columns.get_loc(cluster)] = list(gene_occurence.values())
+        cl_percent_expression.iloc[list(gene_occurrence.keys()), cl_percent_expression.columns.get_loc(cluster)] = list(gene_occurrence.values())
         cl_percent_expression[cluster] = cl_percent_expression[cluster] / len(cluster_adata.obs) * 100
 
     # combine duplicated genes through mean (can happen due to mapping between organisms)
@@ -3166,7 +3182,7 @@ def plot_all_condition_differences(
     save : Optional[str | Tuple[str, str]], default None
         Tuple with output filename base on index 0 and file format (e.g. PDF) on index 1 or
         string with output filename base. When a string is given the file format is set to 'pdf'.
-        The string is used as the prefix of the final filname.
+        The string is used as the prefix of the final filename.
     split_by_direction : bool, default True
         Create separate plots for positive and negative differences.
     hub_threshold : int, default 4

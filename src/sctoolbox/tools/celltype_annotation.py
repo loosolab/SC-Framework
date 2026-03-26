@@ -226,11 +226,6 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
     - 'stdout': SCSA stdout
     - 'cmd': SCSA command
 
-    Notes
-    -----
-    SCSA sometimes gives ValueError: MultiIndex (as covered in https://github.com/bioinfo-ibms-pumc/SCSA/issues/19).
-    This can be solved by downgrading pandas to 1.2.4.
-
     Parameters
     ----------
     adata : sc.AnnData
@@ -280,7 +275,12 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
     ValueError
         1. If species parameter is not Human, Mouse or None.
         2. If no species and no user database is provided.
-        3. If SCSA run failes
+        3. If SCSA run fails
+
+    Notes
+    -----
+    SCSA sometimes gives ValueError: MultiIndex (as covered in https://github.com/bioinfo-ibms-pumc/SCSA/issues/19).
+    This can be solved by downgrading pandas to 1.2.4.
     """
 
     if species is not None:

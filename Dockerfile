@@ -8,7 +8,7 @@ COPY scripts /scripts/
 # Set the time zone (before installing any packages)
 RUN echo 'Europe/Berlin' > apt-get install -y tzdata
 
-# make scripts executeable
+# make scripts executable
 RUN chmod +x scripts/bedGraphToBigWig 
 
 # Clear the local repository of retrieved package files
@@ -33,7 +33,7 @@ RUN apt-get install bedtools && \
 RUN mamba update -n base mamba && \
     mamba --version 
 
-# install enviroment
+# install environment
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
 # install sctoolbox

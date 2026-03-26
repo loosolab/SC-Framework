@@ -49,9 +49,9 @@ classifiers = [
 ]
 keywords = [
     "single-cell",
+    "single-cell analysis",
     "scRNA-seq",
     "scATAC-seq",
-    "single-cell analysis",
     "transcriptomics",
     "epigenomics",
     "chromatin accessibility",
@@ -110,7 +110,8 @@ dependencies = [
         'upsetplot',
         'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
-        'Jinja2'
+        'Jinja2',
+        'scikit-image'
 ]
 
 [project.optional-dependencies]
@@ -154,11 +155,14 @@ annotation = [
     'markerRepo>=0.1.5'  # to speed up installation
 ]
 proportion = [
-    'scanpro>=0.4.0'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
+    'scanpro>=0.4.1'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
 ]
-#velocity = [
-#    'scvelo @ git+https://github.com/theislab/scvelo.git'  # install from github until next release: https://github.com/theislab/scvelo/issues/1334
-#]
+velocity = [
+    'scvelo>=0.3.4'
+]
+palantir = [
+    'palantir'
+]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
@@ -168,7 +172,7 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,proportion,annotation]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,proportion,annotation,velocity,palantir]'
 ]
 # all is intended to install everything
 all = [
@@ -216,7 +220,7 @@ testpaths = [
 ]
 
 [tool.ruff]
-# Include these directores and files
+# Include these directories and files
 include = [
     "pyproject.toml",
     "src/**/*.py",
@@ -276,3 +280,34 @@ convention = "numpy"
 "tests/*" = [
     "ANN"  # disable the flake8-annotation rules
 ]
+
+[tool.codespell]
+# Skip specific directories and file patterns
+# Use commas for multiple entries; globs are supported
+skip = './src/sctoolbox/data,./atac_analysis/notebooks/test_data,./tests/data,.cache'
+
+# Comma-separated list of words to ignore (case-sensitive)
+#ignore-words-list = 'sur,nd,te,mytechnicalterm'  # codespell:ignore
+
+# skip lines that match the regex
+# skips images encoded in jupyter notebooks
+ignore-regex = '\s*"image/(png|jpeg)":\s*".*'
+
+# quiet-level 3: suppresses encoding and binary file warnings
+quiet-level = 3
+
+# Check file names for typos as well
+check-filenames = true
+
+# Check hidden files
+check-hidden = true
+
+# print x lines of surrounding context
+# before-context = 1
+# after-context = 1
+
+# Display a total typo count
+count = true
+
+# print a summary
+summary = true

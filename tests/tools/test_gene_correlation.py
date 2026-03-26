@@ -64,7 +64,7 @@ def test_correlate_ref_vs_all_invalid(adata, gene):
 
 
 def test_compare_two_conditons(adata):
-    """Test if two conditions can be compared wihtout the wrapper function."""
+    """Test if two conditions can be compared without the wrapper function."""
 
     adata_subsets = get_adata_subsets(adata, groupby="condition")
 

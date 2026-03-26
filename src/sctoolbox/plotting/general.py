@@ -677,7 +677,7 @@ def violinplot(table: pd.DataFrame,  # noqa: C901
     if y not in table.columns:
         raise ValueError(f"{y} not found in column names of table! Use one of {list(table.columns)}.")
 
-    # check if color_by is valid volumn name
+    # check if color_by is valid volume name
     if color_by is not None and color_by not in table.columns:
         raise ValueError(f"Color grouping '{color_by}' not found in column names of table! Use one of {list(table.columns)}")
 
@@ -1052,15 +1052,15 @@ def plot_table(table: pd.DataFrame,  # noqa: C901
     **kwargs
         Additional arguments are forwarded to `matplotlib.pyplot.table`
 
-    Raises
-    ------
-    ValueError
-        When the number of col_widths doesn't match the number of columns + indices.
-
     Returns
     -------
     Axes
         Object containing the plot.
+
+    Raises
+    ------
+    ValueError
+        When the number of col_widths doesn't match the number of columns + indices.
     """
     table = table.copy()  # ensure not to change the original table
 

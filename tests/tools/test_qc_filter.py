@@ -57,6 +57,8 @@ def adata():
 
     adata.obs["qc_variable1"] = np.append(np.random.normal(size=n1), np.random.normal(size=n2, loc=1, scale=2))
     adata.obs["qc_variable2"] = np.append(np.random.normal(size=n1), np.random.normal(size=n2, loc=1, scale=3))
+    adata.obs["doublet_score"] = np.append(np.random.normal(size=n1), np.random.normal(size=n2, loc=1, scale=3))
+    adata.uns["scrublet"] = {}
 
     n1 = int(adata.shape[1] * 0.8)
     n2 = adata.shape[1] - n1
@@ -191,6 +193,32 @@ def test_estimate_doublets(adata, groupby, threads):
     assert "doublet_score" in adata.obs.columns
 
 
+def test_adjust_doublet_threshold(adata):
+    """Test whether doubet_prediction is updated based on adjusted threshold."""
+    threshold = 0.25
+    qc.adjust_doublet_threshold(adata, threshold=threshold)
+
+    print(adata.obs["predicted_doublet"])
+
+    # Column should exist
+    assert "predicted_doublet" in adata.obs.columns
+    assert list(adata.obs["predicted_doublet"]) == list(adata.obs["doublet_score"] > threshold)
+
+
+def test_adjust_doublet_threshold_failure(adata):
+    """Test whether doubet_prediction errors are caught."""
+    threshold = 0.25
+    with pytest.raises(KeyError, match="Column 'doublet_score' not found in adata.obs"):
+        adata_copy = adata.copy()
+        adata_copy.obs.drop("doublet_score", axis=1, inplace=True)
+        qc.adjust_doublet_threshold(adata_copy, threshold=threshold)
+
+    with pytest.raises(KeyError, match="Key 'scrublet' not found in adata.uns. Run estimate doublet first."):
+        adata_copy = adata.copy()
+        adata_copy.uns.pop("scrublet")
+        qc.adjust_doublet_threshold(adata_copy, threshold=threshold)
+
+
 def test_gmm_threshold(norm_dist):
     """Test whether min/max threshold can be found using a gaussian mixture model."""
     threshold = qc.gmm_threshold(norm_dist, plot=True)
@@ -230,7 +258,7 @@ def test_automatic_thresholds_failure(adata):
 
 
 def test_thresholds_as_table(threshold_dict):
-    """Test whether treshold dict is successfully converted to pandas table."""
+    """Test whether threshold dict is successfully converted to pandas table."""
 
     table = qc.thresholds_as_table(threshold_dict)
 

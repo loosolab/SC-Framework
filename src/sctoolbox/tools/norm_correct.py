@@ -196,20 +196,20 @@ def tfidf(anndata: sc.AnnData,
     layer : Optional[str], default None
         Perform tfidf on given layer. If None tfidf is run on adata.X.
 
-    Notes
-    -----
-    Function is from the muon package.
-    This function overwrites the .X matrix.
+    Returns
+    -------
+    Optional[sc.AnnData]
+        TF-IDF normalized anndata object.
 
     Raises
     ------
     AttributeError
         log(TF*IDF) requires log(TF) and log(IDF) to be False.
 
-    Returns
-    -------
-    Optional[sc.AnnData]
-        TF-IDF normalized anndata object.
+    Notes
+    -----
+    Function is from the muon package.
+    This function overwrites the .X matrix.
     """
 
     adata = anndata if inplace else anndata.copy()
@@ -319,7 +319,7 @@ def wrap_corrections(adata: sc.AnnData,
     if unknown_keys:
         raise ValueError(f"Unknown methods in `method_kwargs` keys: {unknown_keys}")
 
-    # Check the existance of packages before running batch_corrections
+    # Check the existence of packages before running batch_corrections
     required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "scanorama": "scanorama"}
     for method in methods:
         if method in required_packages:  # not all packages need external tools
@@ -428,7 +428,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
     if batch_key not in adata.obs.columns:
         raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
 
-    # so dim_red_kwargs is unqiue for each function call
+    # so dim_red_kwargs is unique for each function call
     dim_red_kwargs = copy.deepcopy(dim_red_kwargs)
 
     # set default dimension reduction
@@ -579,6 +579,12 @@ def evaluate_batch_effect(adata: sc.AnnData,
     Optional[sc.AnnData]
         if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
 
+    Raises
+    ------
+    KeyError
+        1. If obsm_key is not in adata.obsm.
+        2. If batch_key is no column in adata.obs.
+
     Notes
     -----
     - LISI score is calculated for each cell and it is between 1-n for a data-frame with n categorical variables.
@@ -586,12 +592,6 @@ def evaluate_batch_effect(adata: sc.AnnData,
     - If the cells are well-mixed, then we expect the LISI score to be near n for a data with n batches.
     - The higher the LISI score is, the better batch correction method worked to normalize the batch effect and mix the cells from different batches.
     - For further information on LISI: https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
-
-    Raises
-    ------
-    KeyError
-        1. If obsm_key is not in adata.obsm.
-        2. If batch_key is no column in adata.obs.
     """
 
     # Load LISI
