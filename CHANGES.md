@@ -27,6 +27,7 @@
 - README: Update figure (#268)
 - Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
 - fix logging issue causing error on save (#333)
+- Pin scFates to >= 1.2.3 (#433)
 - CI improvements
 - lint according to new D420 rule
 
@@ -40,6 +41,7 @@
 - RNA/02: Create 06_*_info.txt report file when no genes are filtered
 - RNA/ATAC: always keep the norm layer (#411)
 - ATAC/02: add peakqc references
+- Pseudotime: Run tl.merge_empty_segments after tl.pseudotime
 - Notebook 4: Fix report issue when reclustering (#431)
 
 ## 0.14.2 (24-11-2025)
