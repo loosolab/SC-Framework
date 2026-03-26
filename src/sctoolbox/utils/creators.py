@@ -23,7 +23,7 @@ logger = settings.logger
 
 @deprecation.deprecated(deprecated_in="0.15.0", removed_in="0.17.0",
                         current_version=__version__,
-                        details="Superseeded by 'sctoolbox.utils.creators.github_download'.")
+                        details="Superseded by 'sctoolbox.utils.creators.github_download'.")
 @beartype
 def gitlab_download(internal_path: str,  # noqa: C901
                     file_regex: str,

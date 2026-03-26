@@ -108,7 +108,7 @@ def test_github_download(tmp_path, mocker):
 
             def get_contents(self, *args, **kwargs):
                 return [
-                    self.mockContent(name="fileA.txt", path="path/to/fileA.txt", decoded_content=b"caf\xc3\xa9"),
+                    self.mockContent(name="fileA.txt", path="path/to/fileA.txt", decoded_content=b"caf\xc3\xa9"),  # codespell:ignore caf
                     self.mockContent(name="fileB.txt", path="fileB.txt", decoded_content="milk")
                 ]
 
