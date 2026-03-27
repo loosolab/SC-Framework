@@ -60,21 +60,19 @@ Install the package from PyPI. We recommend to install into a conda environment.
 
   pip install SC-Framework[all]
 
-Setup a jupyter kernel
+Setup a jupyter kernel.
 
 .. code-block:: bash
 
-  python -m ipykernel install --user --name <conda_env_name> --display-name "sctoolbox"
+  python -m ipykernel install --user --name sctoolbox --display-name "sctoolbox"
 
-Open the notebooks matching your data, e.g., `rna`, and start your analysis. The notebooks can be found in the respective folders:
+Download the notebooks.
 
-- RNA_
-- ATAC_
-- general_ (data type independent notebooks. Move to the RNA/ATAC notebook folder before use)
+.. code-block:: bash
 
-.. _RNA: https://github.com/loosolab/SC-Framework/tree/main/rna_analysis/notebooks
-.. _ATAC: https://github.com/loosolab/SC-Framework/tree/main/atac_analysis/notebooks
-.. _general: https://github.com/loosolab/SC-Framework/tree/main/general_notebooks
+   SCF-analysis-setup -p </preexiting/path/to/experiment/> -n <name> -m <rna|atac>
+
+Finally, open your Jupyter server, follow the notebook download path (``-p`` from above) and start the analysis.
 
 Other links
 -----------
