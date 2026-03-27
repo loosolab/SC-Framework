@@ -100,4 +100,42 @@ The images can be found in our GitLab `Container registry <https://gitlab.gwdg.d
 
   docker pull docker.gitlab.gwdg.de/loosolab/software/sc_framework:latest
 
-# TODO explain how to start and run notebooks with the container
+
+**Run the image as a container:**
+
+.. code-block:: bash
+
+  docker docker run --rm -d -p 8123:8080 --volume /path/on/your/machine:/data docker.gitlab.gwdg.de/loosolab/software/sc_framework:latest bash -c "jupyter-notebook --allow-root --ip=0.0.0.0 --notebook-dir=/data --no-browser --NotebookApp.token='' --debug --port 8080"
+
+This will start a docker container with a Jupyter notebook server that has the SC-Framework analysis environment.
+
+======================================== =================================================================================================================================
+Parameter                                Description                                                                                                                      
+======================================== =================================================================================================================================
+``--rm``                                 Automatically deletes the container when it stops.                                                                               
+``-d``                                   Start the container in the background.                                                                                           
+``-p 8123:8080``                         Forward container port `8080` to `8123` on your machine. This allows to access the Jupyter server with ``http://<your_ip>:8123``.
+``--volume /path/on/your/machine:/data`` Makes a directory on your machine accessible from within the container.                                                          
+======================================== =================================================================================================================================
+
+.. note::
+  ``--volume`` does not work with certain filesystems or can be restricted in HPC environments (see `here <https://docs.docker.com/engine/storage/bind-mounts/#configure-bind-propagation>`_). In such a case the dicrectory will show up as empty. A workaround is to move your directory to a location that is supported e.g. the home directory (``/home/<user>/``).
+
+The final part of the command (``bash -c "jupyter-notebook ..."``) takes care of starting the Jupyter server.
+
+Now you can **access your container and analyse** notebooks that are located within the directory given via the ``-v`` parameter. Access the Jupyter server can from your browser with ``http://<your_ip>:8123``.
+
+**Find and stop the running container:**
+
+The existing container can be listed with
+
+.. code-block:: bash
+
+  docker container ls -a
+
+and stopped with
+
+.. code-block:: bash
+
+  docker container stop <container_name>
+
