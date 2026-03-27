@@ -157,7 +157,7 @@ Parameter                                Description
 ======================================== =================================================================================================================================
 
 .. note::
-  ``--volume`` does not work with certain filesystems or can be restricted in HPC environments (see `here <https://docs.docker.com/engine/storage/bind-mounts/#configure-bind-propagation>`_). In such a case the dicrectory will show up as empty. A workaround is to move your directory to a location that is supported e.g. the home directory (``/home/<user>/``).
+  ``--volume`` does not work with certain filesystems or can be restricted in HPC environments (see `here <https://docs.docker.com/engine/storage/bind-mounts/#configure-bind-propagation>`_). In such a case the directory will show up as empty. A workaround is to move your directory to a location that is supported e.g. the home directory (``/home/<user>/``).
 
 The final part of the command (``bash -c "jupyter-notebook ..."``) takes care of starting the Jupyter server.
 
