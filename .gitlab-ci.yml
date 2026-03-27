@@ -362,7 +362,9 @@ notebook-output-check:
 
 # Test notebooks
 notebooks-RNA:
-  image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
+  image:
+    name: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
+    pull_policy: always  # to avoid using outdated images
   needs: [get-container-tag]
   inherit:
     default: false
@@ -412,7 +414,9 @@ notebooks-RNA:
 
 # Test notebooks
 notebooks-ATAC:
-  image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
+  image:
+    name: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
+    pull_policy: always  # to avoid using outdated images
   needs: [get-container-tag]
   inherit:
     default: false

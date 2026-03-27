@@ -111,7 +111,8 @@ dependencies = [
         'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
         'Jinja2',
-        'scikit-image'
+        'scikit-image',
+        'PyGithub'
 ]
 
 [project.optional-dependencies]
@@ -142,7 +143,7 @@ receptor_ligand = [
     'networkx>=3.5'
 ]
 pseudotime = [
-    'scFates>=1.2.1',  # https://github.com/LouisFaure/scFates/issues/54
+    'scFates>=1.2.3',  # https://github.com/LouisFaure/scFates/issues/54; https://github.com/LouisFaure/scFates/issues/43
     'adjustText>=1.3.0'  # is a scFates dependency; set to speed up installation
 ]
 gsea = [
@@ -186,6 +187,9 @@ test = [
     "pytest-cov",
     "pytest-html"
 ]
+
+[project.scripts]
+SCF-analysis-setup = "sctoolbox.utils.cli:main"
 
 [project.urls]
 Repository = "https://github.com/loosolab/SC-Framework"
