@@ -75,14 +75,17 @@ We recommend to structure the analysis to support multiple analysis runs that ma
 
     sc-framework-analysis/
     ├── run_1/
-    │   ├── notebooks/
-    │   └── notes.md
+    │   └── *_analysis/
+    │       ├── notebooks/
+    │       └── notes.md
     ├── run_2/
-    │   ├── notebooks/
-    │   └── notes.md
+    │   └── *_analysis/
+    │       ├── notebooks/
+    │       └── notes.md
     └── run_3/
-        ├── notebooks/
-        └── notes.md
+        └── *_analysis/
+            ├── notebooks/
+            └── notes.md
 
 Notebook downloader CLI
 ^^^^^^^^^^^^^^^^^^^^^^^
