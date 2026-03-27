@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- Readthedocs overhaul (#312, #239, #351)
 - implemented SCF-analysis-setup CLI (#437)
 - implemented `sctoolbox.utils.creators.github_download`
 - spellcheck the project
