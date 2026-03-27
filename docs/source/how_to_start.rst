@@ -84,8 +84,43 @@ We recommend to structure the analysis to support multiple analysis runs that ma
         ├── notebooks/
         └── notes.md
 
-# TODO CLI tool
+Notebook downloader CLI
+^^^^^^^^^^^^^^^^^^^^^^^
 
+The SC-Framework includes a command line interface, installed with the package, to automatically download the analysis notebooks and create the structure shown above.
+
+.. code-block:: bash
+
+  usage: SCF-analysis-setup [-h] -p PATH -n NAME -m {rna,atac} [-g] [-t TOKEN] [-r REFERENCE] [-v]
+
+  Download and prepare analysis notebooks from the SC-Framework repository (https://github.com/loosolab/SC-Framework).
+
+  options:
+    -h, --help            show this help message and exit
+    -p PATH, --path PATH  Path to the output directory.
+    -n NAME, --name NAME  The name of the analysis. Will create a directory with this name in the given 'path'.
+    -m {rna,atac}, --method {rna,atac}
+                          The method matching your data type.
+    -g, --exclude_general
+                          Whether to download the general notebooks.
+    -t TOKEN, --token TOKEN
+                          A GitHub access token. Useful to circumvent API throttling.
+    -r REFERENCE, --reference REFERENCE
+                          Download notebooks of a specific version. Either a branch name, version tag or commit SHA. Will download the latest version from main on default.
+    -v, --version         Show the SC-Framework version.
+
+For example, a RNA analysis can be setup with:
+
+.. note::
+  The path given with ``-p`` must be created before running the command.
+
+.. code-block:: bash
+
+  SCF-analysis-setup -p </path/to/experiment/> -n initial_analysis -m rna
+
+
+.. hint::
+  Use a `GitHub token <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic>`_ to avoid rate limitations.
 
 Docker
 ------
@@ -123,7 +158,7 @@ Parameter                                Description
 
 The final part of the command (``bash -c "jupyter-notebook ..."``) takes care of starting the Jupyter server.
 
-Now you can **access your container and analyse** notebooks that are located within the directory given via the ``-v`` parameter. Access the Jupyter server can from your browser with ``http://<your_ip>:8123``.
+Now you can **access your container and analyse** notebooks that are located within the directory given via the ``-v`` parameter. Access the Jupyter server from your browser with ``http://<your_ip>:8123``.
 
 **Find and stop the running container:**
 
