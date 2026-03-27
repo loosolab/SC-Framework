@@ -1,6 +1,8 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- implemented SCF-analysis-setup CLI (#437)
+- implemented `sctoolbox.utils.creators.github_download`
 - spellcheck the project
 - fixed TypeError caused by non-string column names in `utils.adata._rec_search`
 - Add function adjust_doublet_threshold
