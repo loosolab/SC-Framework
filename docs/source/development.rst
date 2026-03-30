@@ -123,7 +123,7 @@ The only exception to this rule is the first subsection.
 Fixed cells
 ^^^^^^^^^^^
 
-- The first cell of the notebook has to be a **hidden init cell**. (See input cells for more info)
+- The first cell of the notebook has to be a **hidden init cell**. (See :ref:`input-cells` for more info)
 - The second cell of the notebook contains only the underlined title.
     - The title of the notebooks needs to be at level 1 with no other header being allowed to be at this level.
     - The title of the notebook is underlined with a line of 2px thickness:
@@ -149,6 +149,8 @@ After each section of levels 2 and 3, a separation line has to be inserted as a 
 
 - This cell should not contain any other text.
 - In level 4 the sections are **not** separated by a line.
+
+.. _input-cells:
 
 Input cells
 ^^^^^^^^^^^
@@ -208,7 +210,7 @@ This is a **hidden initialization cell**, meaning it will run when the notebook 
 The contents of this cell typical include:
 
 - the `bgcolor` function defining which cells to highlight
-- the name of the file to allow if the version of the analysis notebooks matches the sctoolbox package version
+- the name of the file to allow checking if the version of the analysis notebooks matches to the sctoolbox package version
 
 The Nbextension are likely pre-installed. See `here <https://github.com/Jupyter-contrib/jupyter_nbextensions_configurator?tab=readme-ov-file#usage>`_ for an explanation on how to enable them. You may need to refresh the notebook page after activating an extension.
 
@@ -455,3 +457,30 @@ What not to do!
 Please do not overwrite any variables in your example code! All examples run after each other as they are in one script.
 
 For example, the main example input is stored in the variable ``adata``. If you would overwrite it with something else all the following code that uses the input variable is likely to fail.
+
+Deprecation
+~~~~~~~~~~~
+
+Continued development creates changes in design and structure of the code. As a result, functions, classes, etc. may become outdated and should be removed. We use the `deprecation package <https://pypi.org/project/deprecation/>`_ to give users a grace period before the respective code is deleted.
+
+- A deprecated function should be marked for **removal in two minor** versions.
+- Add ``fail_if_not_removed`` to the functions tests.
+
+.. code-block:: python
+
+  import deprecation
+  from sctoolbox import __version__
+
+  @deprecation.deprecated(deprecated_in="0.15.0", removed_in="0.17.0",
+                          current_version=__version__,
+                          details="Use function xy instead")
+  def deprecated_function():
+      pass
+
+.. code-block:: python
+
+  import deprecation
+
+  @deprecation.fail_if_not_removed
+  def test_deprecated_function():
+    pass
