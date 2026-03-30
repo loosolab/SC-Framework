@@ -167,7 +167,7 @@ Now you can **access your container and analyse** notebooks that are located wit
 
 **Find and stop the running container:**
 
-The existing container can be listed with
+The existing containers can be listed with
 
 .. code-block:: bash
 
