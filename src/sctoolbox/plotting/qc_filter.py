@@ -42,15 +42,15 @@ def _read_starsolo_summary(folder: str) -> pd.DataFrame:
     folder : str
         Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
 
-    Raises
-    ------
-    ValueError
-        If no summary files are found in the folder.
-
     Returns
     -------
     summary_table : pd.DataFrame
         Table with summary statistics from all runs.
+
+    Raises
+    ------
+    ValueError
+        If no summary files are found in the folder.
     """
 
     summary_files = glob.glob(folder + "/**/solo/Gene/Summary.csv")
@@ -643,10 +643,6 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
     """
     Plot quality measurements for cells/features in an anndata object.
 
-    Notes
-    -----
-    Notebook needs "%matplotlib widget" before the call for the interactive sliders to work.
-
     Parameters
     ----------
     adata : sc.AnnData
@@ -659,7 +655,7 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
         A column in table to values on the x-axis.
     ncols : int, default 2
         Number of columns in the plot.
-    header : Optional[list[str]], defaul None
+    header : Optional[list[str]], default None
         A list of custom headers for each measure given in columns.
     color_list : Optional[list[str]], default None
         A list of colors to use for violins. If None, colors are chosen automatically.
@@ -680,15 +676,49 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
     -------
     Tuple[Any, Dict[str, Any]]
         Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
-        First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continously updated.
+        First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continuously updated.
 
     Raises
     ------
     ValueError
         If 'which' is not 'obs' or 'var' or if columns are not in table.
+
+    Notes
+    -----
+    Notebook needs "%matplotlib widget" before the call for the interactive sliders to work.
     """
 
     is_interactive = utils.checker._is_interactive()
+
+    class InitFloatRangeSlider(ipywidgets.FloatRangeSlider):
+        """FloatRangeSlider that returns the initial value even if it is outside the range when the threshold was never updated."""
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Forward everything to ipywidgets.FloatRangeSlider but save the initial thresholds."""
+            super().__init__(*args, **kwargs)
+
+            self._init_values = tuple(kwargs.get("value", self.value))
+
+            self._low_updated = False
+            self._high_updated = False
+
+            self.observe(self._on_value, names="value")
+
+        def _on_value(self, change: dict) -> None:
+            old_low, old_high = change["old"]
+            new_low, new_high = change["new"]
+            if new_low != old_low:
+                self._low_updated = True
+            if new_high != old_high:
+                self._high_updated = True
+
+        @property
+        def ext_value(self) -> tuple:
+            """Return _init_values if never updated otherwise self.value."""
+            return (
+                self._init_values[0] if not self._low_updated else self.value[0],
+                self._init_values[1] if not self._high_updated else self.value[1]
+            )
 
     # ---------------- Test input and get ready --------------#
 
@@ -836,9 +866,9 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
             # Add slider to control thresholds
             if is_interactive:
 
-                slider = ipywidgets.FloatRangeSlider(description=str(group), min=data_min, max=data_max,
-                                                     value=[tmin, tmax],  # initial value
-                                                     continuous_update=False)
+                slider = InitFloatRangeSlider(description=str(group), min=data_min, max=data_max,
+                                              value=[tmin, tmax],  # initial value
+                                              continuous_update=False)
 
                 slider.observe(functools.partial(_update_thresholds,
                                                  fig=fig,
@@ -933,7 +963,11 @@ def get_slider_thresholds(slider_dict: dict) -> dict:
         if isinstance(slider_dict[measure], dict):  # thresholds for groups
             for group in slider_dict[measure]:
                 slider = slider_dict[measure][group]
-                threshold_dict[measure][group] = {"min": slider.value[0], "max": slider.value[1]}
+                if hasattr(slider, "ext_value"):
+                    value = slider.ext_value
+                else:
+                    value = slider.value
+                threshold_dict[measure][group] = {"min": value[0], "max": value[1]}
 
             # Check if all groups have the same thresholds
             mins = set([d["min"] for d in threshold_dict[measure].values()])
@@ -945,7 +979,11 @@ def get_slider_thresholds(slider_dict: dict) -> dict:
 
         else:  # One threshold for measure
             slider = slider_dict[measure]
-            threshold_dict[measure] = {"min": slider.value[0], "max": slider.value[1]}
+            if hasattr(slider, "ext_value"):
+                value = slider.ext_value
+            else:
+                value = slider.value
+            threshold_dict[measure] = {"min": value[0], "max": value[1]}
 
     return threshold_dict
 
@@ -978,7 +1016,7 @@ def _upset_select_cells(adata: sc.AnnData,
     ------
     ValueError
         1. If any/all thresholds are grouped but groupby is set to None
-        2. If grouped threhold dict key does not match values in given groupby column
+        2. If grouped threshold dict key does not match values in given groupby column
     """
     selection = {}
     # loop over all columns

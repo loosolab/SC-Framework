@@ -99,7 +99,7 @@ def _add_path() -> str:
 @beartype
 def _is_gz_file(filepath: str) -> bool:
     """
-    Check wheather file is a compressed .gz file.
+    Check whether file is a compressed .gz file.
 
     Parameters
     ----------
@@ -135,13 +135,13 @@ def gunzip_file(f_in: str, f_out: str) -> None:
 
 
 @beartype
-def is_str_numeric(ans: str) -> bool:
+def is_str_numeric(var: str) -> bool:
     """
     Check if string can be converted to number.
 
     Parameters
     ----------
-    ans : str
+    var : str
         String to check.
 
     Returns
@@ -151,7 +151,7 @@ def is_str_numeric(ans: str) -> bool:
     """
 
     try:
-        float(ans)
+        float(var)
         return True
     except ValueError:
         return False
@@ -410,10 +410,6 @@ def var_index_to_column(adata: sc.AnnData,
     If parsing succeeds, the parsed coordinate columns are added to ``adata.var``.
     If parsing fails, an error is raised.
 
-    Notes
-    -----
-    This function modifies ``adata`` in place.
-
     Parameters
     ----------
     adata : sc.AnnData
@@ -426,6 +422,10 @@ def var_index_to_column(adata: sc.AnnData,
     ------
     ValueError
         If regions are in an incorrect format and cannot be parsed.
+
+    Notes
+    -----
+    This function modifies ``adata`` in place.
     """
 
     # Test whether the three columns are in the right format
@@ -555,7 +555,7 @@ def check_columns(df: pd.DataFrame,
     columns : Union[Iterable[str], str]
         A list of column names or name to check for within `df`.
     error : bool, default True
-        If True raise errror if not all columns are found.
+        If True raise error if not all columns are found.
         If False return true or false
     name : str, default dataframe
         Dataframe name displayed in the error message.
@@ -714,5 +714,5 @@ def check_type(obj: Any, obj_name: str, test_type: Any) -> None:
     Only used for types not supported by beartype.
     """
     if not isinstance(obj, test_type):
-        raise TypeError(f"Paramter {obj_name} is required to be of type: "
+        raise TypeError(f"Parameter {obj_name} is required to be of type: "
                         + f"{test_type}, but is type: {type(obj)}")

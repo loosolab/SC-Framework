@@ -53,12 +53,12 @@ def term_dotplot(adata: sc.AnnData,
     groupby : str
         Key from `adata.obs` to group cells by.
     gene_col : str, default "Lead_genes"
-        Name of column the containg gene (lists).
+        Name of column the containing gene (lists).
         Typical names used by different methods:
         1. prerank -> 'Lead_genes'
         2. enrichr -> 'Genes'
     term_col : str, default 'Term'
-        Name of column containg the terms.
+        Name of column containing the terms.
     groups : Optional[list[str] | str], default None
         Set subset of group column.
     hue : Literal["Mean Expression", "Zscore"], default "Zscore"
@@ -70,10 +70,6 @@ def term_dotplot(adata: sc.AnnData,
     **kwargs : Any
         Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
 
-    Notes
-    -----
-    All genes will be converted to uppercase for comparison.
-
     Returns
     -------
     NDArray[Axes]
@@ -84,6 +80,10 @@ def term_dotplot(adata: sc.AnnData,
     ValueError
         If gsea results cannot be found in adata.uns.
         If no genes are matching the given term in term_table
+
+    Notes
+    -----
+    All genes will be converted to uppercase for comparison.
 
     Examples
     --------
@@ -213,15 +213,15 @@ def gsea_network(adata: sc.AnnData,
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
-    Notes
-    -----
-    Default values expect input dataframe to be prerank output.
-
     Raises
     ------
     ValueError
         If gsea key is not found in adata.uns.
         If no cluster with valid pathways are found.
+
+    Notes
+    -----
+    Default values expect input dataframe to be prerank output.
 
     Examples
     --------
@@ -300,7 +300,7 @@ def gsea_network(adata: sc.AnnData,
                 nodes.drop(j, inplace=True)
                 nodes.index = range(len(nodes))
 
-        # init node cooridnates
+        # init node coordinates
         pos = nx.layout.spiral_layout(G, scale=scale, resolution=resolution)
 
         # draw node
@@ -362,7 +362,7 @@ def gsea_network(adata: sc.AnnData,
     line_list.insert(0, Line2D([], [], alpha=0, label="Shared significant genes\nbetween Pathways"))
 
     # Node size legend
-    # Note The markersize does not fit 100% to the actial scatter size.
+    # Note The markersize does not fit 100% to the actual scatter size.
     # The *20 scaling is an approximation.
     line_list.append(Line2D([], [], alpha=0, label="Ratio of \nPathway Genes in Cluster"))
     s_steps = np.linspace(min(node_sizes), max(node_sizes), step_num)
@@ -468,7 +468,7 @@ def cluster_dotplot(adata: sc.AnnData,
         # Prepare save parameter
         save = f"{save_prefix}_GSEA_dotplot_top_pathways_per_cluster_{c}.pdf" if save_figs else None
 
-        # build empty adata with adata.uns['sctoolbox']['gsea'] fileld as its needed as input type for gsea_dot
+        # build empty adata with adata.uns['sctoolbox']['gsea'] field as its needed as input type for gsea_dot
         empty_adata = sc.AnnData()
         add_uns_info(empty_adata,
                      key=['gsea'],

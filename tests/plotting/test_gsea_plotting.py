@@ -10,7 +10,7 @@ from sctoolbox.plotting import gsea
 # ------------------------------ FIXTURES --------------------------------- #
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata():
     """Minimal adata file for testing.
 

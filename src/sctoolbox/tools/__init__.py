@@ -5,6 +5,8 @@ from types import ModuleType
 
 # define what is exported in this module
 __all__ = [
+    "palantir_analysis",
+    "amulet",
     "bam",
     "calc_overlap_fc",
     "celltype_annotation",

@@ -28,7 +28,7 @@ def test_rm_tmp():
 
     temp_dir = "tempdir"
     utils.io.create_dir(temp_dir)
-    pathlib.Path("tempdir/afile.gtf").touch(exist_ok=True)
+    pathlib.Path("tempdir/a_file.gtf").touch(exist_ok=True)
     pathlib.Path("tempdir/tempfile1.txt").touch(exist_ok=True)
     pathlib.Path("tempdir/tempfile2.txt").touch(exist_ok=True)
 

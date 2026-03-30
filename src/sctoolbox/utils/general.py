@@ -97,19 +97,13 @@ def get_package_versions() -> dict[str, str]:
 
 
 _vip_packages = ["sctoolbox", "scanpy", "anndata", "numpy", "pandas", "peakqc", "scFates", "gseapy",
-                 "pydeseq2", "scvelo", "markerrepo", "scanpro", "uropa", "tobias"]
+                 "pydeseq2", "scvelo", "markerrepo", "scanpro", "uropa", "tobias", "palantir"]
 
 
 @beartype
 def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"] | list[str]] = "vip", table: bool = True, report: Optional[str] = None) -> dict[str, str] | pd.DataFrame:
     """
     Report important packages and versions loaded after importing ``sctoolbox``.
-
-    Notes
-    -----
-    The package version is reported as ``"NA"`` if
-    :func:`importlib.metadata.version` raises :class:`importlib.metadata.PackageNotFoundError`
-    (e.g., because no metadata were found).
 
     Parameters
     ----------
@@ -143,6 +137,11 @@ def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"
            * - Package 2
              - 2.0
 
+    Notes
+    -----
+    The package version is reported as ``"NA"`` if
+    :func:`importlib.metadata.version` raises :class:`importlib.metadata.PackageNotFoundError`
+    (e.g., because no metadata were found).
     """
     current_packages = sys.modules.keys() - __cached_modules
 
@@ -578,7 +577,7 @@ def suppress_logging(level: int = logging.CRITICAL) -> Generator:
     Parameters
     ----------
     level : int, default logging.CRITICAL
-        Supress logging below this level. See https://docs.python.org/3/library/logging.html#logging-levels
+        Suppress logging below this level. See https://docs.python.org/3/library/logging.html#logging-levels
 
     Yields
     ------

@@ -162,7 +162,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
     if adata.raw:
         logger.warning("Found AnnData.raw! Be aware that Scanpy favors '.raw' unless explicitly told to do otherwise."
-                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where neccessary.")
+                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where necessary.")
 
     return adata
 
@@ -262,7 +262,15 @@ def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str
     """
     # check DataFrame column names
     if isinstance(var, pd.DataFrame):
-        col_names = [n for n in var.columns if "/" in n]
+        # get column names with the offending character
+        col_names = []
+        for c in var.columns:
+            try:
+                if repl[0] in c:
+                    col_names.append(c)
+            except TypeError:
+                # if the column type doesn't support the 'in' operator skip
+                continue
 
         if col_names:
             # first element is an adata attribute
@@ -306,7 +314,7 @@ def add_uns_info(adata: sc.AnnData,  # noqa: C901
     value : Any
         The value to add to adata.uns['sctoolbox'].
     how : str, default "overwrite"
-        When set to "overwrite" provided key will be overwriten. If "append" will add element to existing list or dict.
+        When set to "overwrite" provided key will be overwritten. If "append" will add element to existing list or dict.
 
     Raises
     ------
@@ -402,15 +410,15 @@ def get_uns(adata: sc.AnnData,
         The key(s) of value. A list is treated similar to a path which results in checking for nested lists. E.g.:
         a key ['a', 'b', 'c'] would return true if adata.uns = {'a': {'b': {'c': ...}}}.
 
-    Raises
-    ------
-    ValueError
-        If key not fóund in adata.uns sub dictionary.
-
     Returns
     -------
     Any
         Any value stored in adata.uns
+
+    Raises
+    ------
+    ValueError
+        If key not fóund in adata.uns sub dictionary.
     """
     d = adata.uns
     path = ""
@@ -530,6 +538,11 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
     inplace : bool, default False
         If True, modify ``adata`` in place. If False, return a modified copy.
 
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Deployment-ready AnnData object. Returns None if ``inplace`` is True.
+
     Raises
     ------
     ValueError
@@ -538,11 +551,6 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
         If no embeddings are found in ``adata.obsm``.
         If none of the requested embeddings are found when ``keep_obsm`` is provided.
         If ``layer`` is set but no layer with that name exists.
-
-    Returns
-    -------
-    Optional[sc.AnnData]
-        Deployment-ready AnnData object. Returns None if ``inplace`` is True.
     """
     if layer and layer not in adata.layers:
         raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
@@ -737,16 +745,16 @@ def tidy_layers(  # noqa: C901
     inplace : bool, default True
         Modify the AnnData inplace or return a modified copy.
 
+    Returns
+    -------
+    Optional[sc.AnnData]
+        The modified AnnData object.
+
     Raises
     ------
     KeyError
         1. If the new name already exists. During renaming or when raw is saved as a layer.
         2. If the layer to replace X with is not found.
-
-    Returns
-    -------
-    Optional[sc.AnnData]
-        The modified AnnData object.
     """
     if not inplace:
         adata = adata.copy()
