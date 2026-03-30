@@ -149,14 +149,18 @@ The images can be found in our GitLab `Container registry <https://gitlab.gwdg.d
 
 This will start a docker container with a Jupyter notebook server that has the SC-Framework analysis environment.
 
-======================================== =================================================================================================================================
-Parameter                                Description                                                                                                                      
-======================================== =================================================================================================================================
-``--rm``                                 Automatically deletes the container when it stops.                                                                               
-``-d``                                   Start the container in the background.                                                                                           
-``-p 8123:8080``                         Forward container port `8080` to `8123` on your machine. This allows to access the Jupyter server with ``http://<your_ip>:8123``.
-``--volume /path/on/your/machine:/data`` Makes a directory on your machine accessible from within the container.                                                          
-======================================== =================================================================================================================================
+.. table::
+  :widths: 20 80
+  :class: table-responsive
+
+  ======================================== =================================================================================================================================
+  Parameter                                Description                                                                                                                      
+  ======================================== =================================================================================================================================
+  ``--rm``                                 Automatically deletes the container when it stops.                                                                               
+  ``-d``                                   Start the container in the background.                                                                                           
+  ``-p 8123:8080``                         Forward container port `8080` to `8123` on your machine. This allows to access the Jupyter server with ``http://<your_ip>:8123``.
+  ``--volume /path/on/your/machine:/data`` Makes a directory on your machine accessible from within the container.                                                          
+  ======================================== =================================================================================================================================
 
 .. note::
   ``--volume`` does not work with certain filesystems or can be restricted in HPC environments (see `here <https://docs.docker.com/engine/storage/bind-mounts/#configure-bind-propagation>`_). In such a case the directory will show up as empty. A workaround is to move your directory to a location that is supported e.g. the home directory (``/home/<user>/``).
