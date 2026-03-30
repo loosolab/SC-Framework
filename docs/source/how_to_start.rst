@@ -58,7 +58,7 @@ The SC-Framework provides a series of notebooks to streamline analysis. The note
 Notebook setup
 ~~~~~~~~~~~~~~
 
-Download and copy the respective notebook folder (see above) to your preferred location. The general notebooks can be copied in the same folder if required. Running the notebooks will automatically create a structure to store input/output files. The structure is defined via the ``config.yml``, next to the notebooks, and can be edited to your preference.
+Download and copy the respective notebook folder (see above or check the :ref:`notebook-downloader-cli`) to your preferred location. The general notebooks can be copied in the same folder if required. Running the notebooks will automatically create a structure to store input/output files. The structure is defined via the ``config.yml``, next to the notebooks, and can be edited to your preference.
 
 .. note::
    Always start with the **assembly notebook** to ensure seamless data integration. Then skip to the analysis notebook of interest and load the data produced by the assembly notebook.
@@ -86,6 +86,8 @@ We recommend to structure the analysis to support multiple analysis runs that ma
         └── *_analysis/
             ├── notebooks/
             └── notes.md
+
+.. _notebook-downloader-cli:
 
 Notebook downloader CLI
 ^^^^^^^^^^^^^^^^^^^^^^^
