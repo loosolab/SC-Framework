@@ -27,6 +27,7 @@
 - fix logging issue causing error on save (#333)
 - CI improvments
 - lint according to new D420 rule
+- add scanpy score feature including apoptosis,mito,ribo and cell cycle (#401)
 
 ### Changes to notebooks
 - Notebook 2: Show doubled threshold in plot and make it adjustable afterwards (#328)
