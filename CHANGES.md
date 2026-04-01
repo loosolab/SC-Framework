@@ -34,6 +34,7 @@
 - lint according to new D420 rule
 
 ### Changes to notebooks
+- add a number prefix to notebook output figures (#440)
 - implemented the Palantir notebook
 - Notebook 2: Show doubled threshold in plot and make it adjustable afterwards (#328)
 - Notebooks 4: Fix blue input cell order
