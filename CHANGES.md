@@ -32,6 +32,7 @@
 - Pin scFates to >= 1.2.3 (#433)
 - CI improvements
 - lint according to new D420 rule
+- add scanpy score feature including apoptosis,mito,ribo and cell cycle (#401)
 
 ### Changes to notebooks
 - implemented the Palantir notebook
@@ -45,6 +46,7 @@
 - ATAC/02: add peakqc references
 - Pseudotime: Run tl.merge_empty_segments after tl.pseudotime
 - Notebook 4: Fix report issue when reclustering (#431)
+- RNA Notebook 2: added apoptosis score and fixed section numbers (#401)
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
