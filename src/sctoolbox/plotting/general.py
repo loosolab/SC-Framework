@@ -677,7 +677,7 @@ def violinplot(table: pd.DataFrame,  # noqa: C901
     if y not in table.columns:
         raise ValueError(f"{y} not found in column names of table! Use one of {list(table.columns)}.")
 
-    # check if color_by is valid volumn name
+    # check if color_by is valid volume name
     if color_by is not None and color_by not in table.columns:
         raise ValueError(f"Color grouping '{color_by}' not found in column names of table! Use one of {list(table.columns)}")
 

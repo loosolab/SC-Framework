@@ -163,7 +163,7 @@ def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
 
     else:
         assemblers.prepare_atac_anndata(adata_cp, coordinate_cols=coordinate_cols)
-        # check for the existance of the coordinate columns ['chr','start','stop'] in the var table
+        # check for the existence of the coordinate columns ['chr','start','stop'] in the var table
         assert all(item in adata_cp.var.columns for item in expected_coordinates)
 
         # check if the first var index is in the correct format

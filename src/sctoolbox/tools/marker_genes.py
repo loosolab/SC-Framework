@@ -553,7 +553,7 @@ def get_rank_genes_tables(adata: sc.AnnData,  # noqa: C901
     save_excel : Optional[str], default None
         The path to a file for writing the marker gene tables as an excel file (with one sheet per group).
     alt_name : dict[str, str], default {}
-        Alternative names to be used as sheet names. Needed when sanitized names are not unique, which can happen when names are shortened to the first 30 charachter.
+        Alternative names to be used as sheet names. Needed when sanitized names are not unique, which can happen when names are shortened to the first 30 character.
         Only relevant when saving to excel.
         E.g. ["Truncated_reeeeeally_long_name_1", "Truncated_reeeeeally_long_name_2"] would be shortened to "Truncated_reeeeeally_long_name" in both cases so names are duplicated.
         This is solved with alternate names: {"Truncated_reeeeeally_long_name_1": "Unique_1", "Truncated_reeeeeally_long_name_2": "Unique_2"}.

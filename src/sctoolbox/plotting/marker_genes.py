@@ -102,7 +102,7 @@ def rank_genes_plot(adata: sc.AnnData,  # noqa: C901
     parameters.update(kwargs)
     if key is not None:  # from rank_genes_groups output
 
-        # change var.index if neccessary
+        # change var.index if necessary
         if "sctoolbox_params" in adata.uns[key] and "index" in adata.uns[key]["sctoolbox_params"]:
             adata = adata[:, ~adata.var[adata.uns[key]["sctoolbox_params"]["index"]].isna()].copy()  # remove na
             # make the column unique same as .make_var_names_unique
@@ -265,7 +265,7 @@ def grouped_violin(adata: sc.AnnData,  # noqa: C901
 
     if isinstance(x, str):
         x = [x]
-    x = list(x)  # convert to list incase x was a numpy array or other iterable
+    x = list(x)  # convert to list in case x was a numpy array or other iterable
 
     # Establish if x is a column in adata.obs or a gene in adata.var.index
     x_assignment = []
@@ -611,7 +611,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
         if g.ax_col_dendrogram.get_visible():
             g.ax_col_dendrogram.set_title(title, fontsize=13)
         else:
-            g.ax_heatmap.text(counts_z.shape[1] / 2, -2, title,  # ensures space beetween title and heatmap
+            g.ax_heatmap.text(counts_z.shape[1] / 2, -2, title,  # ensures space between title and heatmap
                               transform=g.ax_heatmap.transData, ha="center", va="bottom",
                               fontsize=13)
 
@@ -699,7 +699,7 @@ def plot_gene_correlation(adata: sc.AnnData,
     adata : sc.AnnData
         An annotated data matrix object containing counts in .X.
     ref_gene : str
-        Reference gene to which other genes are comapred to.
+        Reference gene to which other genes are compared to.
     gene_list : list[str] | str
         A list of genes to show expression for.
     ncols : int, default 3

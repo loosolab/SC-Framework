@@ -111,7 +111,8 @@ dependencies = [
         'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
         'Jinja2',
-        'scikit-image'
+        'scikit-image',
+        'PyGithub'
 ]
 
 [project.optional-dependencies]
@@ -142,7 +143,7 @@ receptor_ligand = [
     'networkx>=3.5'
 ]
 pseudotime = [
-    'scFates>=1.2.1',  # https://github.com/LouisFaure/scFates/issues/54
+    'scFates>=1.2.3',  # https://github.com/LouisFaure/scFates/issues/54; https://github.com/LouisFaure/scFates/issues/43
     'adjustText>=1.3.0'  # is a scFates dependency; set to speed up installation
 ]
 gsea = [
@@ -160,6 +161,9 @@ proportion = [
 velocity = [
     'scvelo>=0.3.4'
 ]
+palantir = [
+    'palantir'
+]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
@@ -169,7 +173,7 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,proportion,annotation,velocity,palantir]'
 ]
 # all is intended to install everything
 all = [
@@ -183,6 +187,9 @@ test = [
     "pytest-cov",
     "pytest-html"
 ]
+
+[project.scripts]
+SCF-analysis-setup = "sctoolbox.utils.cli:main"
 
 [project.urls]
 Repository = "https://github.com/loosolab/SC-Framework"
@@ -217,7 +224,7 @@ testpaths = [
 ]
 
 [tool.ruff]
-# Include these directores and files
+# Include these directories and files
 include = [
     "pyproject.toml",
     "src/**/*.py",
@@ -277,3 +284,34 @@ convention = "numpy"
 "tests/*" = [
     "ANN"  # disable the flake8-annotation rules
 ]
+
+[tool.codespell]
+# Skip specific directories and file patterns
+# Use commas for multiple entries; globs are supported
+skip = './src/sctoolbox/data,./atac_analysis/notebooks/test_data,./tests/data,.cache'
+
+# Comma-separated list of words to ignore (case-sensitive)
+#ignore-words-list = 'sur,nd,te,mytechnicalterm'  # codespell:ignore
+
+# skip lines that match the regex
+# skips images encoded in jupyter notebooks
+ignore-regex = '\s*"image/(png|jpeg)":\s*".*'
+
+# quiet-level 3: suppresses encoding and binary file warnings
+quiet-level = 3
+
+# Check file names for typos as well
+check-filenames = true
+
+# Check hidden files
+check-hidden = true
+
+# print x lines of surrounding context
+# before-context = 1
+# after-context = 1
+
+# Display a total typo count
+count = true
+
+# print a summary
+summary = true

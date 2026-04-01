@@ -57,7 +57,7 @@ def _make_adata():
     return adata
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata():
     """Create a fixture of the adata with session scope.
 
@@ -168,8 +168,8 @@ def test_embedding(adata, style, kwargs):
     """Assert embedding works and returns Axes object."""
 
     # Collect test colors
-    colors = ["qcvar1"]   # continous obs variable
-    colors.append(adata.var.index[0])  # continous gene variable
+    colors = ["qcvar1"]   # continuous obs variable
+    colors.append(adata.var.index[0])  # continuous gene variable
     colors.append(None)          # no color / density plot
     if style != "hexbin":
         colors.append("clustering")  # categorical obs variable; only available for dots/density
@@ -319,7 +319,7 @@ def test_plot_group_embeddings(adata, embedding):
                                                  ("umap", "condition"),
                                                  ("tsne", "list")])
 def test_compare_embeddings(adata, embedding, var_list):
-    """Test if compare_embeddings runs trough."""
+    """Test if compare_embeddings runs through."""
 
     adata_cp = adata.copy()
 
@@ -367,7 +367,7 @@ def test_plot_3D_UMAP(adata, color):
 
 
 def test_invalid_color_plot_3D_UMAP(adata):
-    """Test if plot_3D_UMAP return KeyError if color paramater cannot be found in adata."""
+    """Test if plot_3D_UMAP return KeyError if color parameter cannot be found in adata."""
     with pytest.raises(KeyError):
         pl.plot_3D_UMAP(adata, color="invalid", save="3D_test")
 
