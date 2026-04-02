@@ -372,7 +372,7 @@ def pairwise_ranked_genes_nosig():
 
 
 @pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
+def adata_planet_plot():
     """Load and returns an anndata object.
 
     Returns
