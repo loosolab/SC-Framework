@@ -3,30 +3,8 @@
 import pytest
 import scanpy as sc
 import numpy as np
-import sctoolbox.tools as tools
 from sctoolbox.plotting import gsea
 
-
-# ------------------------------ FIXTURES --------------------------------- #
-
-
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
-    """Minimal adata file for testing.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with GSEA results.
-    """
-    adata = sc.datasets.pbmc68k_reduced()
-    tools.marker_genes.run_rank_genes(adata, "louvain")
-    tools.gsea.gene_set_enrichment(adata,
-                                   marker_key="rank_genes_louvain_filtered",
-                                   organism="human",
-                                   method="prerank",
-                                   inplace=True)
-    return adata
 
 # ------------------------------ TESTS --------------------------------- #
 

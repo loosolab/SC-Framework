@@ -1,62 +1,13 @@
 """Test planet plot functions."""
-import os
+
 import pytest
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scanpy as sc
 import sctoolbox.plotting.planet_plot as pp
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
-
-
-# ------------------------------ FIXTURES --------------------------------- #
-
-
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
-    """Load and returns an anndata object.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with test layer for planet plot.
-    """
-
-    np.random.seed(1)  # set seed for reproducibility
-
-    f = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', "adata.h5ad")
-    adata = sc.read_h5ad(f)
-
-    # create a test layer with a diagonal matrix with 1s starting at index, 0,50,100 and 150
-    # This ensures that each of the gene has the expression value exactly 4 times as 1 and once for each subset (category1, category2)
-    test_layer = np.zeros((200, 100))
-    for i in range(50):
-        test_layer[i, i] = 1
-        test_layer[i + 50, i] = 1
-        test_layer[i + 100, i] = 1
-        test_layer[i + 150, i] = 1
-        test_layer[i, i + 50] = 1
-        test_layer[i + 50, i + 50] = 1
-        test_layer[i + 100, i + 50] = 1
-        test_layer[i + 150, i + 50] = 1
-
-    adata.layers["test_layer"] = test_layer
-
-    # next we create a df for adata.obs
-    # create category1 and category2 used for grouping, each column has 2 different values
-    # we make all 4 combinations of (category1, category2) appear equal no of times
-    category1 = ['A'] * 100 + ['B'] * 100
-    category2 = ['a'] * 50 + ['b'] * 50 + ['a'] * 50 + ['b'] * 50
-    df = pd.DataFrame({'category1': category1, 'category2': category2})
-
-    # next we create 6 obs columns that each contain single 1 fore each category combination
-    for i in range(6):
-        df[f'obscol{i + 1}'] = test_layer[:, i]
-
-    adata.obs = df
-    return adata
 
 
 # ------------------------------ TESTS --------------------------------- #

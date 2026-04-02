@@ -4,10 +4,6 @@ import pytest
 import sctoolbox.plotting.embedding as pl
 import scanpy as sc
 import os
-import tempfile
-import shutil
-import pandas as pd
-import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -15,100 +11,6 @@ from beartype.roar import BeartypeCallHintParamViolation
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
-
-
-# ------------------------------ FIXTURES --------------------------------- #
-
-
-def _make_adata():
-    """Load and returns an anndata object.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with processed data and clustering results.
-    """
-
-    np.random.seed(1)  # set seed for reproducibility
-
-    adata = sc.datasets.pbmc3k_processed()
-    adata.raw = None
-
-    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-    adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-    adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-    adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-    adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-    adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-    adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-    adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-    # sc.pp.normalize_total(adata, target_sum=None)
-    # sc.pp.log1p(adata)
-
-    sc.tl.umap(adata, n_components=3)  # to have more than two components available
-    # sc.tl.tsne(adata)
-    # sc.tl.pca(adata)
-    sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-    # sc.tl.dendrogram(adata, groupby='clustering')
-
-    return adata
-
-
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
-    """Create a fixture of the adata with session scope.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with session scope.
-    """
-    return _make_adata()
-
-
-@pytest.fixture(scope="function")  # create a new fixture for each test
-def adata_fun_scope():
-    """Create a fixture of the adata with function scope.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with function scope.
-    """
-    return _make_adata()
-
-
-@pytest.fixture
-def df():
-    """Create and return a pandas dataframe.
-
-    Returns
-    -------
-    pd.DataFrame
-        Simple dataframe with two columns.
-    """
-    return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
-                              'col2': [3, 4, 5, 6, 7]})
-
-
-@pytest.fixture
-def tmp_file():
-    """
-    Return path for a temporary file.
-
-    Yields
-    ------
-    A temporary file path
-    """
-    tmpdir = tempfile.mkdtemp()
-
-    yield os.path.join(tmpdir, "output.pdf")
-
-    # clean up directory and contents
-    shutil.rmtree(tmpdir)
 
 
 # ------------------------------ TESTS --------------------------------- #

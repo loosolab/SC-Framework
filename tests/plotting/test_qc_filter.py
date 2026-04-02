@@ -4,146 +4,16 @@ import pytest
 import sctoolbox.plotting.qc_filter as pl
 import sctoolbox.tools.insertsize as insertsize
 import os
-import scanpy as sc
 import shutil
 import numpy as np
 import glob
 import matplotlib.pyplot as plt
 import seaborn as sns
 import functools
-import ipywidgets as widgets
 
 from beartype.roar import BeartypeCallHintParamViolation
 
-
-# ------------------------------ FIXTURES --------------------------------- #
-
-
 quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
-
-
-@pytest.fixture
-def slider():
-    """Create a slider widget.
-
-    Returns
-    -------
-    ipywidgets.FloatRangeSlider
-        Slider widget with default range.
-    """
-    return widgets.FloatRangeSlider(value=[5, 7], min=0, max=10, step=1)
-
-
-@pytest.fixture
-def slider_list(slider):
-    """Create a list of slider widgets.
-
-    Returns
-    -------
-    list
-        List of slider widgets.
-    """
-    return [slider for _ in range(2)]
-
-
-@pytest.fixture
-def checkbox():
-    """Create a checkbox widget.
-
-    Returns
-    -------
-    ipywidgets.Checkbox
-        Checkbox widget.
-    """
-    return widgets.Checkbox()
-
-
-@pytest.fixture
-def slider_dict(slider):
-    """Create a dict of sliders.
-
-    Returns
-    -------
-    dict
-        Dictionary mapping column names to sliders.
-    """
-    return {c: slider for c in ['LISI_score_pca', 'qc_float']}
-
-
-@pytest.fixture
-def slider_dict_grouped(slider):
-    """Create a nested dict of slider widgets.
-
-    Returns
-    -------
-    dict
-        Nested dictionary mapping columns to groups to sliders.
-    """
-    return {c: {g: slider for g in ['C1', 'C2', 'C3']} for c in ['LISI_score_pca', 'qc_float']}
-
-
-@pytest.fixture
-def slider_dict_grouped_diff(slider):
-    """Create a nested dict of slider widgets with different selections.
-
-    Returns
-    -------
-    dict
-        Nested dictionary with varied slider configurations.
-    """
-    return {"A": {"1": slider, "2": widgets.FloatRangeSlider(value=[1, 5], min=0, max=10, step=1)},
-            "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
-
-
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
-    """Load and returns an anndata object.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with QC metrics.
-    """
-
-    np.random.seed(1)  # set seed for reproducibility
-
-    adata = sc.datasets.pbmc3k_processed()
-    adata.raw = None
-
-    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-    adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-    adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-    adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-    adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-    adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-    adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-    adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-    # sc.pp.normalize_total(adata, target_sum=None)
-    # sc.pp.log1p(adata)
-
-    # sc.tl.umap(adata, n_components=3)  # to have more than two components available
-    # sc.tl.tsne(adata)
-    # sc.tl.pca(adata)
-    # sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-    # sc.tl.dendrogram(adata, groupby='clustering')
-
-    return adata
-
-
-@pytest.fixture
-def atac_adata():
-    """Fixture for an AnnData object.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object.
-    """
-    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
-    return adata
 
 
 # ------------------------------ TESTS --------------------------------- #

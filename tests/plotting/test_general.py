@@ -1,98 +1,13 @@
 """Test general plotting functions."""
 
 import pytest
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
 import scanpy as sc
 import sctoolbox.plotting.general as pl
 
 from beartype.roar import BeartypeCallHintParamViolation
-
-
-# ------------------------------ FIXTURES --------------------------------- #
-
-
-@pytest.fixture
-def df_bidir_bar():
-    """Create DataFrame for bidirectional barplot.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with left and right labels and values for bidirectional barplot.
-    """
-    return pd.DataFrame(data={'left_label': np.random.choice(["B1", "B2", "B3"], size=5),
-                              'right_label': np.random.choice(["A1", "A2", "A3"], size=5),
-                              'left_value': np.random.normal(size=5),
-                              'right_value': np.random.normal(size=5)})
-
-
-@pytest.fixture
-def df():
-    """Create and return a pandas dataframe.
-
-    Returns
-    -------
-    pd.DataFrame
-        Simple dataframe with two columns.
-    """
-    return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
-                              'col2': [3, 4, 5, 6, 7]})
-
-
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
-    """Load and returns an anndata object.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with processed data and clustering results.
-    """
-
-    np.random.seed(1)  # set seed for reproducibility
-
-    f = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', "adata.h5ad")
-    adata = sc.read_h5ad(f)
-
-    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-    adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-    adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-    adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-    adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-    adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-    adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-    adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-    sc.pp.normalize_total(adata, target_sum=None)
-    sc.pp.log1p(adata)
-
-    sc.tl.umap(adata, n_components=3)
-    sc.tl.tsne(adata)
-    # sc.tl.pca(adata)
-    sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-    # sc.tl.dendrogram(adata, groupby='clustering')
-
-    return adata
-
-
-@pytest.fixture
-def venn_dict():
-    """Create arbitrary groups for venn.
-
-    Returns
-    -------
-    dict
-        Dictionary with group names as keys and lists of items as values for Venn diagram.
-    """
-    return {"Group A": [1, 2, 3, 4, 5, 6],
-            "Group B": [2, 3, 7, 8],
-            "Group C": [3, 4, 5, 9, 10]}
 
 
 # ------------------------------ TESTS --------------------------------- #
