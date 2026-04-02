@@ -30,7 +30,7 @@ General
 In-file design
 ~~~~~~~~~~~~~~
 
-All notebooks follows the same scheme. The notebook starts with a short introduction describing the aim of the notebook, followed by the imports (code loading to setup the following steps). Then a colored cell asks for general parameters related to the analysis. This is followed by code-blocks interspaced by descriptions to support and inputs required during the analysis (see the figure below).
+All notebooks follow the same scheme. The notebook starts with a short introduction describing the aim of the notebook, followed by the imports (code loading to setup the following steps). Then a colored cell asks for general parameters related to the analysis. This is followed by code-blocks interspaced by descriptions to support and inputs required during the analysis (see the figure below).
 
 
 .. image:: image/notebook_structure.png
