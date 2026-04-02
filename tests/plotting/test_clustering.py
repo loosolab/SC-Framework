@@ -51,8 +51,8 @@ def test_search_clustering_parameters_beartype(adata):
 def test_marker_gene_clustering(adata, show_umap):
     """Test marker_gene_clustering."""
 
-    marker_dict = {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
-                   "Celltype B": ['ENSMUSG00000102272']}
+    marker_dict = {"Celltype A": list(adata.var.index[:3]),
+                   "Celltype B": list(adata.var.index[-2:])}
 
     axes_list = pl.marker_gene_clustering(adata, "condition",
                                           marker_dict, show_umap=show_umap)
