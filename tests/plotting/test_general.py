@@ -13,7 +13,7 @@ from beartype.roar import BeartypeCallHintParamViolation
 # ------------------------------ TESTS --------------------------------- #
 
 
-@pytest.mark.parametrize("color", [["clustering", "condition"], "clustering"])
+@pytest.mark.parametrize("color", [["louvain", "condition"], "louvain"])
 def test_add_figure_title_axis(adata, color):
     """Test if function _add_figure_title runs with axis object(s) as input."""
     axes = sc.pl.umap(adata, color=color, show=False)
@@ -81,7 +81,7 @@ def test_boxplot(df):
 
 
 @pytest.mark.parametrize("ylabel,color_by,hlines", [(True, None, 0.5),
-                                                    (False, "clustering", [0.5, 0.5, 0.5, 0.5])])
+                                                    (False, "louvain", [0.5, 0.5, 0.5, 0.5])])
 def test_violinplot(adata, ylabel, color_by, hlines):
     """Test violinplot success."""
     ax = pl.violinplot(adata.obs, "qc_float", color_by=color_by,

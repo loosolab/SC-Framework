@@ -95,7 +95,7 @@ def test_gene_expression_heatmap(adata, title, groupby):
                                    groupby=groupby, title=title,
                                    col_cluster=True,            # ensure title is tested
                                    show_col_dendrogram=True,    # ensure title is tested
-                                   cluster_column="clustering")
+                                   cluster_column="louvain")
     assert type(g).__name__ == "ClusterGrid"
 
 
@@ -106,7 +106,7 @@ def test_gene_expression_heatmap_error(adata, kwargs, exception):
 
     genes = adata.var_names.tolist()[:10]
     with pytest.raises(exception):
-        pl.gene_expression_heatmap(adata, genes=genes, cluster_column="clustering", **kwargs)
+        pl.gene_expression_heatmap(adata, genes=genes, cluster_column="louvain", **kwargs)
 
 
 def test_plot_differential_genes(pairwise_ranked_genes):
