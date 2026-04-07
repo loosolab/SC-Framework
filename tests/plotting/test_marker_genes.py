@@ -15,13 +15,13 @@ plt.switch_backend("Agg")
 
 
 @pytest.mark.parametrize("dendrogram,genes,key,swap_axes",
-                         [(True, ['TNFRSF4', 'CPSF3L', 'ATAD3C'], None, True),
+                         [(True, ['TNFRSF4', 'SSU72', 'PARK7'], None, True),
                           (False, None, 'rank_genes_groups', False)])
 @pytest.mark.parametrize("style", ["dots", "heatmap"])
 def test_rank_genes_plot(adata, style, dendrogram, genes, key, swap_axes):
     """Test rank_genes_plot for ranked genes and gene lists."""
     # Gene list
-    d = pl.rank_genes_plot(adata, groupby="clustering",
+    d = pl.rank_genes_plot(adata, groupby="louvain",
                            genes=genes, key=key,
                            style=style, title="Test",
                            dendrogram=dendrogram,
@@ -32,21 +32,21 @@ def test_rank_genes_plot(adata, style, dendrogram, genes, key, swap_axes):
 def test_rank_genes_plot_fail(adata):
     """Test rank_genes_plot for invalid input."""
     with pytest.raises(BeartypeCallHintParamViolation):
-        pl.rank_genes_plot(adata, groupby="clustering",
+        pl.rank_genes_plot(adata, groupby="louvain",
                            key='rank_genes_groups',
                            style="Invalid")
     with pytest.raises(KeyError, match='Could not find keys.*'):
-        pl.rank_genes_plot(adata, groupby="clustering",
+        pl.rank_genes_plot(adata, groupby="louvain",
                            key='rank_genes_groups',
                            genes=["A", "B", "C"])  # invalid genes given
     with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
         pl.rank_genes_plot(adata, groupby=None,
-                           genes=['RER1', 'TNFRSF25'])
+                           genes=['TNFRSF4', 'SRM'])
 
 
-@pytest.mark.parametrize("x,y,norm", [("clustering", "C1orf86", True),
+@pytest.mark.parametrize("x,y,norm", [("louvain", "EFHD2", True),
                                       ("SRM", None, False),
-                                      ("clustering", "qc_float", True)])
+                                      ("louvain", "qc_float", True)])
 @pytest.mark.parametrize("style", ["violin", "boxplot", "bar"])
 def test_grouped_violin(adata, x, y, norm, style):
     """Test grouped_violin success."""
@@ -121,8 +121,8 @@ def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
 
 
 @pytest.mark.parametrize("gene_list,save,figsize",
-                         [(['EFHD2', 'DDI2', 'SPEN'], None, (2, 2)),
-                          ("SDHB", "out.png", None)])
+                         [(['EFHD2', 'SSU72', 'PARK7'], None, (2, 2)),
+                          ("SRM", "out.png", None)])
 def test_plot_gene_correlation(adata, gene_list, save, figsize):
     """Test gene correlation."""
     axes = pl.plot_gene_correlation(adata, "TNFRSF4", gene_list,
