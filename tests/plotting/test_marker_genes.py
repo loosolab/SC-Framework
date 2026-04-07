@@ -58,19 +58,17 @@ def test_grouped_violin(adata, x, y, norm, style):
     assert ax_type.startswith("Axes")
 
 
-def test_grouped_violin_fail(adata):
+@pytest.mark.parametrize("kwargs,exception,match", [
+    ({"x": "Invalid", "y": None, "groupby": "condition"}, ValueError, 'is not a column in adata.obs or a gene in adata.var.index'),
+    ({"x": ["louvain", "SRM"], "y": None, "groupby": "condition"}, ValueError, 'x must be either a column in adata.obs or all genes in adata.var.index'),
+    ({"x": "louvain", "y": "Invalid", "groupby": "condition"}, ValueError, 'was not found in either adata.obs or adata.var.index'),
+    ({"x": "louvain", "y": None, "groupby": "condition"}, ValueError, "Because 'x' is a column in obs, 'y' must be given as parameter"),
+    ({"x": "SRM", "y": None, "groupby": "condition", "style": "Invalid"}, BeartypeCallHintParamViolation, None),
+])
+def test_grouped_violin_fail(adata, kwargs, exception, match):
     """Test grouped_violin fail."""
-
-    with pytest.raises(ValueError, match='is not a column in adata.obs or a gene in adata.var.index'):
-        pl.grouped_violin(adata, x="Invalid", y=None, groupby="condition")
-    with pytest.raises(ValueError, match='x must be either a column in adata.obs or all genes in adata.var.index'):
-        pl.grouped_violin(adata, x=["clustering", "UBIAD1"], y=None, groupby="condition")
-    with pytest.raises(ValueError, match='was not found in either adata.obs or adata.var.index'):
-        pl.grouped_violin(adata, x="clustering", y="Invalid", groupby="condition")
-    with pytest.raises(ValueError, match="Because 'x' is a column in obs, 'y' must be given as parameter"):
-        pl.grouped_violin(adata, x="clustering", y=None, groupby="condition")
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.grouped_violin(adata, x="PRDM2", y=None, groupby="condition", style="Invalid")
+    with pytest.raises(exception, match=match):
+        pl.grouped_violin(adata, **kwargs)
 
 
 def test_group_expression_boxplot(adata):
