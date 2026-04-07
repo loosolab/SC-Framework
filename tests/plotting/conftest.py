@@ -17,48 +17,6 @@ __rank_key = "rank_genes_groups"
 
 
 # ------------------------------ FIXTURES --------------------------------- #
-# test_clustering.py
-
-
-# @pytest.fixture(scope="session")  # reuse the fixture for all tests
-# def adata():
-#     """Load and returns an anndata object.
-
-#     Returns
-#     -------
-#     anndata.AnnData
-#         AnnData object with processed data and clustering results.
-#     """
-
-#     np.random.seed(1)  # set seed for reproducibility
-
-#     f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
-#     adata = sc.read_h5ad(f)
-
-#     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-#     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-#     adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-#     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-#     adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-#     adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-#     sc.pp.normalize_total(adata, target_sum=None)
-#     sc.pp.log1p(adata)
-
-#     sc.tl.umap(adata, n_components=3)
-#     sc.tl.tsne(adata)
-#     # sc.tl.pca(adata)
-#     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-#     # sc.tl.dendrogram(adata, groupby='clustering')
-
-#     return adata
-
-# ------------------------------ FIXTURES --------------------------------- #
-# test_embedding_pl.py
 
 
 def _make_adata():
@@ -89,16 +47,10 @@ def _make_adata():
     adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
     adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
 
-    # sc.pp.normalize_total(adata, target_sum=None)
-    # sc.pp.log1p(adata)
-
     sc.tl.umap(adata, n_components=3)  # to have more than two components available
     sc.tl.tsne(adata)
-    # sc.tl.pca(adata)
 
     sc.tl.rank_genes_groups(adata, groupby='louvain', key_added=__rank_key)
-
-    # sc.tl.dendrogram(adata, groupby='clustering')
 
     return adata
 
@@ -127,19 +79,6 @@ def adata_fun_scope():
     return _make_adata()
 
 
-# @pytest.fixture
-# def df():
-#     """Create and return a pandas dataframe.
-
-#     Returns
-#     -------
-#     pd.DataFrame
-#         Simple dataframe with two columns.
-#     """
-#     return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
-#                               'col2': [3, 4, 5, 6, 7]})
-
-
 @pytest.fixture
 def tmp_file():
     """
@@ -157,9 +96,6 @@ def tmp_file():
     # clean up directory and contents
     shutil.rmtree(tmpdir)
 
-
-# ------------------------------ FIXTURES --------------------------------- #
-# test_general.py
 
 @pytest.fixture
 def df_bidir_bar():
@@ -189,44 +125,6 @@ def df():
                               'col2': [3, 4, 5, 6, 7]})
 
 
-# @pytest.fixture(scope="session")  # reuse the fixture for all tests
-# def adata():
-#     """Load and returns an anndata object.
-
-#     Returns
-#     -------
-#     anndata.AnnData
-#         AnnData object with processed data and clustering results.
-#     """
-
-#     np.random.seed(1)  # set seed for reproducibility
-
-#     f = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', "adata.h5ad")
-#     adata = sc.read_h5ad(f)
-
-#     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-#     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-#     adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-#     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-#     adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-#     adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-#     sc.pp.normalize_total(adata, target_sum=None)
-#     sc.pp.log1p(adata)
-
-#     sc.tl.umap(adata, n_components=3)
-#     sc.tl.tsne(adata)
-#     # sc.tl.pca(adata)
-#     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-#     # sc.tl.dendrogram(adata, groupby='clustering')
-
-#     return adata
-
-
 @pytest.fixture
 def venn_dict():
     """Create arbitrary groups for venn.
@@ -240,9 +138,6 @@ def venn_dict():
             "Group B": [2, 3, 7, 8],
             "Group C": [3, 4, 5, 9, 10]}
 
-
-# ------------------------------ FIXTURES --------------------------------- #
-# test_gsea_plotting.py
 
 @pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata_gsea():
@@ -262,90 +157,6 @@ def adata_gsea():
                                    inplace=True)
 
     return adata
-
-
-# ------------------------------ FIXTURES --------------------------------- #
-# test_gsea_plotting.py
-
-
-# @pytest.fixture(scope="session")  # reuse the fixture for all tests
-# def adata():
-#     """Load and returns an anndata object.
-
-#     Returns
-#     -------
-#     anndata.AnnData
-#         AnnData object with processed data.
-#     """
-
-#     np.random.seed(1)  # set seed for reproducibility
-
-#     f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
-#     adata = sc.read_h5ad(f)
-
-#     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-#     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-#     adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-#     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-#     adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-#     adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-#     sc.pp.normalize_total(adata, target_sum=None)
-#     sc.pp.log1p(adata)
-
-#     sc.tl.umap(adata, n_components=3)
-#     sc.tl.tsne(adata)
-#     # sc.tl.pca(adata)
-#     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-#     # sc.tl.dendrogram(adata, groupby='clustering')
-
-#     return adata
-
-
-# ------------------------------ FIXTURES --------------------------------- #
-# test_marker_genes.py
-
-
-# @pytest.fixture(scope="session")  # reuse the fixture for all tests
-# def adata():
-#     """Load and returns an anndata object.
-
-#     Returns
-#     -------
-#     anndata.AnnData
-#         AnnData object with processed data and ranked genes.
-#     """
-
-#     np.random.seed(1)  # set seed for reproducibility
-
-#     adata = sc.datasets.pbmc3k_processed()
-#     adata.raw = None
-
-#     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-#     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-#     adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-#     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-#     adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-#     adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-#     # sc.pp.normalize_total(adata, target_sum=None)
-#     # sc.pp.log1p(adata)
-
-#     # sc.tl.umap(adata, n_components=3)  # to have more than two components available
-#     # sc.tl.tsne(adata)
-#     # sc.tl.pca(adata)
-#     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-#     # sc.tl.dendrogram(adata, groupby='clustering')
-
-#     return adata
 
 
 @pytest.fixture
@@ -376,10 +187,6 @@ def pairwise_ranked_genes_nosig():
                               "1/3_group": ["NS", "NS", "NS", "NS"],
                               "2/3_group": ["NS", "NS", "NS", "NS"]},
                         index=["GeneA", "GeneB", "GeneC", "GeneD"])
-
-
-# ------------------------------ FIXTURES --------------------------------- #
-# test_planet_plot.py
 
 
 @pytest.fixture(scope="session")  # reuse the fixture for all tests
@@ -424,10 +231,6 @@ def adata_planet_plot():
 
     adata.obs = df
     return adata
-
-
-# ------------------------------ FIXTURES --------------------------------- #
-# test_qc_filter.py
 
 
 @pytest.fixture
@@ -503,44 +306,6 @@ def slider_dict_grouped_diff(slider):
             "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
 
 
-# @pytest.fixture(scope="session")  # reuse the fixture for all tests
-# def adata():
-#     """Load and returns an anndata object.
-
-#     Returns
-#     -------
-#     anndata.AnnData
-#         AnnData object with QC metrics.
-#     """
-
-#     np.random.seed(1)  # set seed for reproducibility
-
-#     adata = sc.datasets.pbmc3k_processed()
-#     adata.raw = None
-
-#     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-#     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-#     adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-#     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-#     adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-#     adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-#     # sc.pp.normalize_total(adata, target_sum=None)
-#     # sc.pp.log1p(adata)
-
-#     # sc.tl.umap(adata, n_components=3)  # to have more than two components available
-#     # sc.tl.tsne(adata)
-#     # sc.tl.pca(adata)
-#     # sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-#     # sc.tl.dendrogram(adata, groupby='clustering')
-
-#     return adata
-
-
 @pytest.fixture
 def atac_adata():
     """Fixture for an AnnData object.
@@ -552,45 +317,3 @@ def atac_adata():
     """
     adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
     return adata
-
-
-# ------------------------------ FIXTURES --------------------------------- #
-# test_velocity.py
-
-
-# @pytest.fixture(scope="session")  # reuse the fixture for all tests
-# def adata():
-#     """Load and returns an anndata object.
-
-#     Returns
-#     -------
-#     anndata.AnnData
-#         Preprocessed AnnData object.
-#     """
-
-#     np.random.seed(1)  # set seed for reproducibility
-
-#     f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
-#     adata = sc.read_h5ad(f)
-
-#     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-#     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-#     adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-#     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-#     adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-#     adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-#     adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-#     sc.pp.normalize_total(adata, target_sum=None)
-#     sc.pp.log1p(adata)
-
-#     sc.tl.umap(adata, n_components=3)
-#     sc.tl.tsne(adata)
-#     # sc.tl.pca(adata)
-#     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-#     # sc.tl.dendrogram(adata, groupby='clustering')
-
-#     return adata
