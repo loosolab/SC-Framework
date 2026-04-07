@@ -75,6 +75,10 @@ def _make_adata():
     adata = sc.datasets.pbmc68k_reduced()
     adata.raw = None
 
+    # create nonsense layers to enable velocity testing
+    adata.layers["spliced"] = adata.X * 2
+    adata.layers["unspliced"] = adata.X * 3
+
     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
     adata.obs["cat"] = adata.obs["condition"].astype("category")
 
