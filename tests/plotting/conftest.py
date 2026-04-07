@@ -92,10 +92,7 @@ def _make_adata():
     sc.tl.tsne(adata)
     # sc.tl.pca(adata)
 
-    sc.tl.rank_genes_groups(adata,
-                            groupby='louvain',
-                            key_added=__rank_key,
-                            n_genes=250)
+    sc.tl.rank_genes_groups(adata, groupby='louvain', key_added=__rank_key)
 
     # sc.tl.dendrogram(adata, groupby='clustering')
 
