@@ -10,6 +10,11 @@ import pandas as pd
 import ipywidgets as widgets
 import sctoolbox.tools as tools
 
+# ---------------------------- Script variables --------------------------- #
+# global variables for this script
+
+__rank_key = "rank_genes_groups"
+
 
 # ------------------------------ FIXTURES --------------------------------- #
 # test_clustering.py
@@ -67,11 +72,10 @@ def _make_adata():
 
     np.random.seed(1)  # set seed for reproducibility
 
-    adata = sc.datasets.pbmc3k_processed()
+    adata = sc.datasets.pbmc68k_reduced()
     adata.raw = None
 
     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-    adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
     adata.obs["cat"] = adata.obs["condition"].astype("category")
 
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
@@ -87,7 +91,12 @@ def _make_adata():
     sc.tl.umap(adata, n_components=3)  # to have more than two components available
     sc.tl.tsne(adata)
     # sc.tl.pca(adata)
-    sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
+
+    sc.tl.rank_genes_groups(adata,
+                            groupby='louvain',
+                            key_added=__rank_key,
+                            n_genes=250)
+
     # sc.tl.dendrogram(adata, groupby='clustering')
 
     return adata
@@ -243,13 +252,14 @@ def adata_gsea():
     anndata.AnnData
         AnnData object with GSEA results.
     """
-    adata = sc.datasets.pbmc68k_reduced()
-    tools.marker_genes.run_rank_genes(adata, "louvain")
+    adata = _make_adata()
+
     tools.gsea.gene_set_enrichment(adata,
-                                   marker_key="rank_genes_louvain_filtered",
+                                   marker_key=__rank_key,
                                    organism="human",
                                    method="prerank",
                                    inplace=True)
+
     return adata
 
 
