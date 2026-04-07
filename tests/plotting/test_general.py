@@ -23,7 +23,7 @@ def test_add_figure_title_axis(adata, color):
 
 def test_add_figure_title_axis_dict(adata):
     """Test if function _add_figure_title runs with axis dict as input."""
-    markers = ['ENSMUSG00000103377', 'ENSMUSG00000102851']
+    markers = list(adata.var.index[:2])  # get the first two gene names
     axes = sc.pl.dotplot(adata, markers, groupby='condition',
                          dendrogram=True, show=False)
     pl._add_figure_title(axes, "Dotplot", fontsize=20)
