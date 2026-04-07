@@ -80,7 +80,7 @@ for f in notebooks:
     elif "general_notebooks" in f:
         notebook_folder = "general-notebooks/"
     else:
-        raise ValueError("Did not recoginze notebook type.")
+        raise ValueError("Did not recognize notebook type.")
 
     os.makedirs(notebook_folder, exist_ok=True)  # create folder if it doesn't exist
 

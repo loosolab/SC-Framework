@@ -1475,7 +1475,7 @@ def _classify_trend_pattern(curve: pd.Series) -> str:
 
     # Locate the main maximum and minimum positions.
     peak_idx = int(np.nanargmax(y))
-    trough_idx = int(np.nanargmin(y))
+    through_idx = int(np.nanargmin(y))
 
     # Use overall change and total spread as simple shape summaries.
     delta = end - start
@@ -1494,7 +1494,7 @@ def _classify_trend_pattern(curve: pd.Series) -> str:
         return "transient peak"
 
     # Middle lower than both ends suggests a transient dip.
-    if middle < start - 0.5 and middle < end - 0.5 and early_cut <= trough_idx <= late_cut:
+    if middle < start - 0.5 and middle < end - 0.5 and early_cut <= through_idx <= late_cut:
         return "transient dip"
 
     # Strong increase with a late maximum suggests late activation.
@@ -1878,7 +1878,7 @@ def plot_branch_gene_programs(  # noqa: C901
                 "start_value": centroid_z.iloc[:, 0].values,
                 "end_value": centroid_z.iloc[:, -1].values,
                 "peak_bin": centroid_z.idxmax(axis=1).values,
-                "trough_bin": centroid_z.idxmin(axis=1).values,
+                "through_bin": centroid_z.idxmin(axis=1).values,
             }
         )
 

@@ -1,4 +1,5 @@
 """Tools for marker gene analyis."""
+from typing import Sequence, Union
 
 import re
 import glob
@@ -101,6 +102,9 @@ def label_genes(adata: sc.AnnData,  # noqa: C901
                 # gender args
                 g_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
                 g_regex: Optional[str] = None,
+                # apoptosis args
+                a_genes: Optional[list[str] | str | Literal["internal"]] = None,
+                a_regex: Optional[str] = None,
                 # report args
                 report: Optional[str] = None,
                 show_mismatches: Optional[int] = 3
@@ -132,6 +136,10 @@ def label_genes(adata: sc.AnnData,  # noqa: C901
         Either a list of gender genes, a file containing one gender gene name per line or 'internal' to use an sctoolbox provided list.
     g_regex : Optional[str]
         A regex to identify gender genes if 'g_genes' is not available or failing.
+    a_genes : Optional[list[str], str, Literal["internal"]], default "internal"
+        Either a list of apoptosis genes, a file containing one apoptosis gene name per line or 'internal' to use an sctoolbox provided list.
+    a_regex : Optional[str]
+        A regex to identify apoptosis genes if 'a_genes' is not available or failing.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     show_mismatches : Optional[int], default 3
@@ -153,8 +161,8 @@ def label_genes(adata: sc.AnnData,  # noqa: C901
     """
     if species:
         species = species.lower()
-    elif m_genes == "internal" or r_genes == "internal" or g_genes == "internal":
-        raise ValueError("Species is mandatory for usage of internal genelists. Either set the parameter 'species' or set 'm_genes', 'r_genes' and 'g_genes' to not be 'internal'.")
+    elif m_genes == "internal" or r_genes == "internal" or g_genes == "internal" or a_genes == "internal":
+        raise ValueError("Species is mandatory for usage of internal genelists. Either set the parameter 'species' or set 'm_genes', 'r_genes', 'g_genes' and 'a_genes' to not be 'internal'.")
 
     # Get the full list of genes from adata
     if gene_column is None:
@@ -167,7 +175,8 @@ def label_genes(adata: sc.AnnData,  # noqa: C901
 
     for kind, labeler, regex in [("mito", m_genes, m_regex),
                                  ("ribo", r_genes, r_regex),
-                                 ("gender", g_genes, g_regex)]:
+                                 ("gender", g_genes, g_regex),
+                                 ("apoptosis", a_genes, a_regex)]:
         # prepare genelist if needed
         if labeler == "internal":
             available_species = utils.general.clean_flanking_strings(glob.glob(str(_GENELIST_LOC / f"*_{kind}_genes.txt")))
@@ -544,7 +553,7 @@ def get_rank_genes_tables(adata: sc.AnnData,  # noqa: C901
     save_excel : Optional[str], default None
         The path to a file for writing the marker gene tables as an excel file (with one sheet per group).
     alt_name : dict[str, str], default {}
-        Alternative names to be used as sheet names. Needed when sanitized names are not unique, which can happen when names are shortened to the first 30 charachter.
+        Alternative names to be used as sheet names. Needed when sanitized names are not unique, which can happen when names are shortened to the first 30 character.
         Only relevant when saving to excel.
         E.g. ["Truncated_reeeeeally_long_name_1", "Truncated_reeeeeally_long_name_2"] would be shortened to "Truncated_reeeeeally_long_name" in both cases so names are duplicated.
         This is solved with alternate names: {"Truncated_reeeeeally_long_name_1": "Unique_1", "Truncated_reeeeeally_long_name_2": "Unique_2"}.
@@ -931,56 +940,136 @@ def run_deseq2(adata: sc.AnnData,  # noqa: C901
 
 @deco.log_anndata
 @beartype
-def score_genes(adata: sc.AnnData,
-                gene_set: str | list[str],
-                score_name: str = 'score',
-                inplace: bool = True,
-                **kwargs: Any) -> Optional[sc.AnnData]:
+def score_genes(  # noqa: C901
+    adata: sc.AnnData,
+    gene_set: Union[str, list[str], Literal["internal"], dict[str, Union[str, list[str], Literal["internal"]]]],
+    score_name: Union[str, Sequence[str]],
+    species: Optional[str] = None,
+    inplace: bool = True,
+    **kwargs: Any,
+) -> Optional[sc.AnnData]:
     """
-    Assign a score to each cell depending on the expression of a set of genes. This is a wrapper for scanpy.tl.score_genes.
+    Calculate one or multiple Scanpy gene scores and store them in `adata.obs`.
 
     Parameters
     ----------
     adata : sc.AnnData
-        Anndata object to score.
-    gene_set : str | list[str]
-        A list of genes or path to a file containing a list of genes.
-        The txt file should have one gene per row.
-    score_name : str, default "score"
-        Name of the column in obs table where the score will be added.
+        AnnData object to score.
+
+    gene_set : str | list[str] | "internal" | dict
+        Gene set definition(s).
+        - list[str]: explicit gene symbols (used for a single score, or for all scores if multiple are given)
+        - str: path to TXT file (one gene per line)
+        - "internal": loads internal list from `sctoolbox/data/gene_lists/{species}_{score}_genes.txt`
+        - dict: mapping score -> gene_set (each value can be list[str] | path str | "internal")
+
+    score_name : str | Sequence[str]
+        Score identifier(s). Examples:
+        - "mito" or "mito_score"
+        - ["mito", "apoptosis"]
+        The function normalizes "xxx_score" to "xxx" and stores results under "{xxx}_score".
+
+    species : str, optional
+        Required if any gene_set resolves to "internal".
+        Example: "human", "mouse", "rat", "zebrafish".
+
     inplace : bool, default True
-        Adds the new column to the original anndata object.
+        If True, modifies `adata` and returns None.
+        If False, returns a copy with added columns.
+
     **kwargs : Any
-        Additional arguments to be passed to scanpy.tl.score_genes.
+        Forwarded to `scanpy.tl.score_genes` (e.g. ctrl_size, n_bins, use_raw, random_state, gene_pool, ...)
 
     Returns
     -------
     Optional[sc.AnnData]
-        If inplace is False, return a copy of anndata object with the new column in the obs table.
+        None if inplace=True, else the modified AnnData copy.
 
-    Raises
-    ------
-    FileNotFoundError
-        If path given in gene_set does not lead to a file.
+    Notes
+    -----
+    Scanpy uses `score_name` only to name the output column in `.obs`.
+    The score itself depends on `gene_list`.
     """
 
+    # --- Copy behavior ---
     if not inplace:
         adata = adata.copy()
 
-    # check if list is in a file
-    if isinstance(gene_set, str):
-        # check if file exists
-        if Path(gene_set).is_file():
-            gene_set = [x.strip() for x in open(gene_set)]
-        else:
-            raise FileNotFoundError('The list was not found!')
+    # --- Normalize score_name(s) ---
+    if isinstance(score_name, str):
+        scores = [score_name.strip()]
+    else:
+        scores = [s.strip() for s in score_name]
 
-    # scale data
+    # --- Helper: resolve a gene_set for a given score ---
+    def resolve_genes_for_score(sc_name: str, gene_set: Union[str, list[str], Literal["internal"], dict[str, Union[str, list[str], Literal["internal"]]]]) -> list[str]:  # noqa: C901
+        # choose the right "gene_set spec" for this score
+        gs_spec = gene_set
+        if isinstance(gene_set, dict):
+            if sc_name not in gene_set:
+                raise ValueError(
+                    f"gene_set is a dict, but no entry found for score '{sc_name}'. "
+                    f"Available keys: {list(gene_set.keys())}"
+                )
+            gs_spec = gene_set[sc_name]
+
+        # now resolve gs_spec -> loaded_genes
+        if isinstance(gs_spec, list):
+            loaded = gs_spec
+
+        elif isinstance(gs_spec, str):
+            if gs_spec.lower() == "internal":
+                if species is None:
+                    raise ValueError("Please provide `species` when using gene_set='internal'.")
+                internal_path = _GENELIST_LOC / f"{species}_{sc_name}_genes.txt"
+                if not internal_path.is_file():
+                    raise FileNotFoundError(f"Internal gene list not found: {internal_path}")
+                loaded = utils.general.read_list_file(str(internal_path))
+                logger.info(
+                    f"Loaded internal genelist score='{sc_name}' for species='{species}' "
+                    f"({len(loaded)} genes)."
+                )
+            else:
+                path = Path(gs_spec)
+                if not path.is_file():
+                    raise FileNotFoundError(f"Gene list file not found: {path}")
+                loaded = utils.general.read_list_file(str(path))
+                logger.info(f"Loaded genelist from file '{path}' ({len(loaded)} genes).")
+
+        else:
+            # Literal["internal"] also comes as str, so this is mostly defensive
+            raise TypeError("Unsupported gene_set type.")
+
+        # filter genes to those present
+        present = [g for g in loaded if g in adata.var_names]
+        missing = [g for g in loaded if g not in adata.var_names]
+
+        if missing:
+            logger.warning(
+                f"[{sc_name}] {len(missing)} of {len(loaded)} gene(s) not found in adata.var_names and will be ignored."
+            )
+        if len(present) == 0:
+            raise ValueError(f"[{sc_name}] None of the provided genes are present in `adata.var_names`.")
+        if len(present) < 5:
+            logger.warning(
+                f"[{sc_name}] Only {len(present)} genes are present. The resulting score may be unstable."
+            )
+
+        return present
+
+    # --- Compute scores
     sdata = sc.pp.scale(adata, copy=True)
 
-    # Score the cells
-    sc.tl.score_genes(sdata, gene_list=gene_set, score_name=score_name, **kwargs)
-    # add score to adata.obs
-    adata.obs[score_name] = sdata.obs[score_name]
+    for sc_name in scores:
+        genes = resolve_genes_for_score(sc_name, gene_set)
+        obs_key = sc_name
+
+        sc.tl.score_genes(
+            sdata,
+            gene_list=genes,
+            score_name=obs_key,
+            **kwargs,
+        )
+        adata.obs[obs_key] = sdata.obs[obs_key]
 
     return adata if not inplace else None

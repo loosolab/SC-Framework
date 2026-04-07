@@ -111,7 +111,8 @@ dependencies = [
         'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
         'Jinja2',
-        'scikit-image'
+        'scikit-image',
+        'PyGithub'
 ]
 
 [project.optional-dependencies]
@@ -191,6 +192,9 @@ test = [
     "pytest-html"
 ]
 
+[project.scripts]
+SCF-analysis-setup = "sctoolbox.utils.cli:main"
+
 [project.urls]
 Repository = "https://github.com/loosolab/SC-Framework"
 Documentation = "https://loosolab.pages.gwdg.de/software/sc_framework/"
@@ -224,7 +228,7 @@ testpaths = [
 ]
 
 [tool.ruff]
-# Include these directores and files
+# Include these directories and files
 include = [
     "pyproject.toml",
     "src/**/*.py",
@@ -284,3 +288,34 @@ convention = "numpy"
 "tests/*" = [
     "ANN"  # disable the flake8-annotation rules
 ]
+
+[tool.codespell]
+# Skip specific directories and file patterns
+# Use commas for multiple entries; globs are supported
+skip = './src/sctoolbox/data,./atac_analysis/notebooks/test_data,./tests/data,.cache'
+
+# Comma-separated list of words to ignore (case-sensitive)
+#ignore-words-list = 'sur,nd,te,mytechnicalterm'  # codespell:ignore
+
+# skip lines that match the regex
+# skips images encoded in jupyter notebooks
+ignore-regex = '\s*"image/(png|jpeg)":\s*".*'
+
+# quiet-level 3: suppresses encoding and binary file warnings
+quiet-level = 3
+
+# Check file names for typos as well
+check-filenames = true
+
+# Check hidden files
+check-hidden = true
+
+# print x lines of surrounding context
+# before-context = 1
+# after-context = 1
+
+# Display a total typo count
+count = true
+
+# print a summary
+summary = true

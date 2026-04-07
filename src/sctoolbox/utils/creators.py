@@ -1,17 +1,29 @@
 """Modules for creating files or directories."""
 
-import pathlib
 import gitlab
 from getpass import getpass
 import warnings
 import re
 from throttler import Throttler
 import time
+from github import Github, Auth
+from pathlib import Path
+import tqdm
+import requests
+
+import deprecation
+from sctoolbox import __version__
 
 from beartype import beartype
 from beartype.typing import Optional, Any, Literal
 
+from sctoolbox._settings import settings
+logger = settings.logger
 
+
+@deprecation.deprecated(deprecated_in="0.15.0", removed_in="0.17.0",
+                        current_version=__version__,
+                        details="Superseded by 'sctoolbox.utils.creators.github_download'.")
 @beartype
 def gitlab_download(internal_path: str,  # noqa: C901
                     file_regex: str,
@@ -21,8 +33,8 @@ def gitlab_download(internal_path: str,  # noqa: C901
                     commit: Optional[str] = None,
                     out_path: str = "./",
                     private: bool = False,
-                    load_token: str = str(pathlib.Path.home() / ".gitlab_token"),
-                    save_token: str = str(pathlib.Path.home() / ".gitlab_token"),
+                    load_token: str = str(Path.home() / ".gitlab_token"),
+                    save_token: str = str(Path.home() / ".gitlab_token"),
                     overwrite: bool = False,
                     max_calls: int = 5,
                     period: int = 60) -> None:
@@ -47,12 +59,12 @@ def gitlab_download(internal_path: str,  # noqa: C901
         Where the fike/dir should be downloaded to
     private :  bool, default False
         Set true if repo is private
-    load_token : str, default 'pathlib.Path.home() / ".gitlab_token"'
+    load_token : str, default 'Path.home() / ".gitlab_token"'
         Load token from file. Set to None for new token
-    save_token : str, default 'pathlib.Path.home() / ".gitlab_token"'
+    save_token : str, default 'Path.home() / ".gitlab_token"'
         Save token to file
     overwrite : bool, default False
-        Overwrite file if it exsits in the directory
+        Overwrite file if it exists in the directory
     max_calls : int, default 5
         limit file download rate per period
     period : int, default 60
@@ -61,7 +73,7 @@ def gitlab_download(internal_path: str,  # noqa: C901
     Raises
     ------
     ValueError
-        If repository is inaccesible.
+        If repository is inaccessible.
     """
 
     def limited(until: float) -> None:
@@ -74,7 +86,7 @@ def gitlab_download(internal_path: str,  # noqa: C901
         branch = commit
 
     if private:
-        load_token_file = pathlib.Path(load_token).is_file() if load_token else False
+        load_token_file = Path(load_token).is_file() if load_token else False
         if load_token_file:
             with open(load_token, 'r') as token_file:
                 token = token_file.readline().strip()
@@ -101,7 +113,7 @@ def gitlab_download(internal_path: str,  # noqa: C901
         for item in items:
             if item["type"] != "blob" or not re.search(file_regex, item["name"]):
                 continue
-            out = pathlib.Path(out_path) / item["name"]
+            out = Path(out_path) / item["name"]
             if not out.is_file() or overwrite:
                 print(f"Downloading: {item['name']}")
                 with rate_limiter:
@@ -113,6 +125,9 @@ def gitlab_download(internal_path: str,  # noqa: C901
         print("Error:", e)
 
 
+@deprecation.deprecated(deprecated_in="0.15.0", removed_in="0.17.0",
+                        current_version=__version__,
+                        details="Use `sctoolbox.utils.creators.add_analysis` instead.")
 @beartype
 def setup_experiment(dest: str,
                      dirs: list[str] = ["raw", "preprocessing", "Analysis"]) -> None:
@@ -133,73 +148,104 @@ def setup_experiment(dest: str,
     """
 
     print("Setting up experiment:")
-    if pathlib.Path(dest).exists():
+    if Path(dest).exists():
         raise Exception(f"Directory '{dest}' already exists. "
                         + "Please make sure you are not going to "
                         + "overwrite an existing project. Exiting..")
 
     for dir in dirs:
-        path_to_build = pathlib.Path(dest) / dir
+        path_to_build = Path(dest) / dir
         path_to_build.mkdir(parents=True, exist_ok=True)
         print(f"Build: {path_to_build}")
 
 
+@beartype
 def add_analysis(dest: str,
                  analysis_name: str,
                  method: Literal["rna", "atac"] = "rna",
-                 dirs: list[str] = ['figures', 'data', 'logs'],
-                 starts_with: int = 1,
+                 general: bool = True,
+                 notes: Optional[str] = "notes.md",
                  **kwargs: Any) -> None:
     """
     Create and add a new analysis/run.
 
-    Note: Only works for Notebooks until number 99.
-    Needs to be adjusted if we exceed 89 notebooks.
+    This function will create a directory in `dest` with the name `analysis_name` and populate it with the selected analysis notebooks.
 
     Parameters
     ----------
     dest : str
-        Path to experiment.
+        Path to which `analysis_name` directory is added.
     analysis_name : str
         Name of the new analysis run.
     method : Literal["rna", "atac"], default "rna"
         Type of notebooks to download.
-    dirs : list[str], default ['figures', 'data', 'logs']
-        Internal folders to create besides 'notebooks' directory.
-    starts_with : int, default 1
-        Notebook the analysis will start with.
+    general : bool, default True
+        Whether to download the notebooks independent of the method.
+    notes : Optional[str], default "notes.md"
+        Adds an empty notes file to the analysis folder.
     **kwargs : Any
-        Forwarded to `gitlab_download`.
+        Forwarded to `github_download`.
 
     Raises
     ------
     FileNotFoundError
-        If path to experiment does not exist.
-    ValueError
-        If `method` is invalid.
+        If the directory given in `dest` does not exist.
+    FileExistsError
+        If the `analysis_name` already exists.
     """
 
-    analysis_path = pathlib.Path(dest) / "Analysis"
+    analysis_path = Path(dest)
     if not analysis_path.exists():
-        raise FileNotFoundError("Analysis directory not found."
+        raise FileNotFoundError("Analysis directory (dest) not found."
                                 + "Please check if you entered the right "
                                 + "directory or if it was setup correctly.")
-    run_path = analysis_path / analysis_name
-    method = method.lower()
-    if method not in ['rna', 'atac']:
-        raise ValueError("Invalid method type. Valid options: 'rna', 'atac'")
 
-    # Setup run directorys
-    setup_experiment(run_path, dirs=dirs + ["notebooks"])
-    # Build notebook regex
-    regex = build_notebooks_regex(starts_with)
+    run_path = analysis_path / analysis_name
+
+    if run_path.exists():
+        raise FileExistsError(f"The analysis directory {run_path} already exists suggesting a preexisting analysis. "
+                              + "Please use another name or manually delete the directory before trying again.")
+
+    # create the directory
+    run_path.mkdir()
 
     # Download notebooks
-    print("Downloading notebooks..")
-    gitlab_download(f"{method}-notebooks", file_regex=regex, out_path=run_path / "notebooks", **kwargs)
-    gitlab_download(f"{method}-notebooks", file_regex="config.yaml", out_path=run_path / "notebooks", **kwargs)
+    logger.info(f"Downloading {method} notebooks...")
+
+    # create a dict of default parameters
+    ghd_params = {
+        "outpath": str(run_path),
+        "match": ".ipynb|.yaml|.pptx",
+    }
+    ghd_params.update(kwargs)
+
+    # method specific notebooks
+    if method == "rna":
+        nb_path = "rna_analysis/notebooks"
+    elif method == "atac":
+        nb_path = "atac_analysis/notebooks"
+
+    github_download(path=nb_path, **ghd_params)
+
+    # general notebooks
+    if general:
+        logger.info("Downloading general notebooks...")
+        # update the parameters to download the general notebooks to the notebooks dir
+        ghd_params.update({
+            "outpath": str(Path(run_path) / nb_path),
+            "keep_repo_structure": False
+        })
+
+        github_download(path="general_notebooks", **ghd_params)
+
+    # add an empty notes file
+    if notes:
+        (run_path / notes).touch()
 
 
+@deprecation.deprecated(deprecated_in="0.15.0", removed_in="0.17.0",
+                        current_version=__version__,
+                        details="No longer required.")
 @beartype
 def build_notebooks_regex(starts_with: int) -> str:
     """
@@ -233,3 +279,93 @@ def build_notebooks_regex(starts_with: int) -> str:
         # Needs change if we ever reach 90+ Notebooks
         raise ValueError("starts_with needs to be lower than 90")
     return regex
+
+
+@beartype
+def github_download(path: str,
+                    repo: str = "loosolab/SC-Framework",
+                    outpath: str = ".",
+                    keep_repo_structure: bool = True,
+                    match: Optional[str] = None,
+                    access_token: Optional[str] = None,
+                    overwrite: bool = False,
+                    reference: Optional[str] = None) -> None:
+    """
+    Download the a file or directory from the given repository.
+
+    Parameters
+    ----------
+    path : str
+        Path to a file or folder within the repository. This is not a recursive downloader, meaning that directories in the specified path will be ignored.
+    repo : str, default loosolab/SC-Framework
+        The repository name.
+    outpath : str, default .
+        Local path where the file(s) will be saved.
+    keep_repo_structure : bool, default True
+        If True, will create the path given by `path` in the location given by `outpath`.
+    match : Optional[str], default None
+        Regex; matching files will be downloaded.
+    access_token : Optional[str], default None
+        GitHub personal access token. May be supplied in case of throttling.
+        See `here <https://github.com/settings/tokens>`_ to create one (you have to be logged in).
+    overwrite : bool, default False
+        Skip or overwrite preexisting files.
+    reference : Optional[str], default None
+        Download the files from a specific branch/tag/commit. Can be a branch name, tag name or a commit-sha.
+    """
+    # authenticate
+    if access_token:
+        auth = Auth.Token(access_token)
+    else:
+        auth = None
+
+    # initialize GitHub
+    with Github(auth=auth) as github:
+        # connect to repository
+        repo_ = github.get_repo(repo)
+
+        # get the contents of the path
+        content = repo_.get_contents(**{"path": path, "ref": reference} if reference else {"path": path})
+
+        if not isinstance(content, list):
+            content = [content]
+
+        # filter based on the match regex
+        if match:
+            content = [f for f in content if re.search(match, f.name)]
+
+        # save files to the output folder
+        for f in tqdm.tqdm(content, desc="Downloading"):
+            # construct the path + filename
+            out_path = Path(outpath) / (f.path if keep_repo_structure else f.name)
+
+            # ignore directories
+            if f.type == "file":
+                logger.debug(f"Downloading {f.name}")
+
+                # warn and skip instead of overwriting a file
+                if not overwrite and out_path.exists():
+                    logger.warning(f"{out_path} already exists. Skipping...")
+                    continue
+
+                # create the directories if necessary
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # write the files
+                try:
+                    content_data = f.decoded_content
+
+                    # Write based on content type/encoding
+                    if isinstance(content_data, bytes):
+                        out_path.write_bytes(content_data)
+                    else:
+                        # try to write as string if no encoding is given
+                        out_path.write_text(str(content_data), encoding='utf-8')
+
+                except Exception:
+                    # If there's an issue, fall back to direct download
+                    try:
+                        response = requests.get(f.download_url)
+                        out_path.write_bytes(response.content)
+                    except Exception as e2:
+                        logger.error(f"Failed to download {f.name}: {e2}")

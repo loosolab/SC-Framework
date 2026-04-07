@@ -16,8 +16,8 @@ The main and dev branch are automatically mirrored.
 - [ ] Create a new release (copy from Gitlab)
 ### Zenodo (https://zenodo.org/records/14056105)
 A Github release automatically triggers a Zenodo release.
-- [ ] check if the Github release triggered Zenodo (may take a few minuts)
+- [ ] check if the Github release triggered Zenodo (may take a few minutes)
 - [ ] adjust the authors in Zenodo (see the prior release)
 ### PyPI
 The final step in the CI/CD pipeline creates a new PyPI release (after ~1.5 hrs).
-- [ ] check if the release was sucessful
+- [ ] check if the release was successful

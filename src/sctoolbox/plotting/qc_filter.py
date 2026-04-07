@@ -655,7 +655,7 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
         A column in table to values on the x-axis.
     ncols : int, default 2
         Number of columns in the plot.
-    header : Optional[list[str]], defaul None
+    header : Optional[list[str]], default None
         A list of custom headers for each measure given in columns.
     color_list : Optional[list[str]], default None
         A list of colors to use for violins. If None, colors are chosen automatically.
@@ -676,7 +676,7 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
     -------
     Tuple[Any, Dict[str, Any]]
         Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
-        First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continously updated.
+        First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continuously updated.
 
     Raises
     ------
@@ -1016,7 +1016,7 @@ def _upset_select_cells(adata: sc.AnnData,
     ------
     ValueError
         1. If any/all thresholds are grouped but groupby is set to None
-        2. If grouped threhold dict key does not match values in given groupby column
+        2. If grouped threshold dict key does not match values in given groupby column
     """
     selection = {}
     # loop over all columns

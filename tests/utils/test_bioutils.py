@@ -13,7 +13,7 @@ from types import SimpleNamespace
 # --------------------------- FIXTURES ------------------------------ #
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata_mock():
     """Return adata object with 3 groups.
 
@@ -182,7 +182,7 @@ def test_bed_is_sorted(unsorted_fragments, sorted_fragments):
 
 
 def test_sort_bed(unsorted_fragments):
-    """Test if the sort bedfile functio works."""
+    """Test if the sort bedfile function works."""
     sorted_bedfile = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'sorted_bedfile.bed')
     utils.bioutils._sort_bed(unsorted_fragments, sorted_bedfile)
 

@@ -5,10 +5,10 @@
 # This is the Gitlab CI/CD pipeline for the SC FRAMEWORK repository.
 # The pipeline is divided into several stages:
 # 1. .pre: This stage is used to export variables and to get the sctoolbox version as global variable.
-# 2. build: This stage checks if something in the enviroment (pyproject.toml or sctoolbox_env.yml) has changed.
+# 2. build: This stage checks if something in the environment (pyproject.toml or sctoolbox_env.yml) has changed.
 #           If yes then a new docker image will be build and pushed to the container registry.
 #           The newly build image is then used for testing later.
-#           If no changes were made to the enviroment nothing is build and the latest image is used later on.
+#           If no changes were made to the environment nothing is build and the latest image is used later on.
 #           In addition the python package is build and pushed to the Gitlab package registry but only when on the main branch.
 # 3. setup: This stage is used to get the container tag for the testing stage.
 # 4. test: This stage is used to lint the code and docstrings, to test if the minimal sctoolbox package can still be imported without additional dependencies,
@@ -62,10 +62,10 @@ extract-version:
 # ###################################################################### build ###############################################################################
 # ############################################################################################################################################################
 
-# The build job below checks if something in the enviroment (pyproject.toml or sctoolbox_env.yml) has changed.
+# The build job below checks if something in the environment (pyproject.toml or sctoolbox_env.yml) has changed.
 # If yes then a new docker image will be build and pushed to the container registry.
 # The newly build image is then used for testing later. 
-# If no changes were made to the enviroment nothing is build and the latest image is used later on.
+# If no changes were made to the environment nothing is build and the latest image is used later on.
 
 # build job
 build:
@@ -79,7 +79,7 @@ build:
         alias: docker
   before_script:
       - echo $BUILD_VERSION
-      - apk update && apk add git # install git for authentification and pushing to registry
+      - apk update && apk add git # install git for authentication and pushing to registry
       - apk update -qq && apk add git
       - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
   script:
@@ -239,6 +239,21 @@ lint:
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb
 
+# check the spelling in the whole repository
+# Configuration is in pyproject.toml [tool.codespell] section
+spellcheck:
+  stage: test
+  image: python:latest
+  before_script:
+    - pip install codespell[toml]
+  script:
+    - python --version
+    - codespell --version
+    - codespell --toml pyproject.toml
+  allow_failure: true  # Optional: set to false if you want to block the MR on typos
+  only:
+    - merge_requests
+
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
 test import:
   image: python:3.10  # pybedtools is not compatible with python 3.11
@@ -383,7 +398,7 @@ notebooks-RNA:
   after_script:
     - pwd
     - echo -------------------------------------------------- RNA logs --------------------------------------------------
-    - "[ -d 'rna_analysis/logs/' ] && ls -l 'rna_analysis/logs/' || echo 'Log dir not found! Please check the artifacts to identify potential errors that occured within the notebooks.'"
+    - "[ -d 'rna_analysis/logs/' ] && ls -l 'rna_analysis/logs/' || echo 'Log dir not found! Please check the artifacts to identify potential errors that occurred within the notebooks.'"
     - if [[ -d rna_analysis/logs/ && "$(ls -A rna_analysis/logs/)" ]]; then for f in rna_analysis/logs/*; do echo "==> $f <=="; cat $f; done; fi
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
@@ -436,7 +451,7 @@ notebooks-ATAC:
   after_script:
     - pwd
     - echo -------------------------------------------------- ATAC logs --------------------------------------------------
-    - "[ -d 'atac_analysis/logs/' ] && ls -l 'atac_analysis/logs/' || echo 'Log dir not found! Please check the artifacts to identify potential errors that occured within the notebooks.'"
+    - "[ -d 'atac_analysis/logs/' ] && ls -l 'atac_analysis/logs/' || echo 'Log dir not found! Please check the artifacts to identify potential errors that occurred within the notebooks.'"
     - if [[ -d atac_analysis/logs/ && "$(ls -A atac_analysis/logs/)" ]]; then for f in atac_analysis/logs/*; do echo "==> $f <=="; cat $f; done; fi
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
