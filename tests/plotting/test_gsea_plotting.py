@@ -1,7 +1,6 @@
 """Test gsea plotting functions."""
 
 import pytest
-import scanpy as sc
 import numpy as np
 from sctoolbox.plotting import gsea
 
@@ -9,10 +8,10 @@ from sctoolbox.plotting import gsea
 # ------------------------------ TESTS --------------------------------- #
 
 
-def test_term_dotplot(adata):
+def test_term_dotplot(adata_gsea):
     """Test term_dotplot success."""
     axes = gsea.term_dotplot(term="Actin Filament Organization (GO:0007015)",
-                             adata=adata,
+                             adata=adata_gsea,
                              groupby="louvain")
 
     assert isinstance(axes, np.ndarray)
@@ -20,20 +19,20 @@ def test_term_dotplot(adata):
     assert ax_type.startswith("Axes")
 
 
-def test_gsea_cluster_dotplot(adata):
+def test_gsea_cluster_dotplot(adata_gsea):
     """Test tsea_cluster_dotplot success."""
-    axes_dict = gsea.cluster_dotplot(adata)
+    axes_dict = gsea.cluster_dotplot(adata_gsea)
     assert isinstance(axes_dict, dict)
 
 
-def test_gsea_network(adata):
+def test_gsea_network(adata_gsea):
     """Test tsea_network success."""
-    gsea.gsea_network(adata, cutoff=0.5)
+    gsea.gsea_network(adata_gsea, cutoff=0.5)
 
 
-def test_gsea_network_fail(adata):
+def test_gsea_network_fail(adata_gsea, adata):
     """Test tsea_network success."""
     with pytest.raises(ValueError):
-        gsea.gsea_network(adata, cutoff=0.0000005)
+        gsea.gsea_network(adata_gsea, cutoff=0.0000005)
     with pytest.raises(ValueError, match="Could not find gsea results."):
-        gsea.gsea_network(sc.datasets.pbmc68k_reduced())
+        gsea.gsea_network(adata)
