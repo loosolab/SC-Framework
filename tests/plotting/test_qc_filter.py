@@ -66,7 +66,7 @@ def test_plot_starsolo_UMI_failure():
 def test_n_cells_barplot(adata, groupby, add_labels):
     """Test n_cells_barplot success."""
 
-    axarr = pl.n_cells_barplot(adata, "clustering", groupby=groupby, add_labels=add_labels)
+    axarr = pl.n_cells_barplot(adata, "louvain", groupby=groupby, add_labels=add_labels)
 
     if groupby is None:
         assert len(axarr) == 1
@@ -212,7 +212,7 @@ def test_upset_select_cells_fail(adata):
         pl._upset_select_cells(adata, grouped_thresholds, groupby=None)
 
     with pytest.raises(ValueError, match="Wrong group selection.*"):
-        pl._upset_select_cells(adata, grouped_thresholds, groupby="clustering")
+        pl._upset_select_cells(adata, grouped_thresholds, groupby="louvain")
 
 
 @pytest.mark.parametrize("thresholds, groupby", [({'qcvar1': {'min': 0.1, 'max': 0.9},
