@@ -13,9 +13,11 @@ import sctoolbox.plotting.velocity as pl
                          )
 def test_pseudotime_heatmap(adata, sortby, title, figsize, layer):
     """Test pseudotime_heatmap success."""
-    ax = pl.pseudotime_heatmap(adata, ['ENSMUSG00000103377',
-                                       'ENSMUSG00000102851'],
-                               sortby=sortby, title=title,
-                               figsize=figsize, layer=layer)
+    ax = pl.pseudotime_heatmap(adata,
+                               list(adata.var.index[:2]),
+                               sortby=sortby,
+                               title=title,
+                               figsize=figsize,
+                               layer=layer)
     ax_type = type(ax).__name__
     assert ax_type.startswith("Axes")
