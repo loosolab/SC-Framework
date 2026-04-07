@@ -390,10 +390,9 @@ def adata_planet_plot():
 
     np.random.seed(1)  # set seed for reproducibility
 
-    f = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', "adata.h5ad")
-    adata = sc.read_h5ad(f)
+    adata = sc.AnnData(X=np.random.rand(200, 100))
 
-    # create a test layer with a diagonal matrix with 1s starting at index, 0,50,100 and 150
+    # create a test layer with a diagonal matrix with 1s starting at index, 0, 50, 100 and 150
     # This ensures that each of the gene has the expression value exactly 4 times as 1 and once for each subset (category1, category2)
     test_layer = np.zeros((200, 100))
     for i in range(50):

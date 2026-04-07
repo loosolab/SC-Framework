@@ -62,12 +62,12 @@ def test_genes_aggregator(aggregator, to_aggregate, expected_output):
     assert np.isclose(agg_val, expected_output, rtol=0.01)
 
 
-def test_planet_plot_anndata_preprocess(adata):
+def test_planet_plot_anndata_preprocess(adata_planet_plot):
     """Test planet plot preprocess for the given adata."""
     x_col = "category1"
     y_col = "category2"
     input_layer = "test_layer"
-    genes = ["ENSMUSG00000103377", "ENSMUSG00000064842", "ENSMUSG00000104428", "ENSMUSG00000065625"]
+    genes = list(adata_planet_plot.var.index[:4])
     gene_symbols = None
     obs_columns = ["obscol1", "obscol2", "obscol3", "obscol4", "obscol5", "obscol6"]
     expected_df_array = np.array([['A', 'a', 50.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
@@ -86,8 +86,9 @@ def test_planet_plot_anndata_preprocess(adata):
                                    0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 1.0,
                                    0.02, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0,
                                    2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0]], dtype=object)
+
     # using default values for aggregators
-    plot_vars = pp.planet_plot_anndata_preprocess(adata=adata,
+    plot_vars = pp.planet_plot_anndata_preprocess(adata=adata_planet_plot,
                                                   x_col=x_col,
                                                   y_col=y_col,
                                                   input_layer=input_layer,
@@ -102,9 +103,9 @@ def test_planet_plot_anndata_preprocess(adata):
 @pytest.mark.parametrize("size_value, output_size_value", [("count", 1), ("percentage", 1)])
 @pytest.mark.parametrize("color_value, output_color_value", [("value", 1), ("percentage_max", 1)])
 @pytest.mark.parametrize("planet_columns, planet_color_schemas, output_schemas",
-                         [(["ENSMUSG00000103377", "ENSMUSG00000064842", "ENSMUSG00000104428", "ENSMUSG00000065625"], None, 0),
+                         [(["0", "1", "2", "3"], None, 0),
                           (["obscol1", "obscol2", "obscol3", "obscol4", "obscol5", "obscol6"], ["Accent", "twilight", "CMRmap", "cividis", "gray", "coolwarm"], 6)])
-def test_planet_plot_render(adata,
+def test_planet_plot_render(adata_planet_plot,
                             mode,
                             size_value,
                             color_value,
@@ -118,10 +119,11 @@ def test_planet_plot_render(adata,
     x_col = "category1"
     y_col = "category2"
     input_layer = "test_layer"
-    genes = ["ENSMUSG00000103377", "ENSMUSG00000064842", "ENSMUSG00000104428", "ENSMUSG00000065625"]
+    genes = list(adata_planet_plot.var.index[:4])
     gene_symbols = None
     obs_columns = ["obscol1", "obscol2", "obscol3", "obscol4", "obscol5", "obscol6"]
-    plot_vars = pp.planet_plot_anndata_preprocess(adata=adata, x_col=x_col,
+    plot_vars = pp.planet_plot_anndata_preprocess(adata=adata_planet_plot,
+                                                  x_col=x_col,
                                                   y_col=y_col,
                                                   input_layer=input_layer,
                                                   genes=genes,
