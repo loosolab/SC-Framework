@@ -91,20 +91,18 @@ def test_violinplot(adata, ylabel, color_by, hlines):
     assert ax_type.startswith("Axes")
 
 
-def test_violinplot_fail(adata):
+@pytest.mark.parametrize("match,y,color_by,hlines", [
+    ('not found in column names of table!', 'Invalid', None, None),
+    ('Color grouping', 'qc_float', 'Invalid', None),
+    ('Parameter hlines has to be number or list', 'qc_float', None, {"A": 0.5}),
+    ('Invalid dict keys in hlines parameter.', 'qc_float', 'louvain', {"A": 0.5}),
+])
+def test_violinplot_fail(adata, match, y, color_by, hlines):
     """Test invalid input for violinplot."""
-    with pytest.raises(ValueError, match='not found in column names of table!'):
-        pl.violinplot(adata.obs, y="Invalid")
 
-    with pytest.raises(ValueError, match='Color grouping'):
-        pl.violinplot(adata.obs, y="qc_float", color_by="Invalid")
-
-    with pytest.raises(ValueError, match='Parameter hlines has to be number or list'):
-        pl.violinplot(adata.obs, y="qc_float", hlines={"A": 0.5})
-
-    with pytest.raises(ValueError, match='Invalid dict keys in hlines parameter.'):
-        pl.violinplot(adata.obs, y="qc_float",
-                      color_by="clustering", hlines={"A": 0.5})
+    with pytest.raises(ValueError, match=match):
+        pl.violinplot(adata.obs, y=y,
+                      color_by=color_by, hlines=hlines)
 
 
 def test_plot_venn(venn_dict):
