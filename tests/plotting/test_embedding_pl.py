@@ -46,7 +46,7 @@ def test_invalid_flip_embedding(adata):
 
 
 @pytest.mark.parametrize("color, label", [
-    ("clustering", "clust_label"),  # categorical -> has legend
+    ("louvain", "clust_label"),  # categorical -> has legend
     ("qc_float", "label")  # sequential -> no legend (colorbar instead)
 ])
 def test_add_legend_ax(adata, color, label):
@@ -74,7 +74,7 @@ def test_embedding(adata, style, kwargs):
     colors.append(adata.var.index[0])  # continuous gene variable
     colors.append(None)          # no color / density plot
     if style != "hexbin":
-        colors.append("clustering")  # categorical obs variable; only available for dots/density
+        colors.append("louvain")  # categorical obs variable; only available for dots/density
 
 # call plot_embedding
     axes_list = pl.plot_embedding(adata, color=colors, style=style, **kwargs)
@@ -110,7 +110,7 @@ def test_feature_per_group(adata, x, top_n, style):
         x = adata.var.index[:3].tolist()
 
     axs = pl.feature_per_group(adata=adata,
-                               y="clustering",
+                               y="louvain",
                                x=x,
                                top_n=top_n,
                                style=style)
@@ -256,7 +256,7 @@ def test_get_3d_dotsize(n, res):
     assert pl._get_3d_dotsize(int(n)) == res
 
 
-@pytest.mark.parametrize("color", ["C1orf86", "clustering", "qc_float"])
+@pytest.mark.parametrize("color", ["TNFRSF4", "louvain", "qc_float"])
 def test_plot_3D_UMAP(adata, color):
     """Test if 3d plot is written to html."""
 
@@ -275,7 +275,7 @@ def test_invalid_color_plot_3D_UMAP(adata):
 
 
 @pytest.mark.parametrize("marker", ["TNFRSF1B",
-                                    ["TNFRSF1B", 'PRDM2']])
+                                    ["TNFRSF1B", 'PRMT2']])
 def test_umap_marker_overview(adata, marker):
     """Test umap_marker_overview."""
     axes_list = pl.umap_marker_overview(adata, marker)
