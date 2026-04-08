@@ -94,8 +94,7 @@ def test_insertsize_plotting(atac_adata):
 
     ax = pl.plot_insertsize(adata)
 
-    ax_type = type(ax).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
 def test_link_sliders(slider_list):
@@ -232,9 +231,6 @@ def test_upset_plot_filter_impacts(adata, thresholds, groupby, limit_combination
 
     assert isinstance(plot_result, dict)
     assert list(plot_result.keys()) == ['matrix', 'shading', 'totals', 'intersections']
-    ax_type = type(plot_result['matrix']).__name__
-    assert ax_type.startswith("Axes")
-    ax_type = type(plot_result['shading']).__name__
-    assert ax_type.startswith("Axes")
-    ax_type = type(plot_result['intersections']).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(plot_result['matrix'], matplotlib.axes.Axes)
+    assert isinstance(plot_result['shading'], matplotlib.axes.Axes)
+    assert isinstance(plot_result['intersections'], matplotlib.axes.Axes)

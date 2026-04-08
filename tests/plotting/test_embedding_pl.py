@@ -85,17 +85,14 @@ def test_embedding(adata, style, kwargs):
     n_components = 1 if isinstance(components, str) else len(components)
     assert len(axes_list) == len(colors) * n_components
 
-    # Assert type of output
-    ax_type = type(axes_list[0]).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(axes_list[0], matplotlib.axes.Axes)
 
 
 def test_embedding_single(adata):
     """Test that embedding works with single color."""
     axarr = pl.plot_embedding(adata, color="qcvar1")
 
-    ax_type = type(axarr[0]).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(axarr[0], matplotlib.axes.Axes)
 
 
 def test_embedding_error(adata):
@@ -281,8 +278,7 @@ def test_umap_marker_overview(adata, n_markers):
     axes_list = pl.umap_marker_overview(adata, marker)
 
     assert isinstance(axes_list, list)
-    ax_type = type(axes_list[0]).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(axes_list[0], matplotlib.axes.Axes)
 
 
 def test_anndata_overview(adata, tmp_file):
@@ -377,9 +373,7 @@ def test_anndata_overview_fail_plots(adata, plots, exception):
 def test_plot_pca_variance(adata, selected):
     """Test if Axes object is returned."""
     ax = pl.plot_pca_variance(adata, selected=selected)
-    ax_type = type(ax).__name__
-
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
 @pytest.mark.parametrize("kwargs,exception,match", [
@@ -399,9 +393,7 @@ def test_plot_pca_correlation(adata, kwargs):
     """Test if Axes object is returned without error."""
 
     ax = pl.plot_pca_correlation(adata, title="Title", **kwargs)
-    ax_type = type(ax).__name__
-
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
 @pytest.mark.parametrize("kwargs", [{"basis": "umap", "which": "var"},  # var is only available for pca coordinates

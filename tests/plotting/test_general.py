@@ -56,8 +56,7 @@ def test_clustermap_dotplot(adata):
                                  title="Title", show_grid=True)
 
     assert isinstance(axes, np.ndarray)
-    ax_type = type(axes[0]).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(axes[0], matplotlib.axes.Axes)
 
 
 def test_bidirectional_barplot(df_bidir_bar):
@@ -75,9 +74,7 @@ def test_bidirectional_barplot_fail(df):
 def test_boxplot(df):
     """Test if Axes object is returned."""
     ax = pl.boxplot(df)
-    ax_type = type(ax).__name__
-
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
 @pytest.mark.parametrize("ylabel,color_by,hlines", [(True, None, 0.5),
@@ -87,8 +84,7 @@ def test_violinplot(adata, ylabel, color_by, hlines):
     ax = pl.violinplot(adata.obs, "qc_float", color_by=color_by,
                        hlines=hlines, colors=None, ax=None,
                        title="Title", ylabel=ylabel)
-    ax_type = type(ax).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
 @pytest.mark.parametrize("match,y,color_by,hlines", [
@@ -144,7 +140,7 @@ def test_pairwise_scatter(adata, thresholds):
     axarr = pl.pairwise_scatter(adata.obs, columns=["qcvar1", "qcvar2"], thresholds=thresholds)
 
     assert axarr.shape == (2, 2)
-    assert type(axarr[0, 0]).__name__.startswith("Axes")
+    assert isinstance(axarr[0, 0], matplotlib.axes.Axes)
 
 
 @pytest.mark.parametrize("ax, crop", [(None, None), (plt.subplots()[1], 2)])

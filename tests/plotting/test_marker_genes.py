@@ -1,6 +1,7 @@
 """Test plotting functions."""
 
 import pytest
+import matplotlib
 import sctoolbox.plotting.marker_genes as pl
 import os
 import matplotlib.pyplot as plt
@@ -55,9 +56,7 @@ def test_grouped_violin(adata, x, y, norm, style):
     y = adata.var_names[1] if y == "<GENE_1>" else y
     ax = pl.grouped_violin(adata, x=x, y=y, style=style,
                            groupby="condition", normalize=norm)
-    ax_type = type(ax).__name__
-
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
 @pytest.mark.parametrize("kwargs,exception,match", [
@@ -78,10 +77,7 @@ def test_group_expression_boxplot(adata):
     """Test if group_expression_boxplot returns a plot."""
     gene_list = adata.var_names.tolist()[:10]
     ax = pl.group_expression_boxplot(adata, gene_list, groupby="condition")
-    ax_type = type(ax).__name__
-
-    # depending on matplotlib version, it can be either AxesSubplot or Axes
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
 @pytest.mark.parametrize("groupby, title",
@@ -113,8 +109,7 @@ def test_gene_expression_heatmap_error(adata, kwargs, exception):
 def test_plot_differential_genes(pairwise_ranked_genes):
     """Test plot_differential_genes success."""
     ax = pl.plot_differential_genes(pairwise_ranked_genes)
-    ax_type = type(ax).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
 def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
@@ -132,7 +127,7 @@ def test_plot_gene_correlation(adata, use_list, save, figsize):
     axes = pl.plot_gene_correlation(adata, adata.var_names[0], gene_list,
                                     save=save, figsize=figsize)
     assert type(axes).__name__ == "ndarray"
-    assert type(axes[0]).__name__.startswith("Axes")
+    assert isinstance(axes[0], matplotlib.axes.Axes)
 
     if save:
         os.remove(save)

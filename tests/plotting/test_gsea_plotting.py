@@ -1,6 +1,7 @@
 """Test gsea plotting functions."""
 
 import pytest
+import matplotlib
 import numpy as np
 from sctoolbox.plotting import gsea
 
@@ -15,8 +16,7 @@ def test_term_dotplot(adata_gsea):
                              groupby="louvain")
 
     assert isinstance(axes, np.ndarray)
-    ax_type = type(axes[0]).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(axes[0], matplotlib.axes.Axes)
 
 
 def test_gsea_cluster_dotplot(adata_gsea):

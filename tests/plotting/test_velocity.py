@@ -1,6 +1,7 @@
 """Tests for Velocity plotting functions."""
 
 import pytest
+import matplotlib
 import sctoolbox.plotting.velocity as pl
 
 
@@ -19,5 +20,4 @@ def test_pseudotime_heatmap(adata, sortby, title, figsize, layer):
                                title=title,
                                figsize=figsize,
                                layer=layer)
-    ax_type = type(ax).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
