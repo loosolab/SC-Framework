@@ -45,21 +45,17 @@ def test_plot_starsolo_UMI():
     assert isinstance(res, np.ndarray)
 
 
-def test_plot_starsolo_UMI_failure():
+def test_plot_starsolo_UMI_failure(tmp_path):
     """Test plot_starsolo_UMI failure with invalid input."""
 
     # Create a quant folder without UMI files
-    shutil.copytree(quant_folder, "quant_without_UMI", dirs_exist_ok=True)
-    UMI_files = glob.glob("quant_without_UMI/*/solo/Gene/UMI*")
-    for file in UMI_files:
+    quant_without_UMI = str(tmp_path / "quant_without_UMI")
+    shutil.copytree(quant_folder, quant_without_UMI, dirs_exist_ok=True)
+    for file in glob.glob(f"{quant_without_UMI}/*/solo/Gene/UMI*"):
         os.remove(file)
 
-    # Test that valueerror is raised
     with pytest.raises(ValueError, match="No UMI files found in folder*"):
-        pl.plot_starsolo_UMI("quant_without_UMI")
-
-    # remove folder
-    shutil.rmtree("quant_without_UMI")
+        pl.plot_starsolo_UMI(quant_without_UMI)
 
 
 @pytest.mark.parametrize("groupby", [None, "condition"])
