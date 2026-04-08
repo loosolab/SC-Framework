@@ -382,14 +382,14 @@ def test_plot_pca_variance(adata, selected):
     assert ax_type.startswith("Axes")
 
 
-def test_plot_pca_variance_fail(adata):
+@pytest.mark.parametrize("kwargs,exception,match", [
+    ({"method": "invalid"}, KeyError, "The given method"),
+    ({"ax": "invalid"}, BeartypeCallHintParamViolation, None),
+])
+def test_plot_pca_variance_fail(adata, kwargs, exception, match):
     """Test if function fails on invalid parameters."""
-
-    with pytest.raises(KeyError, match="The given method"):
-        pl.plot_pca_variance(adata, method="invalid")
-
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.plot_pca_variance(adata, ax="invalid")
+    with pytest.raises(exception, match=match):
+        pl.plot_pca_variance(adata, **kwargs)
 
 
 @pytest.mark.parametrize("kwargs", [{"which": "var", "method": "spearmanr"},
