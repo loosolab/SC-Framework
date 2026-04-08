@@ -113,14 +113,17 @@ def test_plot_venn(venn_dict):
     assert True
 
 
-def test_plot_venn_fail(venn_dict):
+@pytest.mark.parametrize("input_data,exception", [
+    ("<FOUR_GROUPS>", ValueError),              # too many groups
+    ([1, 2, 3, 4, 5], BeartypeCallHintParamViolation),  # wrong input type
+])
+def test_plot_venn_fail(venn_dict, input_data, exception):
     """Test for invalid input."""
-    venn_dict["Group D"] = [1, 2]
-    with pytest.raises(ValueError):
-        pl.plot_venn(venn_dict)
-
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.plot_venn([1, 2, 3, 4, 5])
+    if input_data == "<FOUR_GROUPS>":
+        venn_dict["Group D"] = [1, 2]
+        input_data = venn_dict
+    with pytest.raises(exception):
+        pl.plot_venn(input_data)
 
 
 @pytest.mark.parametrize("columns,exception", [
