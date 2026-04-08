@@ -29,19 +29,20 @@ def test_rank_genes_plot(adata, style, dendrogram, use_genes, key, swap_axes):
     assert isinstance(d, dict)
 
 
-def test_rank_genes_plot_fail(adata):
+@pytest.mark.parametrize("kwargs,exception,match", [
+    ({"groupby": "louvain", "key": "rank_genes_groups", "style": "Invalid"},
+     BeartypeCallHintParamViolation, None),
+    ({"groupby": "louvain", "key": "rank_genes_groups", "genes": ["A", "B", "C"]},  # genes not in dataset
+     KeyError, "Could not find keys.*"),
+    ({"groupby": None, "genes": "<VAR_NAMES[:2]>"},
+     ValueError, "The parameter 'groupby' is needed if 'genes' is given."),
+])
+def test_rank_genes_plot_fail(adata, kwargs, exception, match):
     """Test rank_genes_plot for invalid input."""
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.rank_genes_plot(adata, groupby="louvain",
-                           key='rank_genes_groups',
-                           style="Invalid")
-    with pytest.raises(KeyError, match='Could not find keys.*'):
-        pl.rank_genes_plot(adata, groupby="louvain",
-                           key='rank_genes_groups',
-                           genes=["A", "B", "C"])  # invalid genes given
-    with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
-        pl.rank_genes_plot(adata, groupby=None,
-                           genes=adata.var_names[:2].tolist())
+    kwargs = {k: (adata.var_names[:2].tolist() if v == "<VAR_NAMES[:2]>" else v)
+              for k, v in kwargs.items()}
+    with pytest.raises(exception, match=match):
+        pl.rank_genes_plot(adata, **kwargs)
 
 
 @pytest.mark.parametrize("x,y,norm", [("louvain", "<GENE_1>", True),
