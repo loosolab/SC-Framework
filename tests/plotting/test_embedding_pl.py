@@ -256,10 +256,10 @@ def test_get_3d_dotsize(n, res):
     assert pl._get_3d_dotsize(int(n)) == res
 
 
-@pytest.mark.parametrize("color", ["TNFRSF4", "louvain", "qc_float"])
+@pytest.mark.parametrize("color", ["<GENE_0>", "louvain", "qc_float"])
 def test_plot_3D_UMAP(adata, color):
     """Test if 3d plot is written to html."""
-
+    color = adata.var_names[0] if color == "<GENE_0>" else color
     # Run 3d plotting
     pl.plot_3D_UMAP(adata, color=color, save="3D_test")
 
@@ -274,10 +274,11 @@ def test_invalid_color_plot_3D_UMAP(adata):
         pl.plot_3D_UMAP(adata, color="invalid", save="3D_test")
 
 
-@pytest.mark.parametrize("marker", ["TNFRSF1B",
-                                    ["TNFRSF1B", 'PRMT2']])
-def test_umap_marker_overview(adata, marker):
+@pytest.mark.parametrize("n_markers", [1, 2])
+def test_umap_marker_overview(adata, n_markers):
     """Test umap_marker_overview."""
+    genes = adata.var_names[:n_markers].tolist()
+    marker = genes[0] if len(genes) == 1 else genes
     axes_list = pl.umap_marker_overview(adata, marker)
 
     assert isinstance(axes_list, list)

@@ -14,13 +14,13 @@ plt.switch_backend("Agg")
 # ------------------------------ TESTS --------------------------------- #
 
 
-@pytest.mark.parametrize("dendrogram,genes,key,swap_axes",
-                         [(True, ['TNFRSF4', 'SSU72', 'PARK7'], None, True),
-                          (False, None, 'rank_genes_groups', False)])
+@pytest.mark.parametrize("dendrogram,use_genes,key,swap_axes",
+                         [(True, True, None, True),
+                          (False, False, 'rank_genes_groups', False)])
 @pytest.mark.parametrize("style", ["dots", "heatmap"])
-def test_rank_genes_plot(adata, style, dendrogram, genes, key, swap_axes):
+def test_rank_genes_plot(adata, style, dendrogram, use_genes, key, swap_axes):
     """Test rank_genes_plot for ranked genes and gene lists."""
-    # Gene list
+    genes = adata.var_names[:3].tolist() if use_genes else None
     d = pl.rank_genes_plot(adata, groupby="louvain",
                            genes=genes, key=key,
                            style=style, title="Test",
@@ -41,16 +41,17 @@ def test_rank_genes_plot_fail(adata):
                            genes=["A", "B", "C"])  # invalid genes given
     with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
         pl.rank_genes_plot(adata, groupby=None,
-                           genes=['TNFRSF4', 'SRM'])
+                           genes=adata.var_names[:2].tolist())
 
 
-@pytest.mark.parametrize("x,y,norm", [("louvain", "EFHD2", True),
-                                      ("SRM", None, False),
+@pytest.mark.parametrize("x,y,norm", [("louvain", "<GENE_1>", True),
+                                      ("<GENE_0>", None, False),
                                       ("louvain", "qc_float", True)])
 @pytest.mark.parametrize("style", ["violin", "boxplot", "bar"])
 def test_grouped_violin(adata, x, y, norm, style):
     """Test grouped_violin success."""
-
+    x = adata.var_names[0] if x == "<GENE_0>" else x
+    y = adata.var_names[1] if y == "<GENE_1>" else y
     ax = pl.grouped_violin(adata, x=x, y=y, style=style,
                            groupby="condition", normalize=norm)
     ax_type = type(ax).__name__
@@ -63,10 +64,11 @@ def test_grouped_violin(adata, x, y, norm, style):
     ({"x": ["louvain", "SRM"], "y": None, "groupby": "condition"}, ValueError, 'x must be either a column in adata.obs or all genes in adata.var.index'),
     ({"x": "louvain", "y": "Invalid", "groupby": "condition"}, ValueError, 'was not found in either adata.obs or adata.var.index'),
     ({"x": "louvain", "y": None, "groupby": "condition"}, ValueError, "Because 'x' is a column in obs, 'y' must be given as parameter"),
-    ({"x": "SRM", "y": None, "groupby": "condition", "style": "Invalid"}, BeartypeCallHintParamViolation, None),
+    ({"x": "<GENE_0>", "y": None, "groupby": "condition", "style": "Invalid"}, BeartypeCallHintParamViolation, None),
 ])
 def test_grouped_violin_fail(adata, kwargs, exception, match):
     """Test grouped_violin fail."""
+    kwargs = {k: (adata.var_names[0] if v == "<GENE_0>" else v) for k, v in kwargs.items()}
     with pytest.raises(exception, match=match):
         pl.grouped_violin(adata, **kwargs)
 
@@ -120,12 +122,13 @@ def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
         pl.plot_differential_genes(pairwise_ranked_genes_nosig)
 
 
-@pytest.mark.parametrize("gene_list,save,figsize",
-                         [(['EFHD2', 'SSU72', 'PARK7'], None, (2, 2)),
-                          ("SRM", "out.png", None)])
-def test_plot_gene_correlation(adata, gene_list, save, figsize):
+@pytest.mark.parametrize("use_list,save,figsize",
+                         [(True, None, (2, 2)),
+                          (False, "out.png", None)])
+def test_plot_gene_correlation(adata, use_list, save, figsize):
     """Test gene correlation."""
-    axes = pl.plot_gene_correlation(adata, "TNFRSF4", gene_list,
+    gene_list = adata.var_names[1:4].tolist() if use_list else adata.var_names[1]
+    axes = pl.plot_gene_correlation(adata, adata.var_names[0], gene_list,
                                     save=save, figsize=figsize)
     assert type(axes).__name__ == "ndarray"
     assert type(axes[0]).__name__.startswith("Axes")
