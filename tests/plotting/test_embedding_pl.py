@@ -281,9 +281,10 @@ def test_umap_marker_overview(adata, n_markers):
     assert isinstance(axes_list[0], matplotlib.axes.Axes)
 
 
-def test_anndata_overview(adata, tmp_file):
+def test_anndata_overview(adata, tmp_path):
     """Test anndata_overview success and file generation."""
     adatas = {"raw": adata, "corrected": adata}
+    tmp_file = str(tmp_path / "output.pdf")
 
     assert not os.path.exists(tmp_file)
 

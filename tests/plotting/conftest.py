@@ -4,8 +4,6 @@ import pytest
 import scanpy as sc
 import os
 import numpy as np
-import tempfile
-import shutil
 import pandas as pd
 import ipywidgets as widgets
 import sctoolbox.tools as tools
@@ -78,23 +76,6 @@ def adata_fun_scope():
     """
     return _make_adata()
 
-
-@pytest.fixture
-def tmp_file():
-    """
-    Return path for a temporary file.
-
-    Yields
-    ------
-    A temporary file path
-    """
-    # TODO replace with the pytest native tempfile fixture
-    tmpdir = tempfile.mkdtemp()
-
-    yield os.path.join(tmpdir, "output.pdf")
-
-    # clean up directory and contents
-    shutil.rmtree(tmpdir)
 
 
 @pytest.fixture
