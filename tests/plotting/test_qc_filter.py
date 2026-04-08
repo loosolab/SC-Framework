@@ -197,7 +197,11 @@ def test_upset_select_cells(adata, thresholds, expected):
     assert expected == (sample_selection == global_selection).all().all()
 
 
-def test_upset_select_cells_fail(adata):
+@pytest.mark.parametrize("groupby,match", [
+    (None, "Parameter groupby is set to None while threshold*"),
+    ("louvain", "Wrong group selection.*"),
+])
+def test_upset_select_cells_fail(adata, groupby, match):
     """Test upset_select_cells fail."""
     grouped_thresholds = {
         'qcvar1': {'C1': {'min': 0.1, 'max': 0.9},
@@ -207,12 +211,8 @@ def test_upset_select_cells_fail(adata):
                    'C2': {'min': 0.2, 'max': 0.8},
                    'C3': {'min': 0.2, 'max': 0.8}}
     }
-
-    with pytest.raises(ValueError, match="Parameter groupby is set to None while threshold*"):
-        pl._upset_select_cells(adata, grouped_thresholds, groupby=None)
-
-    with pytest.raises(ValueError, match="Wrong group selection.*"):
-        pl._upset_select_cells(adata, grouped_thresholds, groupby="louvain")
+    with pytest.raises(ValueError, match=match):
+        pl._upset_select_cells(adata, grouped_thresholds, groupby=groupby)
 
 
 @pytest.mark.parametrize("thresholds, groupby", [({'qcvar1': {'min': 0.1, 'max': 0.9},
