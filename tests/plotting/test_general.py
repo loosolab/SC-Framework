@@ -47,9 +47,9 @@ def test_add_labels(df, label):
     assert type(texts[0]).__name__ == "Annotation"
 
 
-def test_clustermap_dotplot():
+def test_clustermap_dotplot(adata):
     """Test clustermap_dotplot success."""
-    table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
+    table = adata.obs.reset_index()[:10]
     axes = pl.clustermap_dotplot(table=table, x="bulk_labels",
                                  y="index", hue="n_genes",
                                  size="n_counts", palette="viridis",
