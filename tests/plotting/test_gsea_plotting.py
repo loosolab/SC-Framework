@@ -30,9 +30,12 @@ def test_gsea_network(adata_gsea):
     gsea.gsea_network(adata_gsea, cutoff=0.5)
 
 
-def test_gsea_network_fail(adata_gsea, adata):
-    """Test tsea_network success."""
-    with pytest.raises(ValueError):
-        gsea.gsea_network(adata_gsea, cutoff=0.0000005)
-    with pytest.raises(ValueError, match="Could not find gsea results."):
-        gsea.gsea_network(adata)
+@pytest.mark.parametrize("adata_name,kwargs,match", [
+    ("adata_gsea", {"cutoff": 0.0000005}, None),
+    ("adata", {}, "Could not find gsea results."),
+])
+def test_gsea_network_fail(request, adata_name, kwargs, match):
+    """Test gsea_network failure."""
+    adata = request.getfixturevalue(adata_name)
+    with pytest.raises(ValueError, match=match):
+        gsea.gsea_network(adata, **kwargs)
