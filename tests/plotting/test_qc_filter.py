@@ -215,6 +215,7 @@ def test_upset_select_cells_fail(adata, groupby, match):
         pl._upset_select_cells(adata, grouped_thresholds, groupby=groupby)
 
 
+@pytest.mark.parametrize("limit_combinations", [None, 2])
 @pytest.mark.parametrize("thresholds, groupby", [({'qcvar1': {'min': 0.1, 'max': 0.9},
                                                    'qcvar2': {'min': 0.2, 'max': 0.8}}, None),
                                                  ({'qcvar1': {'C1': {'min': 0.1, 'max': 0.9},
@@ -224,20 +225,10 @@ def test_upset_select_cells_fail(adata, groupby, match):
                                                               'C2': {'min': 0.2, 'max': 0.8},
                                                               'C3': {'min': 0.2, 'max': 0.8}}
                                                    }, 'condition')])
-def test_upset_plot_filter_impacts(adata, thresholds, groupby):
+def test_upset_plot_filter_impacts(adata, thresholds, groupby, limit_combinations):
     """Test upset_plot_filter_impacts success."""
-    plot_result = pl.upset_plot_filter_impacts(adata, thresholds=thresholds, groupby=groupby)
-
-    assert isinstance(plot_result, dict)
-    assert list(plot_result.keys()) == ['matrix', 'shading', 'totals', 'intersections']
-    ax_type = type(plot_result['matrix']).__name__
-    assert ax_type.startswith("Axes")
-    ax_type = type(plot_result['shading']).__name__
-    assert ax_type.startswith("Axes")
-    ax_type = type(plot_result['intersections']).__name__
-    assert ax_type.startswith("Axes")
-
-    plot_result = pl.upset_plot_filter_impacts(adata, thresholds=thresholds, groupby=groupby, limit_combinations=2)
+    plot_result = pl.upset_plot_filter_impacts(adata, thresholds=thresholds, groupby=groupby,
+                                               limit_combinations=limit_combinations)
 
     assert isinstance(plot_result, dict)
     assert list(plot_result.keys()) == ['matrix', 'shading', 'totals', 'intersections']
