@@ -27,14 +27,14 @@ def test_plot_starsolo_quality(order):
     assert isinstance(res, np.ndarray)
 
 
-def test_plot_starsolo_quality_failure():
+@pytest.mark.parametrize("folder,measures,exception,match", [
+    ("invalid", None, ValueError, "No STARsolo summary files found in folder*"),
+    (quant_folder, ["invalid"], KeyError, "Measure .* not found in summary table"),
+])
+def test_plot_starsolo_quality_failure(folder, measures, exception, match):
     """Test plot_starsolo_quality failure with invalid input."""
-
-    with pytest.raises(ValueError, match="No STARsolo summary files found in folder*"):
-        pl.plot_starsolo_quality("invalid")
-
-    with pytest.raises(KeyError, match="Measure .* not found in summary table"):
-        pl.plot_starsolo_quality(quant_folder, measures=["invalid"])
+    with pytest.raises(exception, match=match):
+        pl.plot_starsolo_quality(folder, measures=measures)
 
 
 def test_plot_starsolo_UMI():
