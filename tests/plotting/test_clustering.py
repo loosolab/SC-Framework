@@ -35,16 +35,14 @@ def test_search_clustering_parameters_errors(adata):
                                         method="leiden")
 
 
-def test_search_clustering_parameters_beartype(adata):
+@pytest.mark.parametrize("resolution_range,method", [
+    ((0.1, 0.3, 0.1, 0.3), "leiden"),   # invalid tuple length
+    ((0.1, 0.3, 0.1), "unknown"),        # invalid method
+])
+def test_search_clustering_parameters_beartype(adata, resolution_range, method):
     """Test if beartype checks for tuple length."""
-
     with pytest.raises(BeartypeCallHintParamViolation):
-        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1, 0.3),
-                                        method="leiden")
-
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1),
-                                        method="unknown")
+        pl.search_clustering_parameters(adata, resolution_range=resolution_range, method=method)
 
 
 @pytest.mark.parametrize("show_umap", [True, False])
