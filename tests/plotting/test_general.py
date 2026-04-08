@@ -123,14 +123,15 @@ def test_plot_venn_fail(venn_dict):
         pl.plot_venn([1, 2, 3, 4, 5])
 
 
-@pytest.mark.parametrize("columns", [["invalid"], ["not", "present"]])
-def test_pairwise_scatter_invalid(adata, columns):
+@pytest.mark.parametrize("columns,exception", [
+    (["invalid"], ValueError),
+    (["not", "present"], ValueError),
+    ("invalid", BeartypeCallHintParamViolation),
+])
+def test_pairwise_scatter_invalid(adata, columns, exception):
     """Test that invalid columns raise error."""
-    with pytest.raises(ValueError):
+    with pytest.raises(exception):
         pl.pairwise_scatter(adata.obs, columns=columns)
-
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.pairwise_scatter(adata.obs, columns="invalid")
 
 
 @pytest.mark.parametrize("thresholds", [None,
