@@ -360,32 +360,17 @@ def test_anndata_overview_fail(adata):
         )
 
 
-def test_anndata_overview_fail_plots(adata):
-    """Test invalid parameter inputs."""
+@pytest.mark.parametrize("plots,exception", [
+    (None, BeartypeCallHintParamViolation),  # no input
+    (["PCA", "invalid"], (BeartypeCallHintParamViolation, ValueError)),  # wrong input
+])
+def test_anndata_overview_fail_plots(adata, plots, exception):
+    """Test invalid plots inputs."""
     adatas = {"raw": adata}
 
-    # invalid plots
-    # no input
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.anndata_overview(
-            adatas=adatas,
-            color_by=list(adata.obs.columns),
-            plots=None,
-            figsize=None,
-            output=None,
-            dpi=300
-        )
-
-    # wrong input
-    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
-        pl.anndata_overview(
-            adatas=adatas,
-            color_by=list(adata.obs.columns),
-            plots=["PCA", "invalid"],
-            figsize=None,
-            output=None,
-            dpi=300
-        )
+    with pytest.raises(exception):
+        pl.anndata_overview(adatas=adatas, color_by=list(adata.obs.columns),
+                            plots=plots, figsize=None, output=None, dpi=300)
 
 
 @pytest.mark.parametrize("selected", [None, [1, 2, 3], [2, 4, 6]])
