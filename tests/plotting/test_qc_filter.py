@@ -135,16 +135,16 @@ def test_quality_violin(adata, groupby, columns, which, title, color_list):
     assert isinstance(slider, dict)
 
 
-def test_quality_violin_fail(adata):
+@pytest.mark.parametrize("kwargs,exception,match", [
+    ({"columns": ["qc_float"], "which": "Invalid"}, BeartypeCallHintParamViolation, None),
+    ({"groupby": "condition", "columns": ["qc_float"], "color_list": sns.color_palette("Set1", 1)}, ValueError, "Increase the color_list variable"),
+    ({"groupby": "condition", "columns": ["qc_float"], "header": []}, ValueError, "Length of header does not match"),
+    ({"columns": ["Invalid"]}, ValueError, "The following columns from 'columns' were not found"),
+])
+def test_quality_violin_fail(adata, kwargs, exception, match):
     """Test quality_violin failure."""
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.quality_violin(adata, columns=["qc_float"], which="Invalid")
-    with pytest.raises(ValueError, match="Increase the color_list variable"):
-        pl.quality_violin(adata, groupby="condition", columns=["qc_float"], color_list=sns.color_palette("Set1", 1))
-    with pytest.raises(ValueError, match="Length of header does not match"):
-        pl.quality_violin(adata, groupby="condition", columns=["qc_float"], header=[])
-    with pytest.raises(ValueError, match="The following columns from 'columns' were not found"):
-        pl.quality_violin(adata, columns=["Invalid"])
+    with pytest.raises(exception, match=match):
+        pl.quality_violin(adata, **kwargs)
 
 
 def test_get_slider_thresholds_dict(slider_dict):
