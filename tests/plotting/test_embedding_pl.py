@@ -36,13 +36,14 @@ def test_flip_embedding(adata, how):
         assert all(adata.obsm[key][:, 0] == -tmp.obsm[key][:, 0])
 
 
-def test_invalid_flip_embedding(adata):
+@pytest.mark.parametrize("kwargs,exception", [
+    ({"how": "invalid"}, BeartypeCallHintParamViolation),
+    ({"key": "invalid"}, KeyError),
+])
+def test_invalid_flip_embedding(adata, kwargs, exception):
     """Test flip_embedding failure."""
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.flip_embedding(adata, how="invalid")
-
-    with pytest.raises(KeyError):
-        pl.flip_embedding(adata, key="invalid")
+    with pytest.raises(exception):
+        pl.flip_embedding(adata, **kwargs)
 
 
 @pytest.mark.parametrize("color, label", [
