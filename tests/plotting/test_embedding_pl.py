@@ -191,21 +191,19 @@ def test_invalid_method_search_dim_red_parameter(adata):
                                       method="invalid")
 
 
-@pytest.mark.parametrize("range", [(0.1, 0.2, 0.1, 0.1), (0.1, 0.2, 0.3)])
-def test_search_dim_red_parameters_ranges(adata, range):
+@pytest.mark.parametrize("min_dist_range,spread_range", [
+    ((0.1, 0.2, 0.1, 0.1), (2.0, 3.0, 0.5)),  # invalid min_dist_range: wrong tuple length
+    ((0.1, 0.2, 0.3), (2.0, 3.0, 0.5)),        # invalid min_dist_range: step > max-min
+    ((0.1, 0.3, 0.1), (0.1, 0.2, 0.1, 0.1)),  # invalid spread_range: wrong tuple length
+    ((0.1, 0.3, 0.1), (0.1, 0.2, 0.3)),        # invalid spread_range: step > max-min
+])
+def test_search_dim_red_parameters_ranges(adata, min_dist_range, spread_range):
     """Test that invalid ranges raise ValueError."""
-
     with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl._search_dim_red_parameters(adata, method="umap",
                                       color="condition",
-                                      min_dist_range=range,
-                                      spread_range=(2.0, 3.0, 0.5))
-
-    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
-        pl._search_dim_red_parameters(adata, method="umap",
-                                      color="condition",
-                                      spread_range=range,
-                                      min_dist_range=(0.1, 0.3, 0.1))
+                                      min_dist_range=min_dist_range,
+                                      spread_range=spread_range)
 
 
 @pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
