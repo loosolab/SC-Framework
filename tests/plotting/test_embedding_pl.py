@@ -314,32 +314,20 @@ def test_anndata_overview(adata, tmp_file):
     assert os.path.exists(tmp_file)
 
 
-def test_anndata_overview_fail_color_by(adata):
-    """Test invalid parameter inputs."""
+@pytest.mark.parametrize("color_by,exception,match", [
+    (None, BeartypeCallHintParamViolation, None),  # no input
+    ("<INVALID_COL>", ValueError, "Couldn't find column"),  # wrong input
+])
+def test_anndata_overview_fail_color_by(adata, color_by, exception, match):
+    """Test invalid color_by inputs."""
     adatas = {"raw": adata}
 
-    # invalid color_by
-    # no input
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.anndata_overview(
-            adatas=adatas,
-            color_by=None,
-            plots=["PCA"],
-            figsize=None,
-            output=None,
-            dpi=300
-        )
+    if color_by == "<INVALID_COL>":
+        color_by = "-".join(list(adata.obs.columns)) + "-invalid"
 
-    # wrong input
-    with pytest.raises(ValueError, match="Couldn't find column"):
-        pl.anndata_overview(
-            adatas=adatas,
-            color_by="-".join(list(adata.obs.columns)) + "-invalid",
-            plots=["PCA"],
-            figsize=None,
-            output=None,
-            dpi=300
-        )
+    with pytest.raises(exception, match=match):
+        pl.anndata_overview(adatas=adatas, color_by=color_by, plots=["PCA"],
+                            figsize=None, output=None, dpi=300)
 
 
 def test_anndata_overview_fail(adata):
