@@ -253,15 +253,12 @@ def test_get_3d_dotsize(n, res):
 
 
 @pytest.mark.parametrize("color", ["<GENE_0>", "louvain", "qc_float"])
-def test_plot_3D_UMAP(adata, color):
+def test_plot_3D_UMAP(adata, color, tmp_path):
     """Test if 3d plot is written to html."""
     color = adata.var_names[0] if color == "<GENE_0>" else color
-    # Run 3d plotting
-    pl.plot_3D_UMAP(adata, color=color, save="3D_test")
-
-    # Assert creation of file
-    assert os.path.isfile("3D_test.html")
-    os.remove("3D_test.html")
+    save_path = tmp_path / "3D_test"
+    pl.plot_3D_UMAP(adata, color=color, save=str(save_path))
+    assert save_path.with_suffix(".html").is_file()
 
 
 def test_invalid_color_plot_3D_UMAP(adata):
