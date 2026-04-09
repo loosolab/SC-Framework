@@ -176,7 +176,8 @@ def test_planet_plot_render(planet_plot_vars,
                             planet_columns,
                             planet_color_schemas,
                             output_mode,
-                            output_schemas):
+                            output_schemas,
+                            assert_axes_array):
     """Test planet plot render for the given adata."""
     axes = pp.planet_plot_render(plot_vars=planet_plot_vars,
                                  x_col=_X_COL,
@@ -192,3 +193,4 @@ def test_planet_plot_render(planet_plot_vars,
         output_schemas = 0
     # size and color each always contribute 1 axis
     assert len(axes) == output_mode + 2 + output_schemas
+    assert_axes_array(axes)
