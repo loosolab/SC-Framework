@@ -324,12 +324,11 @@ def test_anndata_overview_fail_color_by(adata, color_by, exception, match):
                             figsize=None, output=None, dpi=300)
 
 
-def test_anndata_overview_fail(adata):
+def test_anndata_overview_fail(adata, adata_fun_scope):
     """Test invalid parameter inputs."""
     adatas_invalid = {"raw": adata, "invalid": "Not an anndata"}
-    adata_cp = adata.copy()
-    adata_cp.obs = adata_cp.obs.drop(["LISI_score_pca"], axis=1)
-    adatas = {"raw": adata_cp}
+    adata_fun_scope.obs = adata_fun_scope.obs.drop(["LISI_score_pca"], axis=1)
+    adatas = {"raw": adata_fun_scope}
 
     # invalid datatype
     with pytest.raises(ValueError, match="All items in 'adatas'"):
@@ -346,7 +345,7 @@ def test_anndata_overview_fail(adata):
     with pytest.raises(ValueError, match="No LISI scores found"):
         pl.anndata_overview(
             adatas=adatas,
-            color_by=list(adata_cp.obs.columns) + [adata_cp.var_names.tolist()[0]],
+            color_by=list(adata_fun_scope.obs.columns) + [adata_fun_scope.var_names.tolist()[0]],
             plots=["LISI"],
             figsize=None,
             output=None,
