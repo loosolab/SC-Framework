@@ -18,7 +18,7 @@ def test_search_clustering_parameters(adata, method):
     axarr = pl.search_clustering_parameters(adata, method=method,
                                             resolution_range=(0.1, 0.31, 0.1),
                                             ncols=2)
-    assert type(axarr).__name__ == "ndarray"
+    assert isinstance(axarr, np.ndarray)
     assert axarr.shape == (2, 2)
 
 

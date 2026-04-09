@@ -6,6 +6,7 @@ import scanpy as sc
 import os
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 
 from beartype.roar import BeartypeCallHintParamViolation
 
@@ -20,7 +21,7 @@ def test_sc_colormap():
     """Test whether sc_colormap returns a colormap."""
 
     cmap = pl.sc_colormap()
-    assert type(cmap).__name__ == "ListedColormap"
+    assert isinstance(cmap, matplotlib.colors.ListedColormap)
 
 
 @pytest.mark.parametrize("how", ["vertical", "horizontal"])
@@ -166,7 +167,7 @@ def test_search_umap_parameters(adata):
     axarr = pl.search_umap_parameters(adata, color="condition",
                                       min_dist_range=(0.1, 0.3, 0.1),
                                       spread_range=(2.0, 3.0, 0.5))
-    assert type(axarr).__name__ == "ndarray"
+    assert isinstance(axarr, np.ndarray)
     assert axarr.shape == (2, 2)
 
 
@@ -176,7 +177,7 @@ def test_search_tsne_parameters(adata):
     axarr = pl.search_tsne_parameters(adata, color="condition",
                                       learning_rate_range=(100, 300, 100),
                                       perplexity_range=(20, 30, 5))
-    assert type(axarr).__name__ == "ndarray"
+    assert isinstance(axarr, np.ndarray)
     assert axarr.shape == (2, 2)
 
 

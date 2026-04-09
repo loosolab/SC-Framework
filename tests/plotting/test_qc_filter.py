@@ -125,7 +125,7 @@ def test_quality_violin(adata, groupby, columns, which, title, color_list):
     """Test quality_violin success."""
     figure, slider = pl.quality_violin(adata, columns=columns, groupby=groupby,
                                        which=which, title=title, color_list=color_list)
-    assert type(figure).__name__ == "Figure"
+    assert isinstance(figure, matplotlib.figure.Figure)
     assert isinstance(slider, dict)
 
 
