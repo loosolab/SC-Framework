@@ -1,22 +1,19 @@
 """Test gsea plotting functions."""
 
 import pytest
-import matplotlib
-import numpy as np
 from sctoolbox.plotting import gsea
 
 
 # ------------------------------ TESTS --------------------------------- #
 
 
-def test_term_dotplot(adata_gsea):
+def test_term_dotplot(adata_gsea, assert_axes_array):
     """Test term_dotplot success."""
     axes = gsea.term_dotplot(term="Actin Filament Organization (GO:0007015)",
                              adata=adata_gsea,
                              groupby="louvain")
 
-    assert isinstance(axes, np.ndarray)
-    assert isinstance(axes[0], matplotlib.axes.Axes)
+    assert_axes_array(axes)
 
 
 def test_gsea_cluster_dotplot(adata_gsea):

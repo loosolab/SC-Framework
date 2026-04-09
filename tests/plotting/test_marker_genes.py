@@ -121,13 +121,12 @@ def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
 @pytest.mark.parametrize("use_list,save,figsize",
                          [(True, None, (2, 2)),
                           (False, "out.png", None)])
-def test_plot_gene_correlation(adata, use_list, save, figsize):
+def test_plot_gene_correlation(adata, use_list, save, figsize, assert_axes_array):
     """Test gene correlation."""
     gene_list = adata.var_names[1:4].tolist() if use_list else adata.var_names[1]
     axes = pl.plot_gene_correlation(adata, adata.var_names[0], gene_list,
                                     save=save, figsize=figsize)
-    assert type(axes).__name__ == "ndarray"
-    assert isinstance(axes[0], matplotlib.axes.Axes)
+    assert_axes_array(axes)
 
     if save:
         os.remove(save)

@@ -47,7 +47,7 @@ def test_search_clustering_parameters_beartype(adata, resolution_range, method):
 
 
 @pytest.mark.parametrize("show_umap", [True, False])
-def test_marker_gene_clustering(adata, show_umap):
+def test_marker_gene_clustering(adata, show_umap, assert_axes_array):
     """Test marker_gene_clustering."""
 
     marker_dict = {"Celltype A": list(adata.var.index[:3]),
@@ -55,5 +55,4 @@ def test_marker_gene_clustering(adata, show_umap):
 
     axes_list = pl.marker_gene_clustering(adata, "condition",
                                           marker_dict, show_umap=show_umap)
-    assert isinstance(axes_list, np.ndarray)
-    assert isinstance(axes_list[0], matplotlib.axes.Axes)
+    assert_axes_array(axes_list)

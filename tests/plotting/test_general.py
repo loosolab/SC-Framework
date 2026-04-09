@@ -48,7 +48,7 @@ def test_add_labels(df, label):
     assert type(texts[0]).__name__ == "Annotation"
 
 
-def test_clustermap_dotplot(adata):
+def test_clustermap_dotplot(adata, assert_axes_array):
     """Test clustermap_dotplot success."""
     table = adata.obs.reset_index()[:10]
     axes = pl.clustermap_dotplot(table=table, x="bulk_labels",
@@ -56,8 +56,7 @@ def test_clustermap_dotplot(adata):
                                  size="n_counts", palette="viridis",
                                  title="Title", show_grid=True)
 
-    assert isinstance(axes, np.ndarray)
-    assert isinstance(axes[0], matplotlib.axes.Axes)
+    assert_axes_array(axes)
 
 
 def test_bidirectional_barplot(df_bidir_bar):

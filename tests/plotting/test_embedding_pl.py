@@ -67,7 +67,7 @@ def test_add_legend_ax(adata, color, label):
 @pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True, "components": "1,2"},
                                     {"show_title": False, "show_contour": False, "components": ["1,2", "2,3"]}])
 @pytest.mark.parametrize("style", ["dots", "density", "hexbin"])
-def test_embedding(adata, style, kwargs):
+def test_embedding(adata, style, kwargs, assert_axes_array):
     """Assert embedding works and returns Axes object."""
 
     # Collect test colors
@@ -77,7 +77,7 @@ def test_embedding(adata, style, kwargs):
     if style != "hexbin":
         colors.append("louvain")  # categorical obs variable; only available for dots/density
 
-# call plot_embedding
+    # call plot_embedding
     axes_list = pl.plot_embedding(adata, color=colors, style=style, **kwargs)
 
     # Assert number of plots
@@ -85,14 +85,14 @@ def test_embedding(adata, style, kwargs):
     n_components = 1 if isinstance(components, str) else len(components)
     assert len(axes_list) == len(colors) * n_components
 
-    assert isinstance(axes_list[0], matplotlib.axes.Axes)
+    assert_axes_array(axes_list)
 
 
-def test_embedding_single(adata):
+def test_embedding_single(adata, assert_axes_array):
     """Test that embedding works with single color."""
     axarr = pl.plot_embedding(adata, color="qcvar1")
 
-    assert isinstance(axarr[0], matplotlib.axes.Axes)
+    assert_axes_array(axarr)
 
 
 def test_embedding_error(adata):
@@ -102,7 +102,7 @@ def test_embedding_error(adata):
 
 
 @pytest.mark.parametrize("top_n, x, style", [(None, True, "dots"), (3, None, "hexbin")])
-def test_feature_per_group(adata, x, top_n, style):
+def test_feature_per_group(adata, x, top_n, style, assert_axes_array):
     """Test the feature_per_group plot."""
     if x:
         x = adata.var.index[:3].tolist()
@@ -113,8 +113,7 @@ def test_feature_per_group(adata, x, top_n, style):
                                top_n=top_n,
                                style=style)
 
-    # Assert type of output
-    assert isinstance(axs.flatten()[0], matplotlib.axes.Axes)
+    assert_axes_array(axs.flatten())
 
 
 @pytest.mark.parametrize("top_n, x, y", [
