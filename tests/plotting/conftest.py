@@ -135,7 +135,8 @@ def adata_gsea():
                                    marker_key=__rank_key,
                                    organism="human",
                                    method="prerank",
-                                   inplace=True)
+                                   inplace=True,
+                                   save_table=None)
 
     return adata
 
