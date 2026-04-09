@@ -165,8 +165,8 @@ def test_planet_plot_anndata_preprocess(adata_planet_plot):
 
 
 @pytest.mark.parametrize("mode, output_mode", [("aggregate", 1), ("planet", 2)])
-@pytest.mark.parametrize("size_value, output_size_value", [("count", 1), ("percentage", 1)])
-@pytest.mark.parametrize("color_value, output_color_value", [("value", 1), ("percentage_max", 1)])
+@pytest.mark.parametrize("size_value", ["count", "percentage"])
+@pytest.mark.parametrize("color_value", ["value", "percentage_max"])
 @pytest.mark.parametrize("planet_columns, planet_color_schemas, output_schemas",
                          [(["0", "1", "2", "3"], None, 0),
                           (["obscol1", "obscol2", "obscol3", "obscol4", "obscol5", "obscol6"], ["Accent", "twilight", "CMRmap", "cividis", "gray", "coolwarm"], 6)])
@@ -177,8 +177,6 @@ def test_planet_plot_render(planet_plot_vars,
                             planet_columns,
                             planet_color_schemas,
                             output_mode,
-                            output_size_value,
-                            output_color_value,
                             output_schemas):
     """Test planet plot render for the given adata."""
     axes = pp.planet_plot_render(plot_vars=planet_plot_vars,
@@ -193,5 +191,5 @@ def test_planet_plot_render(planet_plot_vars,
     # set 0 for output_schemas for aggregate mode
     if mode == "aggregate":
         output_schemas = 0
-    # assert count of plot axes
-    assert len(axes) == output_mode + output_size_value + output_color_value + output_schemas
+    # size and color each always contribute 1 axis
+    assert len(axes) == output_mode + 2 + output_schemas
