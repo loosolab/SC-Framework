@@ -19,7 +19,6 @@ def test_add_figure_title_axis(adata, color):
     """Test if function _add_figure_title runs with axis object(s) as input."""
     axes = sc.pl.umap(adata, color=color, show=False)
     pl._add_figure_title(axes, "UMAP plots", fontsize=20)
-    assert True
 
 
 def test_add_figure_title_axis_dict(adata):
@@ -28,14 +27,12 @@ def test_add_figure_title_axis_dict(adata):
     axes = sc.pl.dotplot(adata, markers, groupby='condition',
                          dendrogram=True, show=False)
     pl._add_figure_title(axes, "Dotplot", fontsize=20)
-    assert True
 
 
 def test_add_figure_title_axis_clustermap(adata):
     """Test if function _add_figure_title runs with clustermap as input."""
     clustermap = sns.clustermap(adata.obs[['LISI_score_pca', 'qc_float']])
     pl._add_figure_title(clustermap, "Heatmap", fontsize=20)
-    assert True
 
 
 @pytest.mark.parametrize("label", [None, "label"])
@@ -62,7 +59,6 @@ def test_clustermap_dotplot(adata, assert_axes_array):
 def test_bidirectional_barplot(df_bidir_bar):
     """Test bidirectoional_barplot success."""
     pl.bidirectional_barplot(df_bidir_bar, title="Title")
-    assert True
 
 
 def test_bidirectional_barplot_fail(df):
@@ -106,7 +102,6 @@ def test_plot_venn(venn_dict):
     pl.plot_venn(venn_dict, title="Test")
     venn_dict.pop("Group C")
     pl.plot_venn(venn_dict, title="Test")
-    assert True
 
 
 @pytest.mark.parametrize("input_data,exception", [

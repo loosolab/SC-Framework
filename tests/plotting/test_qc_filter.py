@@ -108,14 +108,12 @@ def test_toggle_linkage(checkbox, slider_list, global_threshold):
     linkage_dict = dict()
     linkage_dict[column] = pl._link_sliders(slider_list) if global_threshold is True else None
     checkbox.observe(functools.partial(pl._toggle_linkage, linkage_dict=linkage_dict, slider_list=slider_list, key=column), names=["value"])
-    assert True
 
 
 def test_update_threshold(slider):
     """Test if update_threshold runs without error."""
     fig, _ = plt.subplots()
     slider.observe(functools.partial(pl._update_thresholds, fig=fig, min_line=1, min_shade=1, max_line=1, max_shade=1), names=["value"])
-    assert True
 
 
 @pytest.mark.parametrize("columns, which, groupby", [(['qc_float', 'LISI_score_pca'], "obs", "condition"),
