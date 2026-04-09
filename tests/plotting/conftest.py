@@ -1,6 +1,7 @@
 """Fixtures available to all tests within the plotting directory."""
 
 import pytest
+import matplotlib.axes
 import scanpy as sc
 import os
 import numpy as np
@@ -15,6 +16,21 @@ __rank_key = "rank_genes_groups"
 
 
 # ------------------------------ FIXTURES --------------------------------- #
+
+
+@pytest.fixture
+def assert_axes_array():
+    """Return a helper that asserts an object is a numpy array of matplotlib Axes.
+
+    Returns
+    -------
+    callable
+        Assertion helper function.
+    """
+    def _assert(axes):
+        assert isinstance(axes, np.ndarray)
+        assert isinstance(axes[0], matplotlib.axes.Axes)
+    return _assert
 
 
 def _make_adata():
