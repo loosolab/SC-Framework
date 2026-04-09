@@ -9,6 +9,38 @@ import sctoolbox.plotting.planet_plot as pp
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
 
+# ---------------------------- Script variables --------------------------- #
+# global variables for this script
+
+# Common planet plot parameters shared across tests
+_X_COL = "category1"
+_Y_COL = "category2"
+_INPUT_LAYER = "test_layer"
+_OBS_COLUMNS = ["obscol1", "obscol2", "obscol3", "obscol4", "obscol5", "obscol6"]
+
+# ------------------------------ FIXTURES --------------------------------- #
+
+
+@pytest.fixture(scope="session")
+def planet_plot_vars(adata_planet_plot):
+    """Preprocessed planet plot data for use as test setup.
+
+    Returns
+    -------
+    pd.DataFrame
+        Preprocessed planet plot variables.
+    """
+    genes = list(adata_planet_plot.var.index[:4])
+    return pp.planet_plot_anndata_preprocess(
+        adata=adata_planet_plot,
+        x_col=_X_COL,
+        y_col=_Y_COL,
+        input_layer=_INPUT_LAYER,
+        genes=genes,
+        gene_symbols=None,
+        obs_columns=_OBS_COLUMNS,
+    )
+
 
 # ------------------------------ TESTS --------------------------------- #
 
@@ -64,38 +96,27 @@ def test_genes_aggregator(aggregator, to_aggregate, expected_output):
 
 def test_planet_plot_anndata_preprocess(adata_planet_plot):
     """Test planet plot preprocess for the given adata."""
-    x_col = "category1"
-    y_col = "category2"
-    input_layer = "test_layer"
     genes = list(adata_planet_plot.var.index[:4])
-    gene_symbols = None
-    obs_columns = ["obscol1", "obscol2", "obscol3", "obscol4", "obscol5", "obscol6"]
-    expected_df_array = np.array([['A', 'a', 50.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                                   0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 1.0,
-                                   0.02, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0,
-                                   2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0],
-                                  ['A', 'b', 50.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                                   0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 1.0,
-                                   0.02, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0,
-                                   2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0],
-                                  ['B', 'a', 50.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                                   0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 1.0,
-                                   0.02, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0,
-                                   2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0],
-                                  ['B', 'b', 50.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                                   0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 1.0,
-                                   0.02, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0,
-                                   2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0]], dtype=object)
+
+    # create the expected output array
+    row_template = [50.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                    0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 1.0,
+                    0.02, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0,
+                    2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0, 2.0, 100.0]
+    expected_df_array = np.array(
+        [[cat1, cat2] + row_template for cat1, cat2 in [("A", "a"), ("A", "b"), ("B", "a"), ("B", "b")]],
+        dtype=object
+    )
 
     # using default values for aggregators
     plot_vars = pp.planet_plot_anndata_preprocess(adata=adata_planet_plot,
-                                                  x_col=x_col,
-                                                  y_col=y_col,
-                                                  input_layer=input_layer,
+                                                  x_col=_X_COL,
+                                                  y_col=_Y_COL,
+                                                  input_layer=_INPUT_LAYER,
                                                   genes=genes,
-                                                  gene_symbols=gene_symbols,
-                                                  obs_columns=obs_columns)
-    # assert equality with expected
+                                                  gene_symbols=None,
+                                                  obs_columns=_OBS_COLUMNS)
+
     assert np.array_equal(expected_df_array, np.array(plot_vars.values))
 
 
@@ -105,7 +126,7 @@ def test_planet_plot_anndata_preprocess(adata_planet_plot):
 @pytest.mark.parametrize("planet_columns, planet_color_schemas, output_schemas",
                          [(["0", "1", "2", "3"], None, 0),
                           (["obscol1", "obscol2", "obscol3", "obscol4", "obscol5", "obscol6"], ["Accent", "twilight", "CMRmap", "cividis", "gray", "coolwarm"], 6)])
-def test_planet_plot_render(adata_planet_plot,
+def test_planet_plot_render(planet_plot_vars,
                             mode,
                             size_value,
                             color_value,
@@ -116,22 +137,9 @@ def test_planet_plot_render(adata_planet_plot,
                             output_color_value,
                             output_schemas):
     """Test planet plot render for the given adata."""
-    x_col = "category1"
-    y_col = "category2"
-    input_layer = "test_layer"
-    genes = list(adata_planet_plot.var.index[:4])
-    gene_symbols = None
-    obs_columns = ["obscol1", "obscol2", "obscol3", "obscol4", "obscol5", "obscol6"]
-    plot_vars = pp.planet_plot_anndata_preprocess(adata=adata_planet_plot,
-                                                  x_col=x_col,
-                                                  y_col=y_col,
-                                                  input_layer=input_layer,
-                                                  genes=genes,
-                                                  gene_symbols=gene_symbols,
-                                                  obs_columns=obs_columns)
-    axes = pp.planet_plot_render(plot_vars=plot_vars,
-                                 x_col=x_col,
-                                 y_col=y_col,
+    axes = pp.planet_plot_render(plot_vars=planet_plot_vars,
+                                 x_col=_X_COL,
+                                 y_col=_Y_COL,
                                  mode=mode,
                                  size_value=size_value,
                                  color_value=color_value,
