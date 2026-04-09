@@ -21,7 +21,7 @@ def test_term_dotplot(adata_gsea):
 
 def test_gsea_cluster_dotplot(adata_gsea):
     """Test tsea_cluster_dotplot success."""
-    axes_dict = gsea.cluster_dotplot(adata_gsea)
+    axes_dict = gsea.cluster_dotplot(adata_gsea, save_figs=False)
     assert isinstance(axes_dict, dict)
 
 
