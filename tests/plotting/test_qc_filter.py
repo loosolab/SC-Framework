@@ -1,6 +1,7 @@
 """Test qc_filter plotting function."""
 
 import pytest
+import ipywidgets
 import sctoolbox.plotting.qc_filter as pl
 import sctoolbox.tools.insertsize as insertsize
 import os
@@ -93,7 +94,7 @@ def test_link_sliders(slider_list):
     """Test _link_sliders success."""
     linkage_list = pl._link_sliders(slider_list)
     assert isinstance(linkage_list, list)
-    assert type(linkage_list[0]).__name__ == 'link'
+    assert isinstance(linkage_list[0], ipywidgets.link)
 
 
 @pytest.mark.parametrize("global_threshold", [True, False])
