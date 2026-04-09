@@ -22,9 +22,10 @@ def test_gsea_cluster_dotplot(adata_gsea):
     assert isinstance(axes_dict, dict)
 
 
-def test_gsea_network(adata_gsea):
+@pytest.mark.parametrize("cutoff", [0.3, 0.5, 0.8])
+def test_gsea_network(adata_gsea, cutoff):
     """Test tsea_network success."""
-    gsea.gsea_network(adata_gsea, cutoff=0.5)
+    gsea.gsea_network(adata_gsea, cutoff=cutoff)
 
 
 def test_gsea_network_cutoff_too_low(adata_gsea):
