@@ -81,11 +81,10 @@ def test_group_correlation(adata, tmp_path):
 def test_insertsize_plotting(atac_adata):
     """Test if insertsize plotting works."""
 
-    adata = atac_adata.copy()
     fragments = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac_fragments.bed')
-    insertsize.add_insertsize(adata, fragments=fragments)
+    insertsize.add_insertsize(atac_adata, fragments=fragments)
 
-    ax = pl.plot_insertsize(adata)
+    ax = pl.plot_insertsize(atac_adata)
 
     assert isinstance(ax, matplotlib.axes.Axes)
 

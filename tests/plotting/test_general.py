@@ -41,7 +41,7 @@ def test_add_labels(df, label):
         df["label"] = ["A", "B", "C", "D", "E"]
     texts = pl._add_labels(df, x="col1", y="col2", label_col=label)
     assert isinstance(texts, list)
-    assert type(texts[0]).__name__ == "Annotation"
+    assert isinstance(texts[0], matplotlib.text.Annotation)
 
 
 def test_clustermap_dotplot(adata, assert_axes_array):

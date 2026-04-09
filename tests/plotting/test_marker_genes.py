@@ -2,8 +2,9 @@
 
 import pytest
 import matplotlib
-import sctoolbox.plotting.marker_genes as pl
 import matplotlib.pyplot as plt
+import seaborn as sns
+import sctoolbox.plotting.marker_genes as pl
 
 from beartype.roar import BeartypeCallHintParamViolation
 
@@ -92,7 +93,7 @@ def test_gene_expression_heatmap(adata, title, groupby):
                                    col_cluster=True,            # ensure title is tested
                                    show_col_dendrogram=True,    # ensure title is tested
                                    cluster_column="louvain")
-    assert type(g).__name__ == "ClusterGrid"
+    assert isinstance(g, sns.matrix.ClusterGrid)
 
 
 @pytest.mark.parametrize("kwargs, exception",
