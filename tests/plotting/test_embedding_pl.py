@@ -25,16 +25,16 @@ def test_sc_colormap():
 
 
 @pytest.mark.parametrize("how", ["vertical", "horizontal"])
-def test_flip_embedding(adata, how):
+def test_flip_embedding(adata_fun_scope, how):
     """Test flip_embedding success."""
-    tmp = adata.copy()
+    tmp = adata_fun_scope.copy()
     key = "X_umap"
-    pl.flip_embedding(adata, key=key, how=how)
+    pl.flip_embedding(adata_fun_scope, key=key, how=how)
 
     if how == "vertical":
-        assert all(adata.obsm[key][:, 1] == -tmp.obsm[key][:, 1])
+        assert all(adata_fun_scope.obsm[key][:, 1] == -tmp.obsm[key][:, 1])
     elif how == "horizontal":
-        assert all(adata.obsm[key][:, 0] == -tmp.obsm[key][:, 0])
+        assert all(adata_fun_scope.obsm[key][:, 0] == -tmp.obsm[key][:, 0])
 
 
 @pytest.mark.parametrize("kwargs,exception", [
