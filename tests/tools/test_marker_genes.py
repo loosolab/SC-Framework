@@ -126,31 +126,29 @@ def test_add_gene_expression(adata):
         mg.add_gene_expression(adata=adata, gene="INVALID")
 
 
-def test_get_rank_genes_tables(adata):
+def test_get_rank_genes_tables(adata, tmp_path):
     """Test if rank gene tables are created and saved to excel file."""
 
     sc.tl.rank_genes_groups(adata, groupby="condition")
 
-    tables = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx")
+    save_path = str(tmp_path / "rank_genes.xlsx")
+    tables = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel=save_path)
 
     assert len(tables) == 3
-    assert os.path.exists("rank_genes.xlsx")
-
-    os.remove("rank_genes.xlsx")
+    assert os.path.exists(save_path)
 
 
 @pytest.mark.parametrize("alt_name", [{}, {"Tooooooooo_loooooong_duplicate_1": "Grp_1", "Tooooooooo_loooooong_duplicate_2": "Grp_2"}])
-def test_get_rank_genes_tables_duplicates(adata, alt_name):
+def test_get_rank_genes_tables_duplicates(adata, alt_name, tmp_path):
     """Test the handling of duplicated group names during excel write."""
     sc.tl.rank_genes_groups(adata, groupby="long_condition")
 
+    save_path = str(tmp_path / "rank_genes.xlsx")
     if alt_name == {}:
         with pytest.raises(ValueError):
-            _ = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx", alt_name=alt_name)
+            _ = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel=save_path, alt_name=alt_name)
     else:
-        _ = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx", alt_name=alt_name)
-
-        os.remove("rank_genes.xlsx")
+        _ = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel=save_path, alt_name=alt_name)
 
 
 @pytest.mark.parametrize("kwargs", [{"var_columns": ["invalid", "columns"]}])  # save_excel must be str

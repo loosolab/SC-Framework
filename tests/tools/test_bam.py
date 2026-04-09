@@ -2,7 +2,6 @@
 
 import pytest
 import os
-import shutil
 import glob
 import logging
 import random
@@ -131,24 +130,21 @@ def test_subset_bam(atac_bam_file, barcodes, caplog, tmpdir):
 
 
 @pytest.mark.parametrize("parallel,sort_bams,index_bams", [(True, True, True), (False, False, False)])
-def test_split_bam_clusters(bam_handle, atac_bam_file, adata_atac, parallel, sort_bams, index_bams):
+def test_split_bam_clusters(bam_handle, atac_bam_file, adata_atac, parallel, sort_bams, index_bams, tmp_path):
     """Test split_bam_clusters success."""
     # Get input reads
     n_reads_input = stb.get_bam_reads(bam_handle)
 
     # Split bam
-    stb.split_bam_clusters(adata_atac, atac_bam_file, groupby="Sample", parallel=parallel, sort_bams=sort_bams, index_bams=index_bams, writer_threads=len(set(adata_atac.obs["Sample"])) + 1)
+    output_prefix = str(tmp_path / "split_")
+    stb.split_bam_clusters(adata_atac, atac_bam_file, groupby="Sample", parallel=parallel, sort_bams=sort_bams, index_bams=index_bams, writer_threads=len(set(adata_atac.obs["Sample"])) + 1, output_prefix=output_prefix)
 
     # Check if the bam file is split and the right size
-    output_bams = glob.glob("split_Sample*.bam")
+    output_bams = glob.glob(str(tmp_path / "split_Sample*.bam"))
     handles = [stb.open_bam(f, "rb") for f in output_bams]
     n_reads_output = sum([stb.get_bam_reads(handle) for handle in handles])
 
     assert n_reads_input == n_reads_output  # this is true because all groups are represented in the bam
-
-    # Clean up
-    for bam in output_bams:
-        os.remove(bam)
 
 
 def test_failure_split_bam_clusters(atac_bam_file, adata_atac):
@@ -180,29 +176,27 @@ def test_get_bam_reads(bam_handle):
     assert total == 10000
 
 
-def test_bam_to_bigwig():
+def test_bam_to_bigwig(atac_bam_file, tmp_path):
     """Test whether the bigwig is written."""
 
-    bigwig_out = "mm10_atac.bw"
-
-    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.bam')
-    bigwig_f = stb.bam_to_bigwig(bam_f, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
+    bigwig_out = str(tmp_path / "mm10_atac.bw")
+    bigwig_f = stb.bam_to_bigwig(atac_bam_file, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
 
     assert os.path.exists(bigwig_f)
 
-    os.remove(bigwig_out)
 
-
-@pytest.mark.parametrize("bam_name, outdir, barcode_regex",
-                         [('mm10_atac', None, None),
-                          ('homo_sapiens_liver', 'fragment_file_output', "[^.]*"),
-                          ('homo_sapiens_liver_sorted', None, "[^.]*")])
-def test_create_fragment_file(bam_name, outdir, barcode_regex):
+@pytest.mark.parametrize("bam_name, use_outdir, barcode_regex",
+                         [('mm10_atac', False, None),
+                          ('homo_sapiens_liver', True, "[^.]*"),
+                          ('homo_sapiens_liver_sorted', False, "[^.]*")])
+def test_create_fragment_file(bam_name, use_outdir, barcode_regex, tmp_path):
     """Test create_fragment_file success."""
 
     barcode_tag = "CB"
     if barcode_regex:
         barcode_tag = None
+
+    outdir = str(tmp_path / "fragment_file_output") if use_outdir else str(tmp_path)
 
     bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', bam_name + ".bam")
     fragments_f = stb.create_fragment_file(bam=bam_f,
@@ -212,27 +206,19 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
                                            barcode_regex=barcode_regex,  # homo_sapiens_liver has the barcode in the read name
                                            index=True)  # requires bgzip and tabix
 
-    outdir_fmt = os.path.dirname(bam_f) if outdir is None else outdir
-    expected = os.path.join(outdir_fmt, bam_name + "_fragments.tsv")
+    expected = os.path.join(outdir, bam_name + "_fragments.tsv")
 
     assert fragments_f == expected and os.path.isfile(fragments_f) and os.stat(fragments_f).st_size > 0
 
-    # Clean up framgnets and output folder (if created)
-    os.remove(fragments_f)
-    if outdir is not None:
-        shutil.rmtree(outdir)
 
-
-def test_create_fragment_file_multiprocessing():
+def test_create_fragment_file_multiprocessing(tmp_path):
     """Assert that the result is the same regardless of number of cores used."""
 
     bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'homo_sapiens_liver_sorted.bam')
 
     n_fragments = []
     for nproc in [1, 4]:
-        fragments_f = stb.create_fragment_file(bam=bam_f, nproc=nproc, barcode_tag=None, barcode_regex="[^.]*")  # homo_sapiens_liver has the barcode in the read name
+        fragments_f = stb.create_fragment_file(bam=bam_f, nproc=nproc, outdir=str(tmp_path), barcode_tag=None, barcode_regex="[^.]*")  # homo_sapiens_liver has the barcode in the read name
         n_fragments.append(len(open(fragments_f).readlines()))
 
     assert len(set(n_fragments)) == 1
-
-    os.remove(fragments_f)

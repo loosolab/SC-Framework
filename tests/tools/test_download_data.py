@@ -1,24 +1,16 @@
 """Test tools/download_data.py functions."""
 
 import pytest
-import os
-import shutil
 import botocore
 
 from sctoolbox.tools import download_data
 
 
-def test_download_dataset():
+def test_download_dataset(tmp_path):
     """Test data download."""
 
-    try:
-        download_data.download_dataset("danioheart_atlas.h5ad")
-        is_downloaded = os.path.isfile("data-sc-framework-2025/danioheart_atlas.h5ad")
-        assert is_downloaded
-    finally:
-        is_downloaded = os.path.isfile("data-sc-framework-2025/danioheart_atlas.h5ad")
-        if is_downloaded:
-            shutil.rmtree("data-sc-framework-2025")
+    download_data.download_dataset("danioheart_atlas.h5ad", download_path=str(tmp_path))
+    assert (tmp_path / "danioheart_atlas.h5ad").is_file()
 
 
 def test_download_dataset_fail():
