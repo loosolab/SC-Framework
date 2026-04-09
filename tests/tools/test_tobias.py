@@ -1,41 +1,8 @@
 """Tests for usage of TOBIAS within the sc framework."""
-import pytest
-import scanpy as sc
 import os
 import sctoolbox.tools.tobias as tobias
 import yaml
 import shutil
-
-
-# ----------------------------- FIXTURES ------------------------------- #
-
-
-@pytest.fixture
-def bam_file():
-    """Fixture pointing to test bam.
-
-    Returns
-    -------
-    str
-        Path to the test BAM file.
-    """
-    return os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.bam')
-
-
-@pytest.fixture(scope="session")
-def adata():
-    """Load and returns an anndata object.
-
-    Returns
-    -------
-    sc.AnnData
-        ATAC-seq AnnData object for testing.
-    """
-
-    # has .X of type numpy.array
-    obj = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
-
-    return obj
 
 
 # ------------------------------ TESTS --------------------------------- #
@@ -50,14 +17,14 @@ def test_write_TOBIAS_config():
     assert yml["data"]["1"] == "bam1.bam"
 
 
-def test_prepare_tobias(adata, bam_file):
+def test_prepare_tobias(adata_atac, atac_bam_file):
     """Test prepare_tobias success."""
 
     try:
-        input_dir, output_dir, yml = tobias.prepare_tobias(adata,
+        input_dir, output_dir, yml = tobias.prepare_tobias(adata_atac,
                                                            groupby='Sample',
                                                            output='./tobias',
-                                                           path_bam=bam_file,
+                                                           path_bam=atac_bam_file,
                                                            barcode_column=None,
                                                            barcode_tag='CB',
                                                            fasta='some.fa',

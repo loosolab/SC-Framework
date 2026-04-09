@@ -4,26 +4,10 @@ import sctoolbox.tools as tl
 import sctoolbox.utils as ul
 import os
 import pytest
-import anndata as ad
 import importlib_resources
 
 
 # ---------------------------- FIXTURES -------------------------------- #
-
-
-@pytest.fixture
-def bam():
-    """Load bam file.
-
-    Returns
-    -------
-    str
-        Path to test BAM file.
-    """
-    bam_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac')
-    bam_path = os.path.join(bam_dir, 'mm10_atac.bam')
-
-    return bam_path
 
 
 @pytest.fixture
@@ -58,20 +42,6 @@ def gtf_with_header():
 
 
 @pytest.fixture
-def fragments():
-    """Load a bed file containing fragments.
-
-    Returns
-    -------
-    str
-        Path to BED file with ATAC-seq fragments.
-    """
-    fragments_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_sorted_fragments.bed')
-
-    return fragments_path
-
-
-@pytest.fixture
 def bed():
     """Load a bed with blacklisted regions.
 
@@ -83,21 +53,6 @@ def bed():
     bed_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'hg38.blacklist.v2_sorted.bed')
 
     return bed_path
-
-
-@pytest.fixture
-def adata():
-    """Load adata.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object.
-    """
-    adata_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac')
-    adata = ad.read_h5ad(adata_dir + '/mm10_atac.h5ad')
-
-    return adata
 
 
 # --------------------------- TESTS --------------------------------- #
@@ -124,7 +79,7 @@ def test_convert_gtf_to_bed(tmpdir, gtf, out):
 
 @pytest.mark.parametrize("regions_file", ['bed', 'gtf'])
 @pytest.mark.parametrize("bam_file,fragments_file", [('bam', None), (None, 'fragments')])
-def testfc_fragments_in_regions(tmpdir, adata, bed, gtf, bam, fragments, regions_file, bam_file, fragments_file):
+def testfc_fragments_in_regions(tmpdir, adata_atac, bed, gtf, atac_bam_file, sorted_fragments, regions_file, bam_file, fragments_file):
     """Test fc_fragments_in_regions function for run completion."""
     if regions_file == 'bed':
         regions_file = bed
@@ -132,15 +87,15 @@ def testfc_fragments_in_regions(tmpdir, adata, bed, gtf, bam, fragments, regions
         regions_file = gtf
 
     if bam_file == 'bam':
-        bam_file = bam
+        bam_file = atac_bam_file
     if fragments_file == 'fragments':
-        fragments_file = fragments
+        fragments_file = sorted_fragments
 
-    tl.calc_overlap_fc.fc_fragments_in_regions(adata,
+    tl.calc_overlap_fc.fc_fragments_in_regions(adata_atac,
                                                regions_file=regions_file,
                                                bam_file=bam_file,
                                                fragments_file=fragments_file,
                                                regions_name='promoters',
                                                temp_dir=str(tmpdir))
 
-    assert 'fold_change_promoters_fragments' in adata.obs.columns
+    assert 'fold_change_promoters_fragments' in adata_atac.obs.columns

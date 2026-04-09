@@ -1,7 +1,6 @@
 """Test norm correct functions."""
 
 import pytest
-import os
 import scanpy as sc
 import numpy as np
 import anndata as ad
@@ -12,38 +11,21 @@ import sctoolbox.utils as utils
 # ------------------------- Fixtures -------------------------#
 
 
-@pytest.fixture(scope="session")
-def adata():
-    """Load and returns an anndata object.
+@pytest.fixture
+def adata(adata_rna):
+    """Return an RNA-seq AnnData with batch annotation and highly variable genes.
 
     Returns
     -------
     anndata.AnnData
         RNA-seq AnnData object with batch annotation and highly variable genes.
     """
-
-    f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
-    adata = sc.read_h5ad(f)
-
     # Add batch column
-    adata.obs['batch'] = ["a", "b"] * 100
+    adata_rna.obs['batch'] = ["a", "b"] * 100
 
-    sc.pp.highly_variable_genes(adata)
+    sc.pp.highly_variable_genes(adata_rna)
 
-    return adata
-
-
-@pytest.fixture
-def adata_mm10():
-    """Fixture for an AnnData object.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object.
-    """
-    adata_mm10 = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad'))
-    return adata_mm10
+    return adata_rna
 
 
 # adapted from muon package
@@ -80,9 +62,9 @@ def adata_batch_dict(adata):
 
 
 @pytest.mark.parametrize("method", ["tfidf", "total"])
-def test_normalize_adata_success(adata_mm10, method):
+def test_normalize_adata_success(adata_atac, method):
     """Test normalize_adata success."""
-    adata_norm = tools.norm_correct.normalize_adata(adata_mm10, method=method, target_sum=1e6)  # return from function is a dict
+    adata_norm = tools.norm_correct.normalize_adata(adata_atac, method=method, target_sum=1e6)  # return from function is a dict
 
     if method == "tfidf":
         assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm

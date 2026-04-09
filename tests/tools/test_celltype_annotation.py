@@ -4,7 +4,6 @@ import os
 import pytest
 import anndata as ad
 from sctoolbox.tools import celltype_annotation
-import scanpy as sc
 
 
 # --------------------------- FIXTURES ------------------------------ #
@@ -22,19 +21,6 @@ def test_adata():
     adata_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'scsa')
     adata = ad.read_h5ad(adata_dir + '/adata_scsa.h5ad')
     return adata
-
-
-@pytest.fixture
-def adata_rna():
-    """Load rna anndata.
-
-    Returns
-    -------
-    anndata.AnnData
-        RNA-seq AnnData object.
-    """
-    adata_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'adata.h5ad')
-    return sc.read_h5ad(adata_f)
 
 
 # --------------------------- TESTS --------------------------------- #
