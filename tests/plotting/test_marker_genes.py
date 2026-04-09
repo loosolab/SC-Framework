@@ -3,7 +3,6 @@
 import pytest
 import matplotlib
 import sctoolbox.plotting.marker_genes as pl
-import os
 import matplotlib.pyplot as plt
 
 from beartype.roar import BeartypeCallHintParamViolation

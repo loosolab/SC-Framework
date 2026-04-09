@@ -1,7 +1,6 @@
 """Tests for clustering plotting functions."""
 
 import pytest
-import matplotlib
 import sctoolbox.plotting.clustering as pl
 import numpy as np
 

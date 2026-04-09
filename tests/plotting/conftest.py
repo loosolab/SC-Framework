@@ -93,7 +93,6 @@ def adata_fun_scope():
     return _make_adata()
 
 
-
 @pytest.fixture
 def df_bidir_bar():
     """Create DataFrame for bidirectional barplot.
