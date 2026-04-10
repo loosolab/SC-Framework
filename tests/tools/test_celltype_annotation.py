@@ -54,10 +54,16 @@ def test_run_scsa(test_adata, column):
     assert column in adata.obs.columns
 
 
-def test_add_cellxgene_annotation(adata):
+def test_add_cellxgene_annotation(adata_fun_scope, tmp_path):
     """Test if 'cellxgene' column is added to adata.obs."""
 
-    csv_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'cellxgene_anno.csv')
-    celltype_annotation.add_cellxgene_annotation(adata, csv_f)
+    # Create a CSV with matching barcodes
+    csv_f = tmp_path / "cellxgene_anno.csv"
+    csv_f.write_text(
+        "index,cellxgene_clusters\n"
+        + "\n".join(f"{bc},cluster{i % 3}" for i, bc in enumerate(adata_fun_scope.obs.index))
+    )
 
-    assert "cellxgene_clusters" in adata.obs.columns
+    celltype_annotation.add_cellxgene_annotation(adata_fun_scope, str(csv_f))
+
+    assert "cellxgene_clusters" in adata_fun_scope.obs.columns
