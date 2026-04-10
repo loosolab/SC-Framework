@@ -12,20 +12,22 @@ import sctoolbox.utils as utils
 
 
 @pytest.fixture
-def adata(adata_rna):
-    """Return an RNA-seq AnnData with batch annotation and highly variable genes.
+def adata_with_batch(adata):
+    """Return an AnnData with batch annotation and highly variable genes.
 
     Returns
     -------
     anndata.AnnData
-        RNA-seq AnnData object with batch annotation and highly variable genes.
+        AnnData object with batch annotation and highly variable genes.
     """
+    adata = adata.copy()
+
     # Add batch column
-    adata_rna.obs['batch'] = ["a", "b"] * 100
+    adata.obs['batch'] = ["a", "b"] * 100
 
-    sc.pp.highly_variable_genes(adata_rna)
+    sc.pp.highly_variable_genes(adata)
 
-    return adata_rna
+    return adata
 
 
 # adapted from muon package
@@ -45,7 +47,7 @@ def tfidf_x():
 
 
 @pytest.fixture
-def adata_batch_dict(adata):
+def adata_batch_dict(adata_with_batch):
     """Create dict containing adata with a batch column in obs.
 
     Returns
@@ -53,7 +55,7 @@ def adata_batch_dict(adata):
     dict
         Dictionary with AnnData object containing batch information.
     """
-    anndata_batch_dict = adata.copy()
+    anndata_batch_dict = adata_with_batch.copy()
 
     return {'adata': anndata_batch_dict}
 
@@ -73,10 +75,10 @@ def test_normalize_adata_success(adata_atac, method):
 
 
 @pytest.mark.parametrize("method, keep_layer", [(["total", "tfidf"], "raw"), ("total", None), ("tfidf", "test")])
-def test_normalize_adata(adata, method, keep_layer):
+def test_normalize_adata(adata_with_batch, method, keep_layer):
     """Test that data was normalized."""
     # Execute function
-    result = tools.norm_correct.normalize_adata(adata, method=method, keep_layer=keep_layer, target_sum=1e6)
+    result = tools.norm_correct.normalize_adata(adata_with_batch, method=method, keep_layer=keep_layer, target_sum=1e6)
     # If method is a list, get the first element of the resulting dictionary
     if isinstance(method, list):
         method = method[0]
@@ -113,11 +115,11 @@ def test_tfidf(tfidf_x):
     assert str("%.3f" % tfidf_x.layers["test"][3, 0]) == "4.770"
 
 
-def test_wrap_corrections(adata):
+def test_wrap_corrections(adata_with_batch):
     """Test if wrapper returns a dict, and that the keys contains the given methods."""
 
     methods = ["mnn", "scanorama"]  # two fastest methods
-    adata_dict = tools.norm_correct.wrap_corrections(adata, batch_key="batch", methods=methods, keep_layer="test")
+    adata_dict = tools.norm_correct.wrap_corrections(adata_with_batch, batch_key="batch", methods=methods, keep_layer="test")
 
     assert isinstance(adata_dict, dict)
 
@@ -129,19 +131,19 @@ def test_wrap_corrections(adata):
 
 
 @pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])
-def test_batch_correction(adata, method):
+def test_batch_correction(adata_with_batch, method):
     """Test if batch correction returns an anndata."""
 
-    adata_corrected = tools.norm_correct.batch_correction(adata, batch_key="batch", method=method)
+    adata_corrected = tools.norm_correct.batch_correction(adata_with_batch, batch_key="batch", method=method)
     assert isinstance(adata_corrected, sc.AnnData)
     # assert the returned adata is a different object
     # this is a workaround to test if the original adata was modified
-    assert adata is not adata_corrected
+    assert adata_with_batch is not adata_corrected
 
 
-def test_evaluate_batch_effect(adata):
+def test_evaluate_batch_effect(adata_with_batch):
     """Test if AnnData containing LISI column in .obs is returned."""
-    ad = tools.norm_correct.evaluate_batch_effect(adata, 'batch')
+    ad = tools.norm_correct.evaluate_batch_effect(adata_with_batch, 'batch')
 
     ad_type = type(ad).__name__
     assert ad_type == "AnnData"
@@ -149,13 +151,13 @@ def test_evaluate_batch_effect(adata):
 
 
 @pytest.mark.parametrize("key", ["a", "b"])
-def test_evaluate_batch_effect_keyerror(adata, key):
+def test_evaluate_batch_effect_keyerror(adata_with_batch, key):
     """Test evaluate_batch_effect failure."""
     with pytest.raises(KeyError, match="adata.obsm .*"):
-        tools.norm_correct.evaluate_batch_effect(adata, batch_key='batch', obsm_key=key)
+        tools.norm_correct.evaluate_batch_effect(adata_with_batch, batch_key='batch', obsm_key=key)
 
     with pytest.raises(KeyError, match="adata.obs .*"):
-        tools.norm_correct.evaluate_batch_effect(adata, batch_key=key)
+        tools.norm_correct.evaluate_batch_effect(adata_with_batch, batch_key=key)
 
 
 def test_wrap_batch_evaluation(adata_batch_dict):

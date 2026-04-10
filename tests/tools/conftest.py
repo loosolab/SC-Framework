@@ -25,18 +25,6 @@ def adata_atac():
 
 
 @pytest.fixture
-def adata_rna():
-    """Load and return an RNA-seq AnnData object.
-
-    Returns
-    -------
-    anndata.AnnData
-        RNA-seq AnnData object from adata.h5ad.
-    """
-    return sc.read_h5ad(os.path.join(DATA_DIR, 'adata.h5ad'))
-
-
-@pytest.fixture
 def atac_bam_file():
     """Path to test BAM file.
 

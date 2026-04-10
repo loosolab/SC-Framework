@@ -43,27 +43,15 @@ def unequal_adata():
     return adata
 
 
-# @pytest.fixture
-# def clust_adata():
-#     """Return a clustered adata.
-
-#     Returns
-#     -------
-#     anndata.AnnData
-#         Preprocessed and clustered PBMC3k dataset.
-#     """
-#     return sc.datasets.pbmc3k_processed()
-
-
 # ------------------------------ TESTS --------------------------------- #
 
 
-def test_recluster_exceptions(adata_rna):
+def test_recluster_exceptions(adata):
     """Test recluster failure."""
 
     # invalid column name
     with pytest.raises(KeyError):
-        tl.recluster(adata=adata_rna,
+        tl.recluster(adata=adata,
                      column="INVALID",
                      clusters="B cells",
                      task="join",
@@ -75,7 +63,7 @@ def test_recluster_exceptions(adata_rna):
 
     # invalid cluster name
     with pytest.raises(ValueError):
-        tl.recluster(adata=adata_rna,
+        tl.recluster(adata=adata,
                      column="louvain",
                      clusters="INVALID",
                      task="join",
@@ -86,12 +74,12 @@ def test_recluster_exceptions(adata_rna):
                      embedding="X_umap")
 
 
-def test_recluster(adata_rna):
+def test_recluster(adata):
     """Test recluster success."""
     # join monocytes clusters
-    tl.recluster(adata=adata_rna,
+    tl.recluster(adata=adata,
                  column="louvain",
-                 clusters=list(set(adata_rna.obs["louvain"]))[:2],  # ["CD14+ Monocytes", "FCGR3A+ Monocytes"],
+                 clusters=list(set(adata.obs["louvain"]))[:2],
                  task="join",
                  method="leiden",
                  resolution=1,
@@ -99,13 +87,13 @@ def test_recluster(adata_rna):
                  plot=True,
                  embedding="X_umap")
 
-    assert "joined_louvain" in adata_rna.obs.columns
-    assert len(set(adata_rna.obs["louvain"])) - 1 == len(set(adata_rna.obs["joined_louvain"]))
+    assert "joined_louvain" in adata.obs.columns
+    assert len(set(adata.obs["louvain"])) - 1 == len(set(adata.obs["joined_louvain"]))
 
     # split cluster
-    tl.recluster(adata=adata_rna,
+    tl.recluster(adata=adata,
                  column="louvain",
-                 clusters=[list(set(adata_rna.obs["louvain"]))[0]],  # ["CD4 T cells"],
+                 clusters=[list(set(adata.obs["louvain"]))[0]],
                  task="split",
                  method="leiden",
                  resolution=1,
@@ -113,8 +101,8 @@ def test_recluster(adata_rna):
                  plot=True,
                  embedding="X_umap")
 
-    assert "split_louvain" in adata_rna.obs.columns
-    assert len(set(adata_rna.obs["louvain"])) < len(set(adata_rna.obs["split_louvain"]))
+    assert "split_louvain" in adata.obs.columns
+    assert len(set(adata.obs["louvain"])) < len(set(adata.obs["split_louvain"]))
 
 
 def test_gini():
