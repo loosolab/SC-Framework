@@ -423,6 +423,7 @@ def from_mtx(path: str | Dict[str, Tuple[str, str, str] | Tuple[str, str]],  # n
              variables: str = "*genes.tsv*",
              var_error: bool = True,
              report: Optional[str] = None,
+             obs_unique: bool = True,
              **kwargs: Any) -> sc.AnnData:
     """
     Build an adata object from list of mtx, barcodes and variables files.
@@ -452,6 +453,8 @@ def from_mtx(path: str | Dict[str, Tuple[str, str, str] | Tuple[str, str]],  # n
         Will raise an error when there is no variables file found next to any .mtx file. Set the parameter to False will consider the variable file optional.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    obs_unique : bool, default True
+        Make the observation names unique using :func:`~scanpy.AnnData.obs_names_make_unique`.
     **kwargs : Any
         Contains additional arguments for the sctoolbox.utils.assemblers.from_single_mtx method.
 
@@ -530,6 +533,10 @@ def from_mtx(path: str | Dict[str, Tuple[str, str, str] | Tuple[str, str]],  # n
         adata = utils.adata.concadata(adata_objects)
     else:
         adata = adata_objects[0]
+
+    # add a suffix to duplicate observations
+    if obs_unique:
+        adata.obs_names_make_unique()
 
     # generate and save report
     if settings.report_dir and report:
