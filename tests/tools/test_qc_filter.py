@@ -497,41 +497,46 @@ def test_predict_sex_diff_types(caplog, adata):
     assert 'predicted_sex' in adata_matrix.obs.columns
 
 
-@pytest.mark.parametrize(
-    "species, s_genes, g2m_genes, inplace",
-    [
-        ("mouse", None, None, False),
-        (None, "s_file", "g2m_file", True),
-        (None, "s_list", "g2m_list", True),
-        ("unicorn", None, None, False)
-    ],
-)
-def test_predict_cell_cycle(adata, species, s_genes, g2m_genes, inplace, request):
-    """Test if cell cycle is predicted and added to adata.obs."""
-
-    # Get value of s_genes and g2m_genes fixtures
-    s_genes = request.getfixturevalue(s_genes) if s_genes is not None else None
-    g2m_genes = request.getfixturevalue(g2m_genes) if g2m_genes is not None else None
-
-    # Remove columns if already present
+def test_predict_cell_cycle_species(adata):
+    """Test cell cycle prediction with species parameter."""
     expected_columns = ["S_score", "G2M_score", "phase"]
     adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])
-
     assert not any(c in adata.obs.columns for c in expected_columns)
 
-    if species == "unicorn":
-        with pytest.raises(ValueError):
-            qc.predict_cell_cycle(adata, species=species)
-    else:
-        # For other organisms or if s_genes / g2m_genes are given
-        out = qc.predict_cell_cycle(adata, species=species, s_genes=s_genes, g2m_genes=g2m_genes, inplace=inplace)
+    out = qc.predict_cell_cycle(adata, species="mouse", inplace=False)
 
-        if inplace:
-            assert out is None
-            assert all(c in adata.obs.columns for c in expected_columns)
-        else:
-            assert not any(c in adata.obs.columns for c in expected_columns)
-            assert all(c in out.obs.columns for c in expected_columns)
+    assert not any(c in adata.obs.columns for c in expected_columns)
+    assert all(c in out.obs.columns for c in expected_columns)
+
+
+def test_predict_cell_cycle_from_file(adata, s_file, g2m_file):
+    """Test cell cycle prediction with gene list files."""
+    expected_columns = ["S_score", "G2M_score", "phase"]
+    adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])
+    assert not any(c in adata.obs.columns for c in expected_columns)
+
+    out = qc.predict_cell_cycle(adata, s_genes=s_file, g2m_genes=g2m_file, inplace=True)
+
+    assert out is None
+    assert all(c in adata.obs.columns for c in expected_columns)
+
+
+def test_predict_cell_cycle_from_list(adata, s_list, g2m_list):
+    """Test cell cycle prediction with gene lists."""
+    expected_columns = ["S_score", "G2M_score", "phase"]
+    adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])
+    assert not any(c in adata.obs.columns for c in expected_columns)
+
+    out = qc.predict_cell_cycle(adata, s_genes=s_list, g2m_genes=g2m_list, inplace=True)
+
+    assert out is None
+    assert all(c in adata.obs.columns for c in expected_columns)
+
+
+def test_predict_cell_cycle_invalid_species(adata):
+    """Test cell cycle prediction with invalid species."""
+    with pytest.raises(ValueError):
+        qc.predict_cell_cycle(adata, species="unicorn")
 
 
 # Define the test function
