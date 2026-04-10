@@ -12,7 +12,7 @@ import sctoolbox.utils as utils
 
 
 @pytest.fixture
-def adata_with_batch(adata):
+def adata_with_batch(adata_fun_scope):
     """Return an AnnData with batch annotation and highly variable genes.
 
     Returns
@@ -20,14 +20,11 @@ def adata_with_batch(adata):
     anndata.AnnData
         AnnData object with batch annotation and highly variable genes.
     """
-    adata = adata.copy()
+    adata_fun_scope.obs['batch'] = (["a", "b"] * ((len(adata_fun_scope) // 2) + 1))[:len(adata_fun_scope)]
 
-    # Add batch column
-    adata.obs['batch'] = (["a", "b"] * ((len(adata) // 2) + 1))[:len(adata)]
+    sc.pp.highly_variable_genes(adata_fun_scope)
 
-    sc.pp.highly_variable_genes(adata)
-
-    return adata
+    return adata_fun_scope
 
 
 # adapted from muon package
@@ -75,10 +72,10 @@ def test_normalize_adata_success(adata_atac, method):
 
 
 @pytest.mark.parametrize("method, keep_layer", [(["total", "tfidf"], "raw"), ("total", None), ("tfidf", "test")])
-def test_normalize_adata(adata_with_batch, method, keep_layer):
+def test_normalize_adata(adata_raw, method, keep_layer):
     """Test that data was normalized."""
     # Execute function
-    result = tools.norm_correct.normalize_adata(adata_with_batch, method=method, keep_layer=keep_layer, target_sum=1e6)
+    result = tools.norm_correct.normalize_adata(adata_raw, method=method, keep_layer=keep_layer, target_sum=1e6)
     # If method is a list, get the first element of the resulting dictionary
     if isinstance(method, list):
         method = method[0]

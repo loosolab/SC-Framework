@@ -66,9 +66,9 @@ def test_deep_merge_anndata(adata, adata2):
         m_index = list(merged_adata.obs.index).index(cell_id)
         r_index = list(adata.obs.index).index(cell_id)
         c_index = list(adata2.obs.index).index(cell_id)
-        m = merged_adata.X.tocsr()[m_index, :].todense().tolist()[0]
-        r = adata.X.tocsr()[r_index, :].todense().tolist()[0]
-        c = adata2.X.tocsr()[c_index, :].todense().tolist()[0]
+        m = np.asarray(merged_adata.X[m_index, :]).flatten().tolist()
+        r = np.asarray(adata.X[r_index, :]).flatten().tolist()
+        c = np.asarray(adata2.X[c_index, :]).flatten().tolist()
 
         adata2.obsm["X_umap"][c_index]
 
