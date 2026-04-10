@@ -1,6 +1,7 @@
 """Test quality control functions."""
 
 import pytest
+import pandas as pd
 import sctoolbox.tools.qc_filter as qc
 import sctoolbox.utils.adata as utils
 import scanpy as sc
@@ -262,7 +263,7 @@ def test_thresholds_as_table(threshold_dict):
 
     table = qc.thresholds_as_table(threshold_dict)
 
-    assert type(table).__name__ == "DataFrame"
+    assert isinstance(table, pd.DataFrame)
 
 
 def test_apply_qc_thresholds(adata):

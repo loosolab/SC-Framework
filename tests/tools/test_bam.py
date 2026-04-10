@@ -8,6 +8,7 @@ import random
 import re
 from contextlib import contextmanager
 
+import pysam
 import sctoolbox.tools.bam as stb
 
 # ---------------------------- HELPER ------------------------------- #
@@ -165,7 +166,7 @@ def test_failure_split_bam_clusters(atac_bam_file, adata_atac):
 def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.bam.open_bam
     """Test open_bam success."""
 
-    assert type(bam_handle).__name__ == "AlignmentFile"
+    assert isinstance(bam_handle, pysam.AlignmentFile)
 
 
 def test_get_bam_reads(bam_handle):

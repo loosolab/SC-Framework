@@ -142,8 +142,7 @@ def test_evaluate_batch_effect(adata_with_batch):
     """Test if AnnData containing LISI column in .obs is returned."""
     ad = tools.norm_correct.evaluate_batch_effect(adata_with_batch, 'batch')
 
-    ad_type = type(ad).__name__
-    assert ad_type == "AnnData"
+    assert isinstance(ad, sc.AnnData)
     assert "LISI_score" in ad.obs
 
 
@@ -160,8 +159,5 @@ def test_evaluate_batch_effect_keyerror(adata_with_batch, key):
 def test_wrap_batch_evaluation(adata_batch_dict):
     """Test if DataFrame containing LISI column in .obs is returned."""
     adata_dict = tools.norm_correct.wrap_batch_evaluation(adata_batch_dict, 'batch', inplace=False)
-    adata_dict_type = type(adata_dict).__name__
-    adata_type = type(adata_dict['adata']).__name__
-
-    assert adata_dict_type == "dict"
-    assert adata_type == "AnnData"
+    assert isinstance(adata_dict, dict)
+    assert isinstance(adata_dict['adata'], sc.AnnData)
