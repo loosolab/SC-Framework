@@ -515,7 +515,7 @@ def test_predict_cell_cycle_from_file(adata, s_file, g2m_file):
     adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])
     assert not any(c in adata.obs.columns for c in expected_columns)
 
-    out = qc.predict_cell_cycle(adata, s_genes=s_file, g2m_genes=g2m_file, inplace=True)
+    out = qc.predict_cell_cycle(adata, species=None, s_genes=s_file, g2m_genes=g2m_file, inplace=True)
 
     assert out is None
     assert all(c in adata.obs.columns for c in expected_columns)
@@ -527,7 +527,7 @@ def test_predict_cell_cycle_from_list(adata, s_list, g2m_list):
     adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])
     assert not any(c in adata.obs.columns for c in expected_columns)
 
-    out = qc.predict_cell_cycle(adata, s_genes=s_list, g2m_genes=g2m_list, inplace=True)
+    out = qc.predict_cell_cycle(adata, species=None, s_genes=s_list, g2m_genes=g2m_list, inplace=True)
 
     assert out is None
     assert all(c in adata.obs.columns for c in expected_columns)
