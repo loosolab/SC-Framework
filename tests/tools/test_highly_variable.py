@@ -27,15 +27,14 @@ def adata_atac_qc(adata_atac):
 
 
 @pytest.mark.parametrize("inplace", [True, False])
-def test_annot_HVG(adata, inplace):
+def test_annot_HVG(adata_fun_scope, inplace):
     """Test if 'highly_variable' column is added to adata.var."""
 
-    sc.pp.log1p(adata)
-    out = hv.annot_HVG(adata, inplace=inplace)
+    out = hv.annot_HVG(adata_fun_scope, inplace=inplace)
 
     if inplace:
         assert out is None
-        assert "highly_variable" in adata.var.columns
+        assert "highly_variable" in adata_fun_scope.var.columns
     else:
         assert "highly_variable" in out.var.columns
 

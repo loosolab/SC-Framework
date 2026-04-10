@@ -20,8 +20,9 @@ def adata2(adata):
         Copy of AnnData object with mock PCA and UMAP embeddings.
     """
     adata2 = adata.copy()
-    adata2.obsm['X_pca'] = np.random.uniform(low=-3, high=3, size=(200, 50))
-    adata2.obsm['X_umap'] = np.random.uniform(low=-30, high=70, size=(200, 3))
+    n_obs = adata2.n_obs
+    adata2.obsm['X_pca'] = np.random.uniform(low=-3, high=3, size=(n_obs, 50))
+    adata2.obsm['X_umap'] = np.random.uniform(low=-30, high=70, size=(n_obs, 3))
     return adata2
 
 

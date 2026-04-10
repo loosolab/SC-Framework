@@ -23,7 +23,7 @@ def adata_with_batch(adata):
     adata = adata.copy()
 
     # Add batch column
-    adata.obs['batch'] = ["a", "b"] * 100
+    adata.obs['batch'] = (["a", "b"] * ((len(adata) // 2) + 1))[:len(adata)]
 
     sc.pp.highly_variable_genes(adata)
 
