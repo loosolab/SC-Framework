@@ -72,3 +72,15 @@ def adata_fun_scope():
         AnnData object with function scope.
     """
     return _make_adata()
+
+
+@pytest.fixture
+def adata_raw():
+    """Load and return the raw PBMC3k dataset.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with raw counts.
+    """
+    return sc.datasets.pbmc3k()
