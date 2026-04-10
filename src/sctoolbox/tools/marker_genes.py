@@ -1,4 +1,4 @@
-"""Tools for marker gene analyis."""
+"""Tools for marker gene analysis."""
 from typing import Sequence, Union
 
 import re
