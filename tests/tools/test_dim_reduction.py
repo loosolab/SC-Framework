@@ -12,7 +12,7 @@ import os
 
 
 @pytest.fixture
-def adata():
+def adata_hv():
     """Load ATAC-seq AnnData with QC metrics and highly_variable annotation.
 
     Uses anndata_2.h5ad instead of the shared adata_atac fixture because
@@ -32,20 +32,20 @@ def adata():
 # ------------------------------------ lsi ------------------------------------
 
 @pytest.mark.parametrize("use_highly_variable", [True, False])
-def test_lsi(adata, use_highly_variable):
+def test_lsi(adata_hv, use_highly_variable):
     """Test lsi success."""
-    assert "X_lsi" not in adata.obsm and "lsi" not in adata.uns and "LSI" not in adata.varm
+    assert "X_lsi" not in adata_hv.obsm and "lsi" not in adata_hv.uns and "LSI" not in adata_hv.varm
 
-    std.lsi(adata, use_highly_variable=use_highly_variable)
+    std.lsi(adata_hv, use_highly_variable=use_highly_variable)
 
-    assert "X_lsi" in adata.obsm and "lsi" in adata.uns and "LSI" in adata.varm
+    assert "X_lsi" in adata_hv.obsm and "lsi" in adata_hv.uns and "LSI" in adata_hv.varm
 
     if use_highly_variable:
-        assert np.sum(adata.varm['LSI'][~adata.var['highly_variable']]) == 0
+        assert np.sum(adata_hv.varm['LSI'][~adata_hv.var['highly_variable']]) == 0
     else:
-        assert np.sum(adata.varm['LSI'][~adata.var['highly_variable']]) != 0
+        assert np.sum(adata_hv.varm['LSI'][~adata_hv.var['highly_variable']]) != 0
 
-    assert np.sum(adata.varm['LSI'][adata.var['highly_variable']]) != 0
+    assert np.sum(adata_hv.varm['LSI'][adata_hv.var['highly_variable']]) != 0
 
 
 # -------------------------------- propose_pcs --------------------------------
@@ -61,6 +61,7 @@ def test_propose_pcs_failure(adata_raw):
 def test_propose_pcs_succsess(adata, var_method, kwargs):
     """Test propose_pcs success."""
     n_pcs = adata.obsm["X_pca"].shape[1]
+
     result = std.propose_pcs(anndata=adata,
                              how=["variance", "cumulative variance", "correlation"],
                              var_method=var_method,
