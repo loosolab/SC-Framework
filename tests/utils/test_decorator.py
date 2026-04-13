@@ -1,6 +1,5 @@
 """Test decorator functions."""
 
-import pytest
 from sctoolbox.utils import decorator as deco
 
 import sctoolbox.tools.qc_filter as qc

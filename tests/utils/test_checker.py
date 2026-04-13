@@ -7,7 +7,7 @@ import numpy as np
 import os
 import re
 import sys
-from tests.conftest import DATA_DIR, ATAC_DATA_DIR
+from tests.conftest import ATAC_DATA_DIR
 
 
 # --------------------------- FIXTURES ------------------------------ #

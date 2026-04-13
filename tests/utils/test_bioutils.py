@@ -124,14 +124,7 @@ def test_get_organism(mocker):
 
 
 def test_overlap_two_bedfiles(bedfile, tmp_path):
-    """
-    Test overlap_two_bedfiles.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the file is not found.
-    """
+    """Test overlap_two_bedfiles."""
 
     # Copy a file from source to destination
     bedfile_copy = str(tmp_path / 'copied.bed')
