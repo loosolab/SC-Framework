@@ -53,18 +53,20 @@ def adata():
 
 # ------------------------------------ lsi ------------------------------------
 
-def test_lsi(adata):
+@pytest.mark.parametrize("use_highly_variable", [True, False])
+def test_lsi(adata, use_highly_variable):
     """Test lsi success."""
-    adata_ori = adata.copy()
+    assert "X_lsi" not in adata.obsm and "lsi" not in adata.uns and "LSI" not in adata.varm
 
-    std.lsi(adata_ori, use_highly_variable=True)
-    assert "X_lsi" in adata_ori.obsm and "lsi" in adata_ori.uns and "LSI" in adata_ori.varm
-    assert np.sum(adata_ori.varm['LSI'][~adata_ori.var['highly_variable']]) == 0
-    assert np.sum(adata_ori.varm['LSI'][adata_ori.var['highly_variable']]) != 0
+    std.lsi(adata, use_highly_variable=use_highly_variable)
 
-    std.lsi(data=adata, use_highly_variable=False)
+    assert "X_lsi" in adata.obsm and "lsi" in adata.uns and "LSI" in adata.varm
 
-    assert np.sum(adata.varm['LSI'][~adata.var['highly_variable']]) != 0
+    if use_highly_variable:
+        assert np.sum(adata.varm['LSI'][~adata.var['highly_variable']]) == 0
+    else:
+        assert np.sum(adata.varm['LSI'][~adata.var['highly_variable']]) != 0
+
     assert np.sum(adata.varm['LSI'][adata.var['highly_variable']]) != 0
 
 
