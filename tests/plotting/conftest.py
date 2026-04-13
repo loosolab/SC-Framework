@@ -2,8 +2,6 @@
 
 import pytest
 import matplotlib.axes
-import scanpy as sc
-import os
 import numpy as np
 import pandas as pd
 import ipywidgets as widgets
@@ -200,14 +198,3 @@ def slider_dict_grouped_diff(slider):
             "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
 
 
-@pytest.fixture
-def atac_adata():
-    """Fixture for an AnnData object.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object.
-    """
-    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
-    return adata

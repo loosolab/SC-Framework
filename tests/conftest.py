@@ -3,6 +3,7 @@
 import pytest
 import scanpy as sc
 import numpy as np
+import os
 import tempfile
 
 # Redirect scanpy dataset cache to a temp directory to avoid writing to the repo
@@ -12,6 +13,8 @@ sc.settings.datasetdir = tempfile.mkdtemp()
 # global variables for this script
 
 __rank_key = "rank_genes_groups"
+
+ATAC_DATA_DIR = os.path.join(os.path.dirname(__file__), 'data', 'atac')
 
 
 # ------------------------------ FIXTURES --------------------------------- #
@@ -87,3 +90,15 @@ def adata_raw():
         AnnData object with raw counts.
     """
     return sc.datasets.pbmc3k()
+
+
+@pytest.fixture
+def adata_atac():
+    """Load and return an ATAC-seq AnnData object.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object from mm10_atac.h5ad.
+    """
+    return sc.read_h5ad(os.path.join(ATAC_DATA_DIR, 'mm10_atac.h5ad'))

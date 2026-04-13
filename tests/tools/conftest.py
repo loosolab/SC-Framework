@@ -1,27 +1,12 @@
 """Fixtures available to all tests within the tools directory."""
 
 import pytest
-import scanpy as sc
 import os
 
-
-DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
-ATAC_DATA_DIR = os.path.join(DATA_DIR, 'atac')
+from tests.conftest import ATAC_DATA_DIR
 
 
 # ------------------------------ FIXTURES --------------------------------- #
-
-
-@pytest.fixture
-def adata_atac():
-    """Load and return an ATAC-seq AnnData object.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object from mm10_atac.h5ad.
-    """
-    return sc.read_h5ad(os.path.join(ATAC_DATA_DIR, 'mm10_atac.h5ad'))
 
 
 @pytest.fixture
