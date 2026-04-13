@@ -13,15 +13,17 @@ import os
 
 @pytest.fixture
 def adata():
-    """Fixture for an AnnData object.
+    """Load ATAC-seq AnnData with QC metrics and highly_variable annotation.
+
+    Uses anndata_2.h5ad instead of the shared adata_atac fixture because
+    test_lsi requires 'highly_variable' in var, which mm10_atac.h5ad lacks.
 
     Returns
     -------
     anndata.AnnData
-        ATAC-seq AnnData object for testing.
+        ATAC-seq AnnData object with highly_variable annotation.
     """
-    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'anndata_2.h5ad'))
-    return adata
+    return sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'anndata_2.h5ad'))
 
 
 # ------------------------------ TESTS --------------------------------- #
