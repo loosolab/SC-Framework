@@ -14,6 +14,7 @@ from unittest.mock import patch, MagicMock
 import warnings
 
 import sctoolbox.tools.receptor_ligand as rl
+from tests.conftest import DATA_DIR
 
 
 # ------------------------------ FIXTURES -------------------------------- #
@@ -32,7 +33,7 @@ def adata():
     sc.AnnData
         An anndata object with cluster annotations.
     """
-    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
+    f = os.path.join(DATA_DIR, "adata.h5ad")
 
     obj = sc.read_h5ad(f)
 
@@ -64,7 +65,7 @@ def db_file():
     str
         Path to the mouse receptor-ligand database TSV file.
     """
-    return os.path.join(os.path.dirname(__file__), '..', 'data', 'receptor-ligand', 'mouse_lr_pair.tsv')
+    return os.path.join(DATA_DIR, 'receptor-ligand', 'mouse_lr_pair.tsv')
 
 
 @pytest.fixture

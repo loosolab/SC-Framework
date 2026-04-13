@@ -5,6 +5,7 @@ import sctoolbox.utils as ul
 import os
 import pytest
 import importlib_resources
+from tests.conftest import ATAC_DATA_DIR
 
 
 # ---------------------------- FIXTURES -------------------------------- #
@@ -36,7 +37,7 @@ def gtf_with_header():
     str
         Path to GTF file with header.
     """
-    gtf_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.unsorted.gtf')
+    gtf_path = os.path.join(ATAC_DATA_DIR, 'gtf_testdata', 'cropped_gencode.v41.unsorted.gtf')
 
     return gtf_path
 
@@ -50,7 +51,7 @@ def bed():
     str
         Path to BED file with blacklisted regions.
     """
-    bed_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'hg38.blacklist.v2_sorted.bed')
+    bed_path = os.path.join(ATAC_DATA_DIR, 'hg38.blacklist.v2_sorted.bed')
 
     return bed_path
 

@@ -7,6 +7,7 @@ import scanpy as sc
 
 from sctoolbox.utils.adata import get_adata_subsets
 from sctoolbox.tools.gene_correlation import correlate_conditions, correlate_ref_vs_all, compare_two_conditons
+from tests.conftest import DATA_DIR
 
 
 # ---------------------------- FIXTURES -------------------------------- #
@@ -21,7 +22,7 @@ def adata():
     anndata.AnnData
         RNA-seq AnnData object with gene names as index.
     """
-    h5ad = os.path.join(os.path.dirname(__file__), '..', 'data', 'adata.h5ad')
+    h5ad = os.path.join(DATA_DIR, 'adata.h5ad')
     adata = sc.read_h5ad(h5ad)
 
     adata.obs["condition"] = np.random.choice(["C1", "C2"], size=adata.shape[0])

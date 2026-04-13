@@ -14,7 +14,8 @@ sc.settings.datasetdir = tempfile.mkdtemp()
 
 __rank_key = "rank_genes_groups"
 
-ATAC_DATA_DIR = os.path.join(os.path.dirname(__file__), 'data', 'atac')
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+ATAC_DATA_DIR = os.path.join(DATA_DIR, 'atac')
 
 
 # ------------------------------ FIXTURES --------------------------------- #

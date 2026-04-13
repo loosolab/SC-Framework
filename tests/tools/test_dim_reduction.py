@@ -6,6 +6,7 @@ import sctoolbox.tools.dim_reduction as std
 import scanpy as sc
 import numpy as np
 import os
+from tests.conftest import ATAC_DATA_DIR
 
 
 # ----------------------------- FIXTURES ------------------------------- #
@@ -23,7 +24,7 @@ def adata_hv():
     anndata.AnnData
         ATAC-seq AnnData object with highly_variable annotation.
     """
-    return sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'anndata_2.h5ad'))
+    return sc.read_h5ad(os.path.join(ATAC_DATA_DIR, 'anndata_2.h5ad'))
 
 
 # ------------------------------ TESTS --------------------------------- #

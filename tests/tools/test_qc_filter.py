@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import logging
 from scipy.sparse import csr_matrix
 from contextlib import contextmanager
+from tests.conftest import DATA_DIR
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
@@ -40,7 +41,7 @@ def adata():
     anndata.AnnData
         RNA-seq AnnData object with QC variables and cell cycle genes.
     """
-    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
+    f = os.path.join(DATA_DIR, "adata.h5ad")
     adata = sc.read_h5ad(f)
     adata.obs['sample'] = np.random.choice(["sample1", "sample2"], size=len(adata))
 

@@ -6,6 +6,7 @@ import scanpy as sc
 import numpy as np
 import pandas as pd
 import sctoolbox.tools.marker_genes as mg
+from tests.conftest import DATA_DIR
 
 
 # ---------------------------- FIXTURES -------------------------------- #
@@ -22,7 +23,7 @@ def adata():
 
     np.random.seed(1)  # set seed for reproducibility
 
-    h5ad = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
+    h5ad = os.path.join(DATA_DIR, 'adata.h5ad')
     adata = sc.read_h5ad(h5ad)
 
     sample_names = ["C1_1", "C1_2", "C2_1", "C2_2", "C3_1", "C3_2"]
@@ -55,7 +56,7 @@ def gene_set(adata):
 def test_get_chromosome_genes():
     """Test if get_chromosome_genes get the right genes from the gtf."""
 
-    gtf = os.path.join(os.path.dirname(__file__), '../data', 'genes.gtf')
+    gtf = os.path.join(DATA_DIR, 'genes.gtf')
 
     with pytest.raises(Exception):
         mg.get_chromosome_genes(gtf, "NA")

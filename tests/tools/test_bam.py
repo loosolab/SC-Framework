@@ -10,6 +10,7 @@ from contextlib import contextmanager
 
 import pysam
 import sctoolbox.tools.bam as stb
+from tests.conftest import ATAC_DATA_DIR
 
 # ---------------------------- HELPER ------------------------------- #
 
@@ -199,7 +200,7 @@ def test_create_fragment_file(bam_name, use_outdir, barcode_regex, tmp_path):
 
     outdir = str(tmp_path / "fragment_file_output") if use_outdir else str(tmp_path)
 
-    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', bam_name + ".bam")
+    bam_f = os.path.join(ATAC_DATA_DIR, bam_name + ".bam")
     fragments_f = stb.create_fragment_file(bam=bam_f,
                                            nproc=1,
                                            outdir=outdir,
@@ -215,7 +216,7 @@ def test_create_fragment_file(bam_name, use_outdir, barcode_regex, tmp_path):
 def test_create_fragment_file_multiprocessing(tmp_path):
     """Assert that the result is the same regardless of number of cores used."""
 
-    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'homo_sapiens_liver_sorted.bam')
+    bam_f = os.path.join(ATAC_DATA_DIR, 'homo_sapiens_liver_sorted.bam')
 
     n_fragments = []
     for nproc in [1, 4]:

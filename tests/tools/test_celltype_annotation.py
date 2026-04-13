@@ -4,6 +4,7 @@ import os
 import pytest
 import anndata as ad
 from sctoolbox.tools import celltype_annotation
+from tests.conftest import DATA_DIR
 
 
 # --------------------------- FIXTURES ------------------------------ #
@@ -18,7 +19,7 @@ def test_adata():
     anndata.AnnData
         AnnData object for SCSA testing.
     """
-    adata_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'scsa')
+    adata_dir = os.path.join(DATA_DIR, 'scsa')
     adata = ad.read_h5ad(adata_dir + '/adata_scsa.h5ad')
     return adata
 
