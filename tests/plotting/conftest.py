@@ -196,5 +196,3 @@ def slider_dict_grouped_diff(slider):
     """
     return {"A": {"1": slider, "2": widgets.FloatRangeSlider(value=[1, 5], min=0, max=10, step=1)},
             "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
-
-
