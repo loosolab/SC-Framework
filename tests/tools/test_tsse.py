@@ -43,7 +43,7 @@ def test_overlap_and_aggregate(atac_gtf, atac_fragments, tmp_path):
     assert np.loadtxt(overlap, dtype=str).shape[1] == 5
 
 
-def test_add_tsse_score(adata_atac, atac_fragments, atac_gtf):
+def test_add_tsse_score(adata_atac, atac_fragments, atac_gtf, tmp_path):
     """Test add_tsse_score function."""
     assert 'tsse_score' not in adata_atac.obs.columns
 
@@ -56,12 +56,12 @@ def test_add_tsse_score(adata_atac, atac_fragments, atac_gtf):
                                       edge_size_per_base=50,
                                       min_bias=0.01,
                                       keep_tmp=False,
-                                      temp_dir="")
+                                      temp_dir=str(tmp_path))
 
     assert 'tsse_score' in adata_atac.obs.columns
 
 
-def test_tsse_scoring(atac_fragments, atac_gtf):
+def test_tsse_scoring(atac_fragments, atac_gtf, tmp_path):
     """Test the tsse_scoring function."""
 
     tSSe_df = tools.tsse.tsse_scoring(atac_fragments,
@@ -72,7 +72,7 @@ def test_tsse_scoring(atac_fragments, atac_gtf):
                                       edge_size_per_base=50,
                                       min_bias=0.01,
                                       keep_tmp=False,
-                                      temp_dir="",
+                                      temp_dir=str(tmp_path),
                                       plot=True)
 
     assert all(tSSe_df.columns.isin(['TSS_agg', 'total_ov', 'tsse_score']))

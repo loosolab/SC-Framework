@@ -40,8 +40,11 @@ def adata():
 
 @pytest.mark.parametrize("gene, save", [("Xkr4", None),
                                         ("Xkr4", "output.png")])
-def test_correlate_ref_vs_all(adata, gene, save):
+def test_correlate_ref_vs_all(adata, gene, save, tmp_path):
     """Test if correlation between a reference gene to other genes is calculated."""
+    if save is not None:
+        save = str(tmp_path / save)
+
     results = correlate_ref_vs_all(adata, gene, save=save)
 
     # Test if dataframe is returned

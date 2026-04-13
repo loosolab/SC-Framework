@@ -3,7 +3,10 @@
 import pytest
 import scanpy as sc
 import numpy as np
+import tempfile
 
+# Redirect scanpy dataset cache to a temp directory to avoid writing to the repo
+sc.settings.datasetdir = tempfile.mkdtemp()
 
 # ---------------------------- Script variables --------------------------- #
 # global variables for this script
