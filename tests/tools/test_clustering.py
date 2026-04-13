@@ -74,12 +74,12 @@ def test_recluster_exceptions(adata):
                      embedding="X_umap")
 
 
-def test_recluster(adata):
+def test_recluster(adata_fun_scope):
     """Test recluster success."""
     # join monocytes clusters
-    tl.recluster(adata=adata,
+    tl.recluster(adata=adata_fun_scope,
                  column="louvain",
-                 clusters=list(set(adata.obs["louvain"]))[:2],
+                 clusters=list(set(adata_fun_scope.obs["louvain"]))[:2],
                  task="join",
                  method="leiden",
                  resolution=1,
@@ -87,13 +87,13 @@ def test_recluster(adata):
                  plot=True,
                  embedding="X_umap")
 
-    assert "joined_louvain" in adata.obs.columns
-    assert len(set(adata.obs["louvain"])) - 1 == len(set(adata.obs["joined_louvain"]))
+    assert "joined_louvain" in adata_fun_scope.obs.columns
+    assert len(set(adata_fun_scope.obs["louvain"])) - 1 == len(set(adata_fun_scope.obs["joined_louvain"]))
 
     # split cluster
-    tl.recluster(adata=adata,
+    tl.recluster(adata=adata_fun_scope,
                  column="louvain",
-                 clusters=[list(set(adata.obs["louvain"]))[0]],
+                 clusters=[list(set(adata_fun_scope.obs["louvain"]))[0]],
                  task="split",
                  method="leiden",
                  resolution=1,
@@ -101,8 +101,8 @@ def test_recluster(adata):
                  plot=True,
                  embedding="X_umap")
 
-    assert "split_louvain" in adata.obs.columns
-    assert len(set(adata.obs["louvain"])) < len(set(adata.obs["split_louvain"]))
+    assert "split_louvain" in adata_fun_scope.obs.columns
+    assert len(set(adata_fun_scope.obs["louvain"])) < len(set(adata_fun_scope.obs["split_louvain"]))
 
 
 def test_gini():
