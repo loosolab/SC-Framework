@@ -162,7 +162,7 @@ velocity = [
     'scvelo>=0.3.4'
 ]
 palantir = [
-    'palantir'
+    'palantir>=1.4.4'  # to speed up installation
 ]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
