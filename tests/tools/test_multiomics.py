@@ -70,8 +70,6 @@ def test_deep_merge_anndata(adata, adata2):
         r = np.asarray(adata.X[r_index, :]).flatten().tolist()
         c = np.asarray(adata2.X[c_index, :]).flatten().tolist()
 
-        adata2.obsm["X_umap"][c_index]
-
         assert (list(merged_adata.obsm["X_1_umap"][m_index]) == list(adata.obsm["X_umap"][r_index]))
         assert (list(merged_adata.obsm["X_2_umap"][m_index]) == list(adata2.obsm["X_umap"][c_index]))
         assert merged_adata.obs.index[m_index] == adata.obs.index[r_index]

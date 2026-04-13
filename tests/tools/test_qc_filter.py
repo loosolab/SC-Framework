@@ -199,8 +199,6 @@ def test_adjust_doublet_threshold(adata):
     threshold = 0.25
     qc.adjust_doublet_threshold(adata, threshold=threshold)
 
-    print(adata.obs["predicted_doublet"])
-
     # Column should exist
     assert "predicted_doublet" in adata.obs.columns
     assert list(adata.obs["predicted_doublet"]) == list(adata.obs["doublet_score"] > threshold)

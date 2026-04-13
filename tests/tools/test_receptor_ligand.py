@@ -753,10 +753,6 @@ def test_filter_anndata_gene_mask_zero_sum(adata):
         # Check if any warning was raised
         assert len(w) > 0
 
-        # Print the warning messages to debug
-        for warning in w:
-            print(f"Warning message: {str(warning.message)}")
-
         assert any(
             "gene" in str(warning.message).lower()
             and (
@@ -785,10 +781,6 @@ def test_filter_anndata_cluster_mask_zero_sum(adata):
 
         # Check if any warning was raised
         assert len(w) > 0
-
-        # Print the actual warning messages to help debug
-        for warning in w:
-            print(f"Warning message: {str(warning.message)}")
 
         assert any(
             ("cluster" in str(warning.message).lower() or "cell" in str(warning.message).lower())
