@@ -144,7 +144,7 @@ def test_get_organism(mocker):
     assert utils.bioutils.get_organism("ENSG00000164690") == "Homo_sapiens"
 
 
-def test_overlap_two_bedfiles(bedfile):
+def test_overlap_two_bedfiles(bedfile, tmp_path):
     """
     Test overlap_two_bedfiles.
 
@@ -155,23 +155,15 @@ def test_overlap_two_bedfiles(bedfile):
     """
 
     # Copy a file from source to destination
-    test_data_dir = os.path.split(bedfile)[0]
-    bedfile_copy = os.path.join(test_data_dir, 'copied.bed')
+    bedfile_copy = str(tmp_path / 'copied.bed')
     shutil.copy(bedfile, bedfile_copy)
 
     # overlap bedfiles
-    overlap_file = 'overlap.bed'
+    overlap_file = str(tmp_path / 'overlap.bed')
     utils.bioutils._overlap_two_bedfiles(bedfile, bedfile_copy, overlap_file)
 
     # Test for successful overlap
     assert os.path.exists(overlap_file) and os.path.getsize(overlap_file) > 0
-
-    # clean up
-    try:
-        os.remove(bedfile_copy)
-        os.remove(overlap_file)
-    except FileNotFoundError:
-        raise FileNotFoundError("The file does not exist")
 
 
 def test_bed_is_sorted(unsorted_fragments, sorted_fragments):
@@ -181,15 +173,12 @@ def test_bed_is_sorted(unsorted_fragments, sorted_fragments):
     assert ~utils.bioutils._bed_is_sorted(unsorted_fragments)
 
 
-def test_sort_bed(unsorted_fragments):
+def test_sort_bed(unsorted_fragments, tmp_path):
     """Test if the sort bedfile function works."""
-    sorted_bedfile = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'sorted_bedfile.bed')
+    sorted_bedfile = str(tmp_path / 'sorted_bedfile.bed')
     utils.bioutils._sort_bed(unsorted_fragments, sorted_bedfile)
 
     assert utils.bioutils._bed_is_sorted(sorted_bedfile)
-
-    # Clean up
-    os.remove(sorted_bedfile)
 
 
 # TODO

@@ -86,25 +86,23 @@ def test_split_list(berries):
     assert split == [["blueberry", "blackberry"], ["strawberry"]]
 
 
-def test_read_list_file(berries):
+def test_read_list_file(berries, tmp_path):
     """Test if read_list_file returns the correct list from a file."""
 
-    path = "berries.txt"
+    path = str(tmp_path / "berries.txt")
     general.write_list_file(berries, path)
     berries_read = general.read_list_file(path)
-    os.remove(path)  # file no longer needed
 
     assert berries == berries_read
 
 
-def test_write_list_file(berries):
+def test_write_list_file(berries, tmp_path):
     """Test if write_list_file writes a file."""
 
-    path = "berries.txt"
+    path = str(tmp_path / "berries.txt")
     general.write_list_file(berries, path)
 
     assert os.path.isfile(path)
-    os.remove(path)  # clean up after tests
 
 
 def test_clean_flanking_strings():
