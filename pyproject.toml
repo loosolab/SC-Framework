@@ -187,6 +187,16 @@ test = [
     "pytest-cov",
     "pytest-html"
 ]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinx-exec-code",
+    "nbsphinx",
+    "nbsphinx_link",
+    "myst-parser",
+    "docutils<=0.21",  # pinned until https://github.com/vidartf/nbsphinx-link/issues/25 is fixed
+    "sphinxcontrib-youtube"
+]
 
 [project.scripts]
 SCF-analysis-setup = "sctoolbox.utils.cli:main"
