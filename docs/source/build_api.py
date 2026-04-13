@@ -45,7 +45,7 @@ def automodule(name):
 def get_modules(path):
 
     modules = [os.path.basename(f).replace(".py", "") for f in glob.glob(path + "/*")]
-    modules = [f for f in modules if not f.startswith("_") and f != "data" and "settings" not in f]
+    modules = [f for f in modules if not f.startswith("_") and f != "data" or "settings" in f]
 
     return modules
 
