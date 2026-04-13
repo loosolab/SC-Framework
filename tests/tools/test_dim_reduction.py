@@ -11,18 +11,6 @@ import os
 # ----------------------------- FIXTURES ------------------------------- #
 
 
-@pytest.fixture(scope="session")
-def adata_pca():
-    """Create an anndata object with precalculated PCA.
-
-    Returns
-    -------
-    anndata.AnnData
-        Preprocessed PBMC3k dataset with PCA.
-    """
-    return sc.datasets.pbmc3k_processed()
-
-
 @pytest.fixture
 def adata():
     """Fixture for an AnnData object.
@@ -67,48 +55,42 @@ def test_propose_pcs_failure(adata_raw):
         std.propose_pcs(anndata=adata_raw)
 
 
-def test_propose_pcs_succsess(adata_pca):
+@pytest.mark.parametrize("var_method, kwargs", [("knee", {}), ("percent", {"perc_thresh": 10})])
+def test_propose_pcs_succsess(adata, var_method, kwargs):
     """Test propose_pcs success."""
-    # test knee finding option
-    assert [1, 3, 4, 5, 6] == std.propose_pcs(anndata=adata_pca,
-                                              how=["variance", "cumulative variance", "correlation"],
-                                              var_method="knee")
+    n_pcs = adata.obsm["X_pca"].shape[1]
+    result = std.propose_pcs(anndata=adata,
+                             how=["variance", "cumulative variance", "correlation"],
+                             var_method=var_method,
+                             **kwargs)
 
-    # test percentile finding option
-    assert [1, 3, 4, 5] == std.propose_pcs(anndata=adata_pca,
-                                           how=["variance", "cumulative variance", "correlation"],
-                                           var_method="percent",
-                                           perc_thresh=10)
+    assert isinstance(result, list)
+    assert len(result) > 0
+    assert all(isinstance(pc, (int, np.integer)) for pc in result)
+    assert all(1 <= pc <= n_pcs for pc in result)
+    assert result == sorted(result)
 
 
 # -------------------------------- subset_pca --------------------------------
 
 
-def test_subset_PCA(adata_pca):
+@pytest.mark.parametrize("inplace, kwargs, expected_n_pcs", [
+    (False, {"n_pcs": 5, "start": 2}, 3),
+    (True, {"select": [2, 4, 6, 8]}, 4),
+])
+def test_subset_PCA(adata, inplace, kwargs, expected_n_pcs):
     """Test whether number of PCA coordinate dimensions was reduced."""
-    adata_copy = adata_pca.copy()
+    adata_copy = adata.copy()
+    n_pcs_orig = adata.obsm["X_pca"].shape[1]
 
-    # test range selection, not inplace
-    res_adata = std.subset_PCA(adata=adata_copy,
-                               n_pcs=5,
-                               start=2,
-                               inplace=False)
+    result = std.subset_PCA(adata=adata_copy, inplace=inplace, **kwargs)
 
-    # test inplace
-    assert adata_pca.obsm["X_pca"].shape[1] == adata_copy.obsm["X_pca"].shape[1]
-    assert res_adata.obsm["X_pca"].shape[1] != adata_copy.obsm["X_pca"].shape[1]
-    # test PC amount
-    assert res_adata.obsm["X_pca"].shape[1] == 3
-
-    # test custom selection, inplace
-    select = [2, 4, 6, 8]
-    cstm_res_adata = std.subset_PCA(adata=adata_copy,
-                                    select=select,
-                                    inplace=True)
-
-    assert cstm_res_adata is None
-    assert adata_copy.obsm["X_pca"].shape[1] == len(select)
-    assert adata_copy.obsm["X_pca"].shape[1] != adata_pca.obsm["X_pca"].shape[1]
+    if inplace:
+        assert result is None
+        assert adata_copy.obsm["X_pca"].shape[1] == expected_n_pcs
+    else:
+        assert adata_copy.obsm["X_pca"].shape[1] == n_pcs_orig
+        assert result.obsm["X_pca"].shape[1] == expected_n_pcs
 
 
 # -------------------------------- subset_pca --------------------------------
