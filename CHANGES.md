@@ -2,6 +2,7 @@
 
 ## 0.15.0 (in progress)
 - Readthedocs overhaul (#312, #239, #351)
+- enhance `utils.assemblers.from_mtx(path)` to accept dicts (#367)
 - implemented SCF-analysis-setup CLI (#437)
 - implemented `sctoolbox.utils.creators.github_download`
 - spellcheck the project
@@ -36,6 +37,7 @@
 - add scanpy score feature including apoptosis,mito,ribo and cell cycle (#401)
 
 ### Changes to notebooks
+- RNA/ATAC assembly: adjust for updated `from_mtx`
 - add a number prefix to notebook output figures (#440)
 - implemented the Palantir notebook
 - Notebook 2: Show doubled threshold in plot and make it adjustable afterwards (#328)
