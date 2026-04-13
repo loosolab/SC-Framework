@@ -45,10 +45,12 @@ Notebooks are currently stored at three locations:
 - `atac_analysis/notebooks <https://gitlab.gwdg.de/loosolab/software/sc_framework/-/tree/460f6d3d0ab44ac24f4b2df9dab372a6b64bd56a/atac_analysis/notebooks>`_
 - `general_notebooks <https://gitlab.gwdg.de/loosolab/software/sc_framework/-/tree/460f6d3d0ab44ac24f4b2df9dab372a6b64bd56a/general_notebooks>`_
 
-Which shows the intended data type the notebook should be used with. General notebooks are data type agnostic, meaning, they can be used with any type of data. New notebooks should be appropriately placed within this structure.
+A notebook is either *data-specific*, meaning it is designed to work with a specific type of data (e.g. RNA, ATAC) or *data-agnostic*, meaning it may be used with any type of data. This is reflected by the notebooks location and should be considered when developing/adding a new notebook.
+
+General notebooks are stored in a separate directory to avoid maintaining multiple copies of the same notebook. However, they are designed to run in the same environment as the *data-specific* notebooks and should therefore be copied to the *data-specific* notebook directory before use.
 
 .. note::
-  General notebooks should be moved to the specific data type directory, e.g. `rna_analysis/notebooks` before use.
+  General notebooks should be moved to a *data-specific* directory, e.g. `rna_analysis/notebooks` before use.
 
 Configuration
 ~~~~~~~~~~~~~
