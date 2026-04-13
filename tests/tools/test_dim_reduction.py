@@ -12,18 +12,6 @@ import os
 
 
 @pytest.fixture(scope="session")
-def adata_no_pca():
-    """Create an anndata object without PCA.
-
-    Returns
-    -------
-    anndata.AnnData
-        PBMC3k dataset without PCA.
-    """
-    return sc.datasets.pbmc3k()
-
-
-@pytest.fixture(scope="session")
 def adata_pca():
     """Create an anndata object with precalculated PCA.
 
@@ -73,10 +61,10 @@ def test_lsi(adata, use_highly_variable):
 # -------------------------------- propose_pcs --------------------------------
 
 
-def test_propose_pcs_failure(adata_no_pca):
+def test_propose_pcs_failure(adata_raw):
     """Test the propose_pcs function fails without precomputed PCA."""
     with pytest.raises(ValueError):
-        std.propose_pcs(anndata=adata_no_pca)
+        std.propose_pcs(anndata=adata_raw)
 
 
 def test_propose_pcs_succsess(adata_pca):
@@ -128,9 +116,9 @@ def test_subset_PCA(adata_pca):
 
 @pytest.mark.parametrize("inplace", [True, False])
 @pytest.mark.parametrize("method", ["PCA", "LSI"])
-def test_dim_red(adata_no_pca, method, inplace):
+def test_dim_red(adata_raw, method, inplace):
     """Test the dim_red function."""
-    adata = adata_no_pca.copy()
+    adata = adata_raw.copy()
 
     # check there is no dimension reduction and neighbor graph
     assert "X_pca" not in adata.obsm.keys()

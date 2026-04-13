@@ -74,8 +74,9 @@ def test_normalize_adata_success(adata_atac, method):
 @pytest.mark.parametrize("method, keep_layer", [(["total", "tfidf"], "raw"), ("total", None), ("tfidf", "test")])
 def test_normalize_adata(adata_raw, method, keep_layer):
     """Test that data was normalized."""
+    adata = adata_raw.copy()
     # Execute function
-    result = tools.norm_correct.normalize_adata(adata_raw, method=method, keep_layer=keep_layer, target_sum=1e6)
+    result = tools.norm_correct.normalize_adata(adata, method=method, keep_layer=keep_layer, target_sum=1e6)
     # If method is a list, get the first element of the resulting dictionary
     if isinstance(method, list):
         method = method[0]

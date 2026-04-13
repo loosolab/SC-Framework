@@ -80,7 +80,7 @@ def adata_fun_scope():
     return _make_adata()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def adata_raw():
     """Load and return the raw PBMC3k dataset.
 
