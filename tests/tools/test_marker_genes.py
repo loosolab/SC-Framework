@@ -38,26 +38,7 @@ def adata():
 
 
 @pytest.fixture
-def adata_score(adata):
-    """Prepare adata for scoring/ cell cycle test.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with gene names as index for scoring tests.
-    """
-
-    # set gene names as index instead of ensemble ids
-    adata.var.reset_index(inplace=True)
-    adata.var['gene'] = adata.var['gene'].astype('str')
-    adata.var.set_index('gene', inplace=True)
-    adata.var_names_make_unique()
-
-    return adata
-
-
-@pytest.fixture
-def gene_set(adata_score):
+def gene_set(adata):
     """Return subset of adata genes.
 
     Returns
@@ -65,7 +46,7 @@ def gene_set(adata_score):
     list
         List of 50 gene names.
     """
-    return adata_score.var.index.to_list()[:50]
+    return adata.var.index.to_list()[:50]
 
 
 # ------------------------------ TESTS --------------------------------- #
@@ -210,18 +191,18 @@ def test_run_deseq2(adata, condition_col, error, contrast):
     ],
     indirect=["gene_set"]
 )
-def test_score_genes(adata_score, score_name, gene_set, inplace):
+def test_score_genes(adata, score_name, gene_set, inplace):
     """Test if genes are scored and added to adata.obs."""
 
-    assert score_name not in adata_score.obs.columns
+    assert score_name not in adata.obs.columns
 
-    out = mg.score_genes(adata_score, gene_set, score_name=score_name, inplace=inplace)
+    out = mg.score_genes(adata, gene_set, score_name=score_name, inplace=inplace)
 
     if inplace:
         assert out is None
-        assert score_name in adata_score.obs.columns
+        assert score_name in adata.obs.columns
     else:
-        assert score_name not in adata_score.obs.columns
+        assert score_name not in adata.obs.columns
         assert score_name in out.obs.columns
 
 
