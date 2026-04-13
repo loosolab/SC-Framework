@@ -8,6 +8,7 @@ import sctoolbox.utils as utils
 import re
 import shutil
 from types import SimpleNamespace
+from tests.conftest import ATAC_DATA_DIR
 
 
 # --------------------------- FIXTURES ------------------------------ #
@@ -30,21 +31,6 @@ def adata_mock():
 
 
 @pytest.fixture
-def adata():
-    """Return a adata object from SnapATAC.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object from SnapATAC.
-    """
-
-    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
-
-    return sc.read(f)
-
-
-@pytest.fixture
 def bedfile():
     """Return a bedfile.
 
@@ -53,38 +39,31 @@ def bedfile():
     str
         Path to bedfile.
     """
-
-    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_sorted_fragments.bed')
-
-    return f
+    return os.path.join(ATAC_DATA_DIR, 'mm10_sorted_fragments.bed')
 
 
 @pytest.fixture
 def unsorted_fragments():
-    """Return adata object with 3 groups.
+    """Return path to unsorted fragments bedfile.
 
     Returns
     -------
     str
         Path to unsorted fragments bedfile.
     """
-
-    fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_fragments.bed')
-    return fragments
+    return os.path.join(ATAC_DATA_DIR, 'mm10_atac_fragments.bed')
 
 
 @pytest.fixture
 def sorted_fragments():
-    """Return adata object with 3 groups.
+    """Return path to sorted fragments bedfile.
 
     Returns
     -------
     str
         Path to sorted fragments bedfile.
     """
-
-    fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_sorted_fragments.bed')
-    return fragments
+    return os.path.join(ATAC_DATA_DIR, 'mm10_sorted_fragments.bed')
 
 
 # --------------------------- TESTS --------------------------------- #
@@ -99,31 +78,31 @@ def test_pseudobulk_table(adata_mock):
     assert pseudobulk.shape[1] == 3  # number of groups
 
 
-def test_barcode_index(adata):
+def test_barcode_index(adata_atac):
     """Test barcode index."""
 
     regex = re.compile(r'([ATCG]{8,16})')
     # remove barcode from index and add it to a column
-    adata.obs['barcode'] = adata.obs.index
-    adata.obs = adata.obs.reset_index(drop=True)
+    adata_atac.obs['barcode'] = adata_atac.obs.index
+    adata_atac.obs = adata_atac.obs.reset_index(drop=True)
     # get first index element
-    first_index = str(adata.obs.index[0])
+    first_index = str(adata_atac.obs.index[0])
     # check if the first index element is a barcode
     match = regex.match(first_index)
     # assert match is None
     assert match is None
 
-    utils.bioutils.barcode_index(adata)
+    utils.bioutils.barcode_index(adata_atac)
 
     # get first index element
-    first_index = adata.obs.index[0]
+    first_index = adata_atac.obs.index[0]
     # check if the first index element is a barcode
     match = regex.match(first_index)
     # assert match is None
     assert match is not None
 
     # execute barcode_index again to check if it will raise an error
-    utils.bioutils.barcode_index(adata)
+    utils.bioutils.barcode_index(adata_atac)
 
 
 def test_get_organism(mocker):
@@ -265,7 +244,7 @@ def test_sort_bed(unsorted_fragments, tmp_path):
 #     assert not any(adata2.var[mixed_name].str.startswith("ENS"))
 
 @pytest.mark.parametrize("var_map", ({}, {"Chromosome": "chr", "Start": "start", "End": "stop"}))
-def test_peaks_to_bins(adata, var_map):
+def test_peaks_to_bins(adata_atac, var_map):
     """Test peaks_to_bins."""
     bin_size = 5000
     chromsizes = {
@@ -274,15 +253,15 @@ def test_peaks_to_bins(adata, var_map):
 
     if var_map == {}:
         with pytest.raises(ValueError):
-            binned_adata = utils.bioutils.peaks_to_bins(
-                adata,
+            utils.bioutils.peaks_to_bins(
+                adata_atac,
                 chromsizes=chromsizes,
                 var_map=var_map,
                 bin_size=bin_size
             )
     else:
-        binned_adata = utils.bioutils.peaks_to_bins(
-                adata,
+        utils.bioutils.peaks_to_bins(
+                adata_atac,
                 chromsizes=chromsizes,
                 var_map=var_map,
                 bin_size=bin_size

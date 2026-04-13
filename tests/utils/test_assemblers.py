@@ -6,6 +6,7 @@ import anndata
 import pytest
 import sctoolbox.utils.assemblers as assemblers
 import scanpy as sc
+from tests.conftest import DATA_DIR, ATAC_DATA_DIR
 
 
 # --------------------------- FIXTURES ------------------------------ #
@@ -20,7 +21,7 @@ def h5ad_file1():
     str
         Path to h5ad file.
     """
-    return os.path.join(os.path.dirname(__file__), '..', 'data', 'adata.h5ad')
+    return os.path.join(DATA_DIR, 'adata.h5ad')
 
 
 @pytest.fixture()
@@ -32,7 +33,7 @@ def h5ad_file2():
     str
         Path to h5ad file.
     """
-    return os.path.join(os.path.dirname(__file__), '..', 'data', 'scsa', 'adata_scsa.h5ad')
+    return os.path.join(DATA_DIR, 'scsa', 'adata_scsa.h5ad')
 
 
 @pytest.fixture
@@ -44,29 +45,11 @@ def named_var_adata():
     anndata.AnnData
         AnnData object with a prefix attached to the .var index.
     """
-
-    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_named_var.h5ad')
-
-    return sc.read(f)
+    return sc.read(os.path.join(ATAC_DATA_DIR, 'mm10_atac_named_var.h5ad'))
 
 
 @pytest.fixture
-def atac_adata():
-    """Return a adata object from ATAC-seq.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object from ATAC-seq.
-    """
-
-    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
-
-    return sc.read(f)
-
-
-@pytest.fixture
-def adata_atac_emptyvar(atac_adata):
+def adata_atac_emptyvar(adata_atac):
     """Create adata with empty adata.var.
 
     Returns
@@ -74,13 +57,13 @@ def adata_atac_emptyvar(atac_adata):
     anndata.AnnData
         AnnData object with empty var table.
     """
-    adata = atac_adata.copy()
+    adata = adata_atac.copy()
     adata.var = adata.var.drop(columns=adata.var.columns)
     return adata
 
 
 @pytest.fixture
-def adata_atac_invalid(atac_adata):
+def adata_atac_invalid(adata_atac):
     """Create adata with invalid index.
 
     Returns
@@ -88,24 +71,11 @@ def adata_atac_invalid(atac_adata):
     anndata.AnnData
         AnnData object with invalid index.
     """
-    adata = atac_adata.copy()
+    adata = adata_atac.copy()
     adata.var.iloc[0, 1] = 500  # start
     adata.var.iloc[0, 2] = 100  # end
     adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-stop index
     return adata
-
-
-@pytest.fixture
-def adata_rna():
-    """Load rna adata.
-
-    Returns
-    -------
-    anndata.AnnData
-        RNA AnnData object.
-    """
-    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
-    return sc.read_h5ad(adata_f)
 
 
 @pytest.fixture()
@@ -117,7 +87,7 @@ def rds_file():
     str
         Path to rds file.
     """
-    return os.path.join(os.path.dirname(__file__), '..', 'data', 'adata_rna.rds')
+    return os.path.join(DATA_DIR, 'adata_rna.rds')
 
 # --------------------------- TESTS --------------------------------- #
 
@@ -141,10 +111,10 @@ def test_from_h5ad(files, request):
 
 
 @pytest.mark.parametrize("fixture, expected, coordinate_cols",
-                         [("atac_adata", True, ["chr", "start", "stop"]),  # expects var tables to be unchanged
+                         [("adata_atac", True, ["chr", "start", "stop"]),  # expects var tables to be unchanged
                           ("adata_atac_emptyvar", KeyError, ["chr", "start", "stop"]),
                           # expects var tables to be changed
-                          ("adata_rna", KeyError, ["chr", "start", "stop"]),
+                          ("adata", KeyError, ["chr", "start", "stop"]),
                           # expects a valueerror due to missing columns
                           ("adata_atac_invalid", False, ["chr", "start", "stop"]),
                           ("named_var_adata", True, 'coordinate_col')])  # expects a valueerror due to format of columns
@@ -173,7 +143,7 @@ def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
 def test_from_single_starsolo():
     """Test from_single_starsolo success."""
 
-    SOLO_DIR = os.path.join(os.path.dirname(__file__), '../data', 'solo')
+    SOLO_DIR = os.path.join(DATA_DIR, 'solo')
     adata = assemblers.from_single_starsolo(SOLO_DIR, dtype="filtered", header=None)
 
     assert isinstance(adata, anndata.AnnData)
@@ -183,8 +153,8 @@ def test_from_mtx():
     """Test from_mtx success."""
 
     # With variable file
-    adata = assemblers.from_mtx(os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered'))
-    adata2 = assemblers.from_mtx(os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered'),
+    adata = assemblers.from_mtx(os.path.join(DATA_DIR, 'solo', 'Gene', 'filtered'))
+    adata2 = assemblers.from_mtx(os.path.join(DATA_DIR, 'solo', 'Gene', 'filtered'),
                                  variables="*notfound.tsv",
                                  var_error=False)
 
@@ -196,11 +166,11 @@ def test_from_mtx_fail():
     """Test from_mtx fail."""
 
     with pytest.raises(ValueError):
-        assemblers.from_mtx(os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered'),
+        assemblers.from_mtx(os.path.join(DATA_DIR, 'solo', 'Gene', 'filtered'),
                             variables="*notfound.tsv")
 
     with pytest.raises(ValueError):
-        assemblers.from_mtx(os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered'),
+        assemblers.from_mtx(os.path.join(DATA_DIR, 'solo', 'Gene', 'filtered'),
                             barcodes="*notfound.tsv")
 
     with pytest.raises(ValueError):
@@ -210,9 +180,9 @@ def test_from_mtx_fail():
 def test_from_single_mtx():
     """Test from_single_mtx success."""
 
-    MTX_FILENAME = os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered', 'matrix.mtx')
-    BARCODES_FILENAME = os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered', 'barcodes.tsv')
-    GENES_FILENAME = os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered', 'genes.tsv')
+    MTX_FILENAME = os.path.join(DATA_DIR, 'solo', 'Gene', 'filtered', 'matrix.mtx')
+    BARCODES_FILENAME = os.path.join(DATA_DIR, 'solo', 'Gene', 'filtered', 'barcodes.tsv')
+    GENES_FILENAME = os.path.join(DATA_DIR, 'solo', 'Gene', 'filtered', 'genes.tsv')
 
     # test full adata (matrix, barcodes, genes)
     adata = assemblers.from_single_mtx(MTX_FILENAME, BARCODES_FILENAME, GENES_FILENAME, header=None)
