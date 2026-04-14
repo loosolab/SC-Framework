@@ -7,7 +7,7 @@ __cached_modules.remove("sctoolbox")  # to include the sctoolbox as a newly load
 
 # import with prefix _ to hide them
 from ._version import __version__
-from ._settings import settings
+from ._settings import settings, SctoolboxConfig
 import importlib as _importlib
 
 submodules = [
@@ -20,6 +20,7 @@ submodules = [
 __all__ = submodules + [
     "__version__",
     "settings",
+    "SctoolboxConfig",
     "__cached_modules"
 ]
 
