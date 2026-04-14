@@ -13,50 +13,50 @@ class SctoolboxConfig(object):
     """
     Config manager for sctoolbox.
 
-    Parameters
-    ----------
-    figure_dir : str
-        Directory to write figures to, default "".
-    figure_prefix : str
-        Prefix for all figures to write (within figure_dir), default "".
-    table_dir : str
-        Directory to write tables to, default "".
-    table_prefix : str
-        Prefix for all tables to write (within table_dir), default "".
-    adata_input_dir : str
-        Directory to read adata objects from, default "".
-    adata_input_prefix : str
-        Prefix for all adata objects to read (within adata_input_dir), default "".
-    adata_output_dir : str
-        Directory to write adata objects to, default "".
-    adata_output_prefix : str
-        Prefix for all adata objects to write (within adata_output_dir), default "".
-    report_dir : str
-        Directory to collect everything for the final report, default "" to disable.
-    threads : int
-        Default number of threads to use when multiprocessing is available, default 4.
-    k8s_threads : int
-        Default number of threads to use on a kubernetes cluster, default 1.
-    create_dirs : bool
-        Create output directories if they do not exist, default True.
-    verbosity : int
-        Logging verbosity: 0 = error, 1 = info, 2 = debug, default 1.
-    log_file : str
-        Path to log file, default None.
-    overwrite_log : bool
-        Overwrite log file if it already exists; default is to append, default False.
-    dpi : float
-        The resolution in dots per inch used when saving plots.
-    report_dpi : float
-        The resolution in dots per inch used when saving report plots.
-
     Attributes
     ----------
-    __frozen : bool
-        If True, disallows new attributes to be added.
+    figure_dir : str, default ""
+        Directory to write figures to.
+    figure_prefix : str, default ""
+        Prefix for all figures to write (within figure_dir).
+    table_dir : str, default ""
+        Directory to write tables to.
+    table_prefix : str, default ""
+        Prefix for all tables to write (within table_dir).
+    adata_input_dir : str, default ""
+        Directory to read adata objects from.
+    adata_input_prefix : str, default ""
+        Prefix for all adata objects to read (within adata_input_dir).
+    adata_output_dir : str, default ""
+        Directory to write adata objects to.
+    adata_output_prefix : str, default ""
+        Prefix for all adata objects to write (within adata_output_dir).
+    report_dir : str, default ""
+        Directory to collect everything for the final report. Set "" to disable.
+    threads : int, default 4
+        Default number of threads to use when multiprocessing is available.
+    k8s_threads : int, default 1
+        Default number of threads to use on a kubernetes cluster.
+    create_dirs : bool, default True
+        Create output directories if they do not exist.
+    verbosity : int, default 1
+        Logging verbosity: 0 = error, 1 = info, 2 = debug.
+    log_file : str, default None
+        Path to log file.
+    overwrite_log : bool, default False
+        Overwrite log file if it already exists; default is to append.
+    dpi : float, default 600
+        The resolution in dots per inch used when saving plots.
+    report_dpi : float, default 200
+        The resolution in dots per inch used when saving report plots.
     """
 
+    __name__ = "SctoolboxConfig"  # added to enable sphinx autodoc
     __frozen: bool = False
+    """If True, disallows new attributes to be added.
+
+    :meta private:
+    """
 
     def __init__(self,
                  figure_dir: str = "",            # Directory to write figures to
