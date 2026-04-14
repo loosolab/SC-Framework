@@ -486,3 +486,27 @@ Continued development creates changes in design and structure of the code. As a 
   @deprecation.fail_if_not_removed
   def test_deprecated_function():
     pass
+
+Changelog
+~~~~~~~~~
+
+The repository contains a `CHANGES.md` file that lists the changes that are made with each version of the SC-Framework. An entry must be added whenever changes are made to either the ``sctoolbox`` package or the notebooks. This is enforced by the CI/CD pipeline. Once released, the documentation will be updated and the changes are displayed in :doc:`CHANGES`.
+
+The changelog is in `markdown-format <https://en.wikipedia.org/wiki/Markdown>`_. A new version can be added by creating a new section at the top of the file:
+
+.. code-block::
+
+  # Changelog
+
+  ## 0.xy.z (in progress)
+  - implemented a new feature (#<issue number>)
+  ...
+
+  ### Changes to notebooks
+  - added a new notebook (#<issue number>)
+  ...
+
+- ``(in progress)`` will be changed to the release date e.g. ``## 0.14.2 (24-11-2025)``.
+- If possible, **add an issue number** to the end of the entry.
+- The ``Changes to notebooks`` section can be skipped if there are no changes to the notebooks.
+- Keep it short and link information e.g. an issue for details.
