@@ -75,8 +75,8 @@ for link in links:
     os.remove(link)
 
 # Create nblinks for current notebooks
-notebooks = glob.glob("../../*_analysis/notebooks/*.ipynb") # captures both rna-notebooks, atac-notebooks etc.
-notebooks.extend(glob.glob("../../*_notebooks/*.ipynb")) # capture general_notebooks
+notebooks = glob.glob("../../*_analysis/notebooks/*.ipynb")  # captures both rna-notebooks, atac-notebooks etc.
+notebooks.extend(glob.glob("../../*_notebooks/*.ipynb"))  # capture general_notebooks
 for f in notebooks:
 
     if "rna_analysis" in f:
