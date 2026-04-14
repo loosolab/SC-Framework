@@ -311,6 +311,8 @@ All notebooks should contain texts describing the current steps to explain the a
 .. note::
   Add sources to packages, best practise, relevant papers or anything else that might help the user to further inform themselves.
 
+.. _output_section:
+
 Outputs
 ~~~~~~~
 
@@ -365,6 +367,28 @@ utils
 ^^^^^
 
 General utility functions. Usually functions that may be used at several places throughout the package.
+
+Extending the package
+~~~~~~~~~~~~~~~~~~~~~
+
+New functions should be added next to functions of similar content to keep the package clean an concise. Check above for the general package structure. Each of the general modules, shown as directories in the repository, contain python scripts aka submodules. These submodules can be interpreted as subcategories. A new function should be added to a submodule with a similar topic.
+
+A new file may be created if the function does not fit to any of the existing submodules. A new file must be registered in the ``__init__.py`` that can be found in the same directory as the newly created file. To register add the name of the new file (without the extension) to the ``__all__`` variable within the ``__init__.py``.
+
+.. code-block:: python
+
+  # define what is exported in this module
+  __all__ = [
+      ...
+      "clustering",
+      "embedding",
+      "<new_file>"
+  ]
+
+
+Functions should utilize the :class:`sctoolbox.settings <sctoolbox.SctoolboxConfig>`, e.g. to manage the default number of threads or filepaths. A parameter may be implemented to overwrite this behavior. Also see the :ref:`output_section` section.
+
+See below for considerations regarding the actual code like style or robustness.
 
 Testing
 ~~~~~~~
