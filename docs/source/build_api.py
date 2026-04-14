@@ -104,6 +104,9 @@ def main():
         print(module)
         with open("API/" + module + ".rst", 'w') as fp:
 
+            if module.startswith("_"):
+                module = module[1:]  # omit the first character if it is "_"
+
             fp.write(header(module.capitalize(), 1))
 
             # Write page header if it exists
@@ -120,13 +123,38 @@ def main():
                 submodules_ordered = [submodule for submodule in submodule_order if submodule in submodules]
                 submodules_ordered += [submodule for submodule in submodules if submodule not in submodule_order]
 
-                # Add submodules to rst file
-                for submodule in submodules_ordered:
-                    fp.write(header(submodule, 2))
-                    fp.write(automodule(f"sctoolbox.{module}.{submodule}"))
+                # if submodules is empty module is assumed to be at bottom level
+                if not submodules_ordered:
+                    if module == "settings":
+                        # special settings case
+                        fp.write(
+                            """
+.. data:: sctoolbox.settings
 
-                    if submodule != submodules_ordered[-1]:
-                        fp.write(hline())  # add horizontal line between submodules
+    Global instance of :class:`~sctoolbox.SctoolboxConfig`.
+
+    Usage::
+
+      import sctoolbox
+      sctoolbox.settings.some_method()
+
+.. autoclass:: sctoolbox.SctoolboxConfig
+    :members:
+    :undoc-members:
+    :show-inheritance:
+""")
+                    else:
+                        fp.write(header(module, 2))
+                        fp.write(automodule(f"sctoolbox.{module}"))
+
+                else:
+                    # Add submodules to rst file
+                    for submodule in submodules_ordered:
+                        fp.write(header(submodule, 2))
+                        fp.write(automodule(f"sctoolbox.{module}.{submodule}"))
+
+                        if submodule != submodules_ordered[-1]:
+                            fp.write(hline())  # add horizontal line between submodules
 
             else:
                 for category, submodules in submodule_categories_module.items():
