@@ -67,7 +67,7 @@ A `config.yaml` file, located in the same directory as the notebooks (e.g., `rna
       overwrite_log: True
       report_dir: "../report/pseudotime_analysis/"
 
-The example above shows the *pseudotime notebook* section, which defines the parameters for the notebook of the same name. These parameters are forwarded to the `sctoolbox.settings` module. The `config.yaml` is loaded at the beginning of each notebook as follows:
+The example above shows the *pseudotime notebook* section, which defines the parameters for the notebook of the same name. These parameters are forwarded to the :class:`sctoolbox.settings <sctoolbox.SctoolboxConfig>` module. The `config.yaml` is loaded at the beginning of each notebook as follows:
 
 .. code-block:: python
 
