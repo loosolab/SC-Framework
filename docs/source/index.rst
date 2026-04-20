@@ -97,6 +97,7 @@ Interested in our group and our projects? :)
    how_to_start
    tutorials/index
    notebooks
+   guidance
    API/index
    CHANGES
    faq
