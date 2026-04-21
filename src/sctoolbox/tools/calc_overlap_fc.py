@@ -30,7 +30,7 @@ def _convert_gtf_to_bed(gtf: str,
     gtf : str
         Path to .gtf file.
     out : Optional[str], default None
-        Path to save new BED file. If none, the file will be saved in the same folder as tha BAM file.
+        Path to save new BED file. If none, the file will be saved in the same folder as the BAM file.
     temp_files : list[str], default []
         List of temporary files.
 
@@ -91,7 +91,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,  # noqa: C901
     Parameters
     ----------
     adata : sc.AnnData
-        The anndata object containig cell barcodes in adata.obs.
+        The anndata object containing cell barcodes in adata.obs.
     regions_file : str
         Path to BED or GTF file containing regions of interest.
     bam_file : Optional[str], default None

@@ -163,7 +163,7 @@ def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
 
     else:
         assemblers.prepare_atac_anndata(adata_cp, coordinate_cols=coordinate_cols)
-        # check for the existance of the coordinate columns ['chr','start','stop'] in the var table
+        # check for the existence of the coordinate columns ['chr','start','stop'] in the var table
         assert all(item in adata_cp.var.columns for item in expected_coordinates)
 
         # check if the first var index is in the correct format
@@ -179,8 +179,8 @@ def test_from_single_starsolo():
     assert isinstance(adata, anndata.AnnData)
 
 
-def test_from_mtx():
-    """Test from_mtx success."""
+def test_from_mtx_path():
+    """Test from_mtx success with path as input."""
 
     # With variable file
     adata = assemblers.from_mtx(os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered'))
@@ -190,6 +190,18 @@ def test_from_mtx():
 
     assert isinstance(adata, anndata.AnnData)
     assert isinstance(adata2, anndata.AnnData)
+
+
+def test_from_mtx_dict():
+    """Test from_mtx success with dict as input."""
+    parent_path = os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered')
+
+    adata = assemblers.from_mtx(path={
+        "cond_1": (os.path.join(parent_path, "matrix.mtx"), os.path.join(parent_path, "barcodes.tsv"), os.path.join(parent_path, "genes.tsv")),
+        "cond_2": (os.path.join(parent_path, "matrix.mtx"), os.path.join(parent_path, "barcodes.tsv"))
+    })
+
+    assert isinstance(adata, anndata.AnnData)
 
 
 def test_from_mtx_fail():

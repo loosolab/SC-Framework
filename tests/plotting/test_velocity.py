@@ -10,7 +10,7 @@ import numpy as np
 # ------------------------------ FIXTURES --------------------------------- #
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata():
     """Load and returns an anndata object.
 
