@@ -102,6 +102,14 @@
   overwrite_log: True
   report_dir: "../report/pseudotime_analysis/"
 
+"PILOT_trajectory":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/pilot/"
+  figure_dir: "../figures/pilot/"
+  table_dir: "../tables/pilot/"
+  log_file: "../logs/pilot_log.txt"
+  overwrite_log: True
+  
 "Palantir":
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/"
