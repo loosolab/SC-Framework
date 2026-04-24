@@ -297,6 +297,9 @@ skip = './src/sctoolbox/data,./atac_analysis/notebooks/test_data,./tests/data,.c
 # Comma-separated list of words to ignore (case-sensitive)
 #ignore-words-list = 'sur,nd,te,mytechnicalterm'  # codespell:ignore
 
+# Comma-separated list of words to ignore in URIs and emails (case-sensitive)
+uri-ignore-words-list = 'gost'
+
 # skip lines that match the regex
 # skips images encoded in jupyter notebooks
 ignore-regex = '\s*"image/(png|jpeg)":\s*".*'
