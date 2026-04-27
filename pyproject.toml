@@ -83,6 +83,7 @@ dependencies = [
         'matplotlib_venn>=1.1.2',  # to speed up installation
         'scanpy[leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
+        'natsort>=8.4.0',  # is a anndata dependency; to speed up installation
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy>=2',
         'kneed',
