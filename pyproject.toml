@@ -100,7 +100,7 @@ dependencies = [
         'openpyxl',
         'apybiomart',
         'requests>=2.32.5',  # to speed up installation
-        'python-gitlab',
+        'python-gitlab>=8.2.0',  # to speed up installation
         'psutil',
         'deprecation',
         'pyyaml>=6.0.3',  # to speed up installation
