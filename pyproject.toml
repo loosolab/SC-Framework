@@ -113,7 +113,8 @@ dependencies = [
         'boto3',
         'Jinja2',
         'scikit-image',
-        'PyGithub'
+        'PyGithub>=2.9.1',  # to speed up installation
+        'cryptography>=47.0.0'  # is a PyGithub dependency; to speed up installation
 ]
 
 [project.optional-dependencies]
