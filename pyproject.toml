@@ -78,7 +78,7 @@ keywords = [
     "visualization",
 ]
 dependencies = [
-        'pysam',
+        'pysam>=0.23.3',  # to speed up installation
         'matplotlib>=3.8.4',  # to speed up installation
         'matplotlib_venn>=1.1.2',  # to speed up installation
         'scanpy[leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (leiden)
