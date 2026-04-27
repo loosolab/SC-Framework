@@ -109,6 +109,7 @@ dependencies = [
         'throttler',
         'upsetplot',
         'pptreport>=1.1.4',  # to fix placeholder not found error
+        'pymupdf>=1.27.2.3', # is a pptreport dependency; to speed up installation
         'boto3',
         'Jinja2',
         'scikit-image',
