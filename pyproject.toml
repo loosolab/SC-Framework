@@ -111,6 +111,7 @@ dependencies = [
         'upsetplot',
         'pptreport>=1.1.4',  # to fix placeholder not found error
         'pymupdf>=1.27.2.3', # is a pptreport dependency; to speed up installation
+        'importlib_resources>=6.5.2',  # is a pptreport dependency; to speed up installation
         'boto3',
         'Jinja2>=3.1.6',  # to speed up installation
         'MarkupSafe>=3.0.3',  # is a Jinja2 dependency; to speed up installation
