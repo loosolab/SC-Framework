@@ -98,7 +98,6 @@ dependencies = [
         'scrublet',
         'IPython',
         'ipympl>=0.9.8',  # to speed up installation
-        # 'openpyxl',  # TODO remove if not used
         'apybiomart',
         'requests>=2.32.5',  # to speed up installation
         'python-gitlab>=8.2.0',  # to speed up installation
