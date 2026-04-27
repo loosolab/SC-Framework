@@ -103,7 +103,7 @@ dependencies = [
         'python-gitlab',
         'psutil',
         'deprecation',
-        'pyyaml>=6.0.3',  to speed up installation
+        'pyyaml>=6.0.3',  # to speed up installation
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'packaging',
         'throttler',
