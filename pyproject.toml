@@ -86,7 +86,7 @@ dependencies = [
         'natsort>=8.4.0',  # is a anndata dependency; to speed up installation
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy>=2',
-        'kneed',
+        'kneed>=0.8.6',  # to speed up installation
         'qnorm>=0.9',  # to speed up installation
         'plotly>=6.0.0',  # to speed up installation
         'narwhals>=2.20.0',  # is a plotly dependency; to speed up installation
