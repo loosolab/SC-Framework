@@ -88,6 +88,7 @@ dependencies = [
         'kneed',
         'qnorm>=0.9',  # to speed up installation
         'plotly',
+        'narwhals>=2.20.0',  # is a plotly dependency; to speed up installation
         'scipy>=1.14',
         'statsmodels>=0.14.5',
         'tqdm',
@@ -101,7 +102,7 @@ dependencies = [
         'apybiomart',
         'requests>=2.32.5',  # to speed up installation
         'python-gitlab>=8.2.0',  # to speed up installation
-        'psutil',
+        'psutil>=7.2.2',  # to speed up installation
         'deprecation',
         'pyyaml>=6.0.3',  # to speed up installation
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
