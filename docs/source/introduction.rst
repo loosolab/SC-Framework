@@ -49,9 +49,9 @@ The SC-Framework offers notebooks for various types of analysis:
    :alt: Typical analysis workflow with iterative analysis to find optimal parameters and branching into concurrent runs.
    :width: 400
 
-   A typical analysis workflow involves iterative steps, where individual cells or entire notebooks may be repeated to identify optimal parameters. The analysis may also branch into concurrent runs to explore different hypotheses or investigative paths.
+   A typical analysis workflow involves iterative steps, where individual cells or entire notebooks may be repeated to identify optimal parameters (blue and orange arrows). The analysis may also branch into concurrent runs to explore different hypotheses or investigative paths (indicated by the junctions). For example, *run 1* could be an analysis of the full dataset ending in trajectory analysis, while *run 2* investigates cell interactions in a subset of cell types. *Run 2* splits of after cell type annotation to avoid including superfluous/outdated analysis in the subset.
 
-Single-cell analysis often requires iterative exploration of the dataset to identify optimal parameter combinations. Moreover, ongoing analysis may necessitate splitting the workflow into multiple concurrent branches, for example to analyze a specific subset of cell types while continuing the analysis on the full dataset. The SC-Framework is designed to accommodate both needs by enabling the re-execution of individual cells or entire notebooks within a workflow (see image above). This flexibility supports dynamic, adaptive analysis pipelines tailored to evolving research questions.
+Single-cell analysis often requires iterative exploration of the dataset to identify optimal parameter combinations. Moreover, ongoing analysis may necessitate splitting the workflow into multiple concurrent branches (analysis runs; see image above), for example to analyze a specific subset of cell types while continuing the analysis on the full dataset. The SC-Framework is designed to accommodate both needs by enabling the re-execution of individual cells or entire notebooks within a workflow (see image above). This flexibility supports dynamic, adaptive analysis pipelines tailored to evolving research questions.
 
 Analysis directory structure
 ----------------------------
