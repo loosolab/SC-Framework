@@ -87,7 +87,7 @@ dependencies = [
         'numpy>=2',
         'kneed',
         'qnorm>=0.9',  # to speed up installation
-        'plotly',
+        'plotly>=6.0.0',  # to speed up installation
         'narwhals>=2.20.0',  # is a plotly dependency; to speed up installation
         'scipy>=1.14',
         'statsmodels>=0.14.5',
