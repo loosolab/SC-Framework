@@ -473,9 +473,9 @@ def compare_clusters(mdata: mu.MuData,
     mdata : mu.MuData
         Muon object containing both modalities with clustering information.
     clusters_mod1 : str
-        Value with the name of the modality 1 clustering column in the ATAC matrix or in the joint matrix.
+        Clustering column of modality 1
     clusters_mod2 : str
-        Value with the name of the modality 2 clustering column in the RNA matrix or in the joint matrix.
+        Clustering column of modality 2
 
     Returns
     -------
