@@ -3,9 +3,6 @@ requires = [
     "setuptools",  # needed pre-install
     "wheel",
     "numpy",  # needed pre-install
-    "pyyaml",
-    "beartype",
-    "pip",  # to make pip accessible during installation
     "setuptools_scm>=9.0.3"  # due to https://github.com/pypa/setuptools-scm/issues/938
 ]
 build-backend = "setuptools.build_meta"
