@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from pandas.io.formats.style import Styler
 from functools import reduce
-import warnings
 import muon as mu
 from scipy.stats import zscore
 
@@ -14,6 +13,8 @@ from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
 from sctoolbox.utils.general import remove_suffix
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 @beartype
@@ -52,7 +53,7 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
     """
 
     if join == "outer":
-        warnings.warn("'outer' join is currently not supported. Proceeding with 'inner' ...")
+        logger.warning("'outer' join is currently not supported. Proceeding with 'inner' ...")
         join = "inner"
 
     # Generate minimal anndata objects
@@ -60,11 +61,11 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
     for label, adata in anndata_dict.items():
         minimal_adata_dict[label] = sc.AnnData(X=adata.X, obs=adata.obs, var=adata.var, obsm=dict(adata.obsm))
         if not adata.obs.index.is_unique:
-            warnings.warn(f"Obs index of {label} dataset is not unique. Running .obs_names_make_unique()..")
+            logger.warning(f"Obs index of {label} dataset is not unique. Running .obs_names_make_unique()..")
             minimal_adata_dict[label].obs_names_make_unique()
 
         if not adata.var.index.is_unique:
-            warnings.warn(f"Var index of {label} dataset is not unique. Running .var_names_make_unique()..")
+            logger.warning(f"Var index of {label} dataset is not unique. Running .var_names_make_unique()..")
             minimal_adata_dict[label].var_names_make_unique()
 
     # Get cell barcode (obs) intersection
@@ -108,7 +109,7 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
     utils.tables.fill_na(merged_adata.var)
 
     if len(merged_adata.var) <= 50:
-        warnings.warn("The adata object contains less than 51 genes/var entries. "
+        logger.warning("The adata object contains less than 51 genes/var entries. "
                       + "CellxGene will not work. Please add dummy genes to the var table.")
 
     return merged_adata
@@ -546,7 +547,7 @@ def export_modality_adatas(mdata: mu.MuData,
     # Transfer obs columns from MuData to individual modality AnnData objects
     for modality, adata in mdata.mod.items():
 
-        print(f"Transferring obs columns to {modality} AnnData...")
+        logger.info(f"Transferring obs columns to {modality} AnnData...")
 
         # Join mdata obs columns into modality adata
         # Only transfer cells that are present in the modality adata
@@ -557,11 +558,11 @@ def export_modality_adatas(mdata: mu.MuData,
             if key in mdata.obsm:
                 new_key = key[2:] if key.startswith("X_") else key
                 final_key = f"X_joined_{new_key}"
-                print(f"Transferring {key} to {modality} AnnData as {final_key}...")
+                logger.info(f"Transferring {key} to {modality} AnnData as {final_key}...")
                 # Only transfer cells that are present in the modality adata
                 adata.obsm[final_key] = mdata.obsm[key][mdata.obs.index.isin(adata.obs.index)]
             else:
-                print(f"Warning: {key} not found in MuData obsm, skipping...")
+                logger.info(f"Warning: {key} not found in MuData obsm, skipping...")
 
         # Save modality adata
         adata_output = f"anndata_multiome_{modality}.h5ad"

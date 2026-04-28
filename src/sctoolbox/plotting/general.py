@@ -1228,6 +1228,8 @@ def plot_heatmap(data_frame: pd.DataFrame,
     -------
     plt.Axes
         Axes object containing the heatmap.
+
+    TODO Integreate into sctoolbox environemnt like settings, logging, etc.
     """
     # Create figure and axes if not given
     if ax is None:

@@ -20,6 +20,7 @@ from numpy.typing import NDArray
 
 from sctoolbox.plotting.general import _save_figure, plot_heatmap
 from sctoolbox import settings
+logger = settings.logger
 
 
 @beartype
@@ -487,7 +488,7 @@ def umap_parameter_sweep(mdata: mu.MuData,
     axes = axes.flatten()
 
     for ax, (min_dist, spread) in zip(axes, combinations):
-        print(f"Running UMAP with min_dist={min_dist:.2f}, spread={spread:.2f}")
+        logger.info(f"Running UMAP with min_dist={min_dist:.2f}, spread={spread:.2f}")
 
         # Run UMAP with current parameters
         sc.tl.umap(mdata, min_dist=min_dist, spread=spread)
