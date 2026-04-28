@@ -76,16 +76,16 @@ keywords = [
     "visualization",
 ]
 dependencies = [
-        'pysam>=0.23.3',  # to speed up installation
-        'matplotlib>=3.8.4',  # to speed up installation
-        'matplotlib_venn>=1.1.2',  # to speed up installation
+        'pysam',
+        'matplotlib',
+        'matplotlib_venn',
         'scanpy[leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy>=2',
-        'kneed>=0.8.6',  # to speed up installation
-        'qnorm>=0.9',  # to speed up installation
-        'plotly>=6.0.0',  # to speed up installation
+        'kneed',
+        'qnorm',
+        'plotly',
         'scipy>=1.14',
         'statsmodels>=0.14.5',
         'tqdm',
@@ -94,22 +94,22 @@ dependencies = [
         'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
         'scrublet',
         'IPython',
-        'ipympl>=0.9.8',  # to speed up installation
+        'ipympl',
         'apybiomart',
-        'requests>=2.32.5',  # to speed up installation
-        'python-gitlab>=8.2.0',  # to speed up installation
-        'psutil>=7.2.2',  # to speed up installation
-        'deprecation>=2.1.0',  # to speed up installation
-        'pyyaml>=6.0.3',  # to speed up installation
+        'requests',
+        'python-gitlab',
+        'psutil',
+        'deprecation',
+        'pyyaml',
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'packaging',
         'throttler',
         'upsetplot',
         'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
-        'Jinja2>=3.1.6',  # to speed up installation
+        'Jinja2',
         'scikit-image',
-        'PyGithub>=2.9.1',  # to speed up installation
+        'PyGithub',
 ]
 
 [project.optional-dependencies]
@@ -120,7 +120,7 @@ converter = [
 atac = [
     'uropa',
     'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
-    'pygenometracks>=3.9',  # to speed up installation
+    'pygenometracks>=3.8',
     'peakqc',
     'tobias>=0.17.2',  # to avoid installation error
     'pyranges'
@@ -134,13 +134,12 @@ batch_correction = [
     'scanorama'
 ]
 receptor_ligand = [
-    'pycirclize>=1.10.1',  # to speed up installation
-    'liana>=1.7.0',  # to speed up installation
+    'pycirclize>=1.7.1',
+    'liana',
     'networkx>=3.5'
 ]
 pseudotime = [
-    'scFates>=1.2.4',  # https://github.com/LouisFaure/scFates/issues/54; https://github.com/LouisFaure/scFates/issues/58
-    'adjustText>=1.3.0'  # is a scFates dependency; set to speed up installation
+    'scFates>=1.2.4'  # https://github.com/LouisFaure/scFates/issues/54; https://github.com/LouisFaure/scFates/issues/58
 ]
 gsea = [
     'gseapy>=1.2.1'  # https://github.com/zqfang/GSEApy/issues/353
@@ -149,7 +148,7 @@ deseq2 = [
     'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
 ]
 annotation = [
-    'markerRepo>=0.1.5'  # to speed up installation
+    'markerRepo>=0.1.5'
 ]
 proportion = [
     'scanpro>=0.4.1'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
