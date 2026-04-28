@@ -4,7 +4,7 @@ requires = [
     "wheel",
     "numpy",  # needed pre-install
     "setuptools_scm>=9.0.3",  # due to https://github.com/pypa/setuptools-scm/issues/938
-    "pyyaml"  # required due to sctoolbox/_settings.py -> "import yaml"
+    "beartype"  # required due to sctoolbox/_settings.py -> "import beartype"
 ]
 build-backend = "setuptools.build_meta"
 
