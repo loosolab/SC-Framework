@@ -1,7 +1,6 @@
 """Settings for running sctoolbox functions including paths to output directories, logging, verbosity etc."""
 
 import os
-import yaml
 import sys
 import logging
 
@@ -334,6 +333,7 @@ class SctoolboxConfig(object):
         KeyError
             If key is not found in config file.
         """
+        import yaml  # import here so it can be removed from the build-system requirements
 
         # Read yaml file
         with open(config_file, "r") as f:
