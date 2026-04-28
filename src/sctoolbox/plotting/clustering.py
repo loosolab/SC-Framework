@@ -5,6 +5,7 @@ import scanpy as sc
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import warnings
+import muon as mu
 
 from beartype import beartype
 from beartype.typing import Literal, Tuple, Optional, Any
@@ -19,7 +20,7 @@ logger = settings.logger
 
 @deco.log_anndata
 @beartype
-def search_clustering_parameters(adata: sc.AnnData,
+def search_clustering_parameters(adata: sc.AnnData | mu.MuData,
                                  method: Literal["leiden"] = "leiden",
                                  resolution_range: Tuple[float | int, float | int, float | int] = (0.1, 1, 0.1),
                                  embedding: str = "X_umap",

@@ -416,9 +416,9 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
     clusters_pct_mod2 = "_".join([modalities[1], "clusters_pct"])
 
     # Caclulate number of cells per modality 1 cluster
-    df_tmp = data_frame.groupby(clustercols[0]).size().reset_index(name="Cells_total").set_index(clustercols[0])
+    df_tmp = data_frame.groupby(clustercols[0], observed=False).size().reset_index(name="Cells_total").set_index(clustercols[0])
     # Calculate number of cells per modality 1 cluster that has been assigned to each modality 2 cluster
-    df_tmp = (data_frame.groupby([clustercols[0], clustercols[1]]).size().
+    df_tmp = (data_frame.groupby([clustercols[0], clustercols[1]], observed=False).size().
                  reset_index(name="Cells_per_cluster").set_index(clustercols[0]).join(df_tmp))
 
     # Calculate fractions of cells from each modality 1 cluster assigned to each modality 2 cluster
@@ -430,7 +430,7 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
     df_sankey = df_tmp.reset_index()
 
     # Group by cluster names of modality 1 clusters
-    df_final = df_heatmap.groupby(index).agg(list)
+    df_final = df_heatmap.groupby(index, observed=False).agg(list)
     # Generate column with modality 2 cluster names as keys and number of cells per modality 2 cluster as values in dictionary
     df_final.insert(3, clusters_mod2,
                     df_final.apply(lambda x: dict(zip(x[clustercols[1]], x["Cells_per_cluster"])), axis=1))
@@ -510,3 +510,59 @@ def compare_clusters(mdata: mu.MuData,
     dfs_mods[3] = dfs_sankey[0]
 
     return dfs_heatmaps, dfs_mods, dfs_sankey
+
+
+@beartype
+def export_modality_adatas(mdata: mu.MuData,
+                           obs_cols: Optional[List[str]] = None,
+                           obsm_keys: List[str] = ["X_mofa", "X_umap"]) -> None:
+    """
+    Transfer obs columns and obsm embeddings from MuData to individual modality AnnData objects and save them.
+
+    Parameters
+    ----------
+    mdata : mu.MuData
+        MuData object containing the modalities.
+    obs_cols : List[str], default=None
+        List of obs column names to transfer from MuData to individual AnnData objects.
+        If None, all obs columns will be transferred.
+    obsm_keys : List[str], default=["X_mofa", "X_umap"]
+        List of obsm keys to transfer from MuData to individual AnnData objects.
+    """
+
+    # Select obs columns to transfer
+    if obs_cols is None:
+        obs_to_transfer = mdata.obs
+    else:
+        obs_to_transfer = mdata.obs[obs_cols]
+
+    # Add "Joined:" prefix to obs columns that do not belong to a specific modality
+    # e.g. "leiden" -> "Joined:leiden" but "RNA:clustering" stays "RNA:clustering"
+    obs_to_transfer.columns = [
+        col if any(col.startswith(f"{modality}:") for modality in mdata.mod.keys()) else f"Joined:{col}"
+        for col in obs_to_transfer.columns
+    ]
+
+    # Transfer obs columns from MuData to individual modality AnnData objects
+    for modality, adata in mdata.mod.items():
+
+        print(f"Transferring obs columns to {modality} AnnData...")
+
+        # Join mdata obs columns into modality adata
+        # Only transfer cells that are present in the modality adata
+        adata.obs = adata.obs[[]].join(obs_to_transfer, how="left")
+
+        # Transfer obsm embeddings from MuData to modality adata
+        for key in obsm_keys:
+            if key in mdata.obsm:
+                new_key = key[2:] if key.startswith("X_") else key
+                final_key = f"X_joined_{new_key}"
+                print(f"Transferring {key} to {modality} AnnData as {final_key}...")
+                # Only transfer cells that are present in the modality adata
+                adata.obsm[final_key] = mdata.obsm[key][mdata.obs.index.isin(adata.obs.index)]
+            else:
+                print(f"Warning: {key} not found in MuData obsm, skipping...")
+
+        # Save modality adata
+        adata_output = f"anndata_multiome_{modality}.h5ad"
+        utils.adata.save_h5ad(adata, adata_output)
