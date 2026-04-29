@@ -280,8 +280,7 @@ def plot_sankey(data_frame: pd.DataFrame,
 
     # Generate source, target and value lists
     source = [labels.index(":".join([modalities[0], item])) for item in data_frame[clust1]]
-    target = [labels.index(":".join([modalities[1], item]),
-                           len(labels_mod1) - 1, len(labels)) for item in data_frame[clust2]]
+    target = [labels.index(":".join([modalities[1], item])) for item in data_frame[clust2]]
     value = list(data_frame["Cells_per_cluster"])
 
     # Generate color_lines list based on source colors
