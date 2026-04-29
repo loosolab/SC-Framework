@@ -34,6 +34,7 @@
 - CI improvements
 - lint according to new D420 rule
 - add scanpy score feature including apoptosis,mito,ribo and cell cycle (#401)
+- Add multiomics tools and plotting functions (#237)
 
 ### Changes to notebooks
 - RNA/ATAC assembly: adjust for updated `from_mtx`
@@ -52,6 +53,7 @@
 - Pilot: Implemented Pilot Notebook (#353)
 - RNA Notebook 2: added apoptosis score and fixed section numbers (#401)
 - General/annotation: utilize settings to define the repository path
+- General: Add multiomics notebook (#237)
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
