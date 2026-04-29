@@ -59,7 +59,7 @@ def visualize_cluster_comparison(mdata: mu.MuData,  # noqa: C901
     - One for modality 1 clusters on modality 1 UMAP.
     - One for modality 2 clusters on modality 2 UMAP.
     - One for modality 1 data with cells marked according to which modality 2 cluster they belong to.
-    - One for modality 2 data with cells marked according ot which modality 1 cluster they belong to.
+    - One for modality 2 data with cells marked according to which modality 1 cluster they belong to.
     - One modality 1 plot per modality 2 cluster where only cells from that specific modality 2 cluster are marked,
         all other cells are grayed out.
     - One modality 2 plot per modality 1 cluster where only cells from that specific modality 1 cluster are marked,
@@ -68,7 +68,7 @@ def visualize_cluster_comparison(mdata: mu.MuData,  # noqa: C901
     Parameters
     ----------
     mdata : mu.MuData
-        Muon object modalities both combined and seperate, each with clustering information.
+        Muon object modalities both combined and separate, each with clustering information.
         Value containing the name of the second modality. Must be a valid key in mdata.mod.keys().
     clusters_mod1 : str
         Value with the name of the modality 1 clustering column in the modality 1 matrix or in the joint matrix.
@@ -94,7 +94,7 @@ def visualize_cluster_comparison(mdata: mu.MuData,  # noqa: C901
     clusters_mod1 = ":".join([modality_1, clusters_mod1]) if not clusters_mod1.startswith(modality_1) else clusters_mod1
     clusters_mod2 = ":".join([modality_2, clusters_mod2]) if not clusters_mod2.startswith(modality_2) else clusters_mod2
 
-    # Add addtional columns with clusternames modfied to be <modality>:<cluster name> for both modalities
+    # Add additional columns with clusternames modified to be <modality>:<cluster name> for both modalities
     mdata.obs[f"{modality_1}:tmp_cluster_names"] = mdata.obs[clusters_mod1].apply(lambda x: ":".join([modality_1, x]))
     mdata.obs[f"{modality_2}:tmp_cluster_names"] = mdata.obs[clusters_mod2].apply(lambda x: ":".join([modality_2, x]))
 
@@ -102,7 +102,7 @@ def visualize_cluster_comparison(mdata: mu.MuData,  # noqa: C901
     cluster_names_mod1 = mdata.obs[clusters_mod1].cat.categories
     cluster_names_mod2 = mdata.obs[clusters_mod2].cat.categories
 
-    # Set variables containging embedding for modality 1 and for modality 2
+    # Set variables containing embedding for modality 1 and for modality 2
     embedding_mod1 = ":".join([modality_1, embedding])
     embedding_mod2 = ":".join([modality_2, embedding])
 
@@ -240,7 +240,7 @@ def plot_sankey(data_frame: pd.DataFrame,
                 cmap: str = "tab20",
                 save: Optional[str] = None) -> go.Figure:
     """
-    Plot a Sankey diagramm to show connections between modality 1 clusters and modality 2 clusters.
+    Plot a Sankey diagram to show connections between modality 1 clusters and modality 2 clusters.
 
     Parameters
     ----------
@@ -268,7 +268,7 @@ def plot_sankey(data_frame: pd.DataFrame,
     clust1 = f"{modalities[0]}:{clustercols[0]}"
     clust2 = f"{modalities[1]}:{clustercols[1]}"
 
-    # Generate labels for diagramm
+    # Generate labels for diagram
     labels_mod1 = [":".join([modalities[0], cluster]) for cluster in data_frame[clust1].unique()]
     labels_mod2 = [":".join([modalities[1], cluster]) for cluster in data_frame[clust2].unique()]
     labels = labels_mod1 + labels_mod2
@@ -305,7 +305,7 @@ def plot_sankey(data_frame: pd.DataFrame,
 
     fig.update_layout(title_text=title, font_size=title_size)
 
-    # Save sankey diagramm
+    # Save sankey diagram
     if save:
         save_path = Path(settings.figure_dir) / save
         fig.write_html(save_path)
@@ -335,7 +335,7 @@ def visualize_modality_grid(mdata: mu.MuData,
         Mudata object conainting all information in regards to both modalities.
     clustercols : List[str]
         List of cluster column names for the modalities. Must match the order
-        of modality names in 'modalities' paramter and be valid columns for mdata.obs.
+        of modality names in 'modalities' parameter and be valid columns for mdata.obs.
     embedding : str, default="X_umap"
         Value with the name of the embedding option for plotting.
     use_mod_1 : bool, default=True
@@ -401,7 +401,7 @@ def visualize_modality_grid(mdata: mu.MuData,
 
             # Plot embedding scatter
             ax = axes[row_i, col_i]
-            # Supress warnings
+            # Suppress warnings
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -435,7 +435,7 @@ def visualize_modality_grid(mdata: mu.MuData,
 
     plt.tight_layout(pad=2.0, rect=[0, 0, 1, 0.98])
 
-    # Save sankey diagramm if output path for figures is given
+    # Save sankey diagram if output path for figures is given
     _save_figure(save)
 
     return fig, axes

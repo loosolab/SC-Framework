@@ -134,15 +134,15 @@ def match_barcodes(adata_mod1: sc.AnnData,
         Anndata of modality 2.
     barcode_map : str
         Path to barcode map file.
-        The file contains a tab seperated table of two columns.
+        The file contains a tab separated table of two columns.
         The first column contains the barcodes of modality 1.
-        The second column the coresponding barcode of modality 2.
+        The second column the corresponding barcode of modality 2.
         Example:
         TAGCCCTGATATTGGG        AGGTCTTAGTGAACCT
         GGATCCAGATATTGGG        AGGTCTTAGTGAACGA
     sample_delimiter : str, default '-'
         Often the sample name is added to the barcode to generate unique IDs.
-        For mapping the raw barcodes are required wihtout the sample name.
+        For mapping the raw barcodes are required without the sample name.
     sample_mod1 : String, default="Sample"
         Sample column in the modality 1 anndata object.
     sample_mod2 : String, default="Sample"
@@ -169,7 +169,7 @@ def match_barcodes(adata_mod1: sc.AnnData,
         bc_conversion = pd.read_csv(barcode_map, sep='\t', header=None, names=['mod1', 'mod2'])
         bc_conversion["barcode_id"] = bc_conversion.index.astype(str)
 
-        # Add unique barcode IDs as indeces to the two andata objects
+        # Add unique barcode IDs as indices to the two andata objects
         adata_mod1.obs["raw_barcode"] = raw_barcodes_mod1
         adata_mod1.obs = adata_mod1.obs.merge(bc_conversion, left_on="raw_barcode", right_on="mod1", how="left")
         # should be batch not sample column and only used if multiple batches?
@@ -185,7 +185,7 @@ def match_barcodes(adata_mod1: sc.AnnData,
         adata_mod1.obs.index = raw_barcodes_mod1 + "-" + adata_mod1.obs[sample_mod1].astype(str)
         adata_mod2.obs.index = raw_barcodes_mod2 + "-" + adata_mod2.obs[sample_mod2].astype(str)
 
-    # Remove possible NaN indeces from anndatas after cell tag conversion
+    # Remove possible NaN indices from anndatas after cell tag conversion
     adata_mod1 = adata_mod1[adata_mod1.obs.index.notnull()].copy()
     adata_mod2 = adata_mod2[adata_mod2.obs.index.notnull()].copy()
 
@@ -391,7 +391,7 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
     The second matrix shows per row:
         - Cluster name from modality one as index.
         - Number of cells total assigned to modality 1 cluster.
-        - A dictionary showing how many of the cells in modality 1 cluster have been assigend to each modality 2 cluster.
+        - A dictionary showing how many of the cells in modality 1 cluster have been assigned to each modality 2 cluster.
         - A dictionary showing the percentage of cells in modality 1 cluster assigned to each modality 2 cluster.
         - The name of the best match modality 2 cluster for the modality 1 cluster.
         - The percentage of cells from the modality 1 cluster assigned to the best match modality 2 cluster.
@@ -416,7 +416,7 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
     clusters_mod2 = "_".join([modalities[1], "clusters_cnts"])
     clusters_pct_mod2 = "_".join([modalities[1], "clusters_pct"])
 
-    # Caclulate number of cells per modality 1 cluster
+    # Calculate number of cells per modality 1 cluster
     df_tmp = data_frame.groupby(clustercols[0], observed=False).size().reset_index(name="Cells_total").set_index(clustercols[0])
     # Calculate number of cells per modality 1 cluster that has been assigned to each modality 2 cluster
     df_tmp = (data_frame.groupby([clustercols[0], clustercols[1]], observed=False).size().
@@ -462,7 +462,7 @@ def compare_clusters(mdata: mu.MuData,
                      clusters_mod1: str,
                      clusters_mod2: str,) -> Tuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]:
     """
-    Calculate comparison matricies of clusters between modalities.
+    Calculate comparison matrices of clusters between modalities.
 
     - Give a score for each pairwise cluster comparison that rates how well they match -> Mean of percentage of cells of one cluster
       in other cluster from both sides.
@@ -481,7 +481,7 @@ def compare_clusters(mdata: mu.MuData,
     Returns
     -------
     Tuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]
-        Tuple of comparison matricies
+        Tuple of comparison matrices
     """
     modality_1, modality_2 = list(mdata.mod.keys())
 
@@ -507,7 +507,7 @@ def compare_clusters(mdata: mu.MuData,
     # Save mean percent data frame to mdata.uns layer
     mdata.uns["cluster_comparison_best_matches"] = dfs_mods[2].data
 
-    # Add data frame for sankey diagramm
+    # Add data frame for sankey diagram
     dfs_mods[3] = dfs_sankey[0]
 
     return dfs_heatmaps, dfs_mods, dfs_sankey
