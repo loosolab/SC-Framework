@@ -7,6 +7,7 @@ import copy
 import multiprocessing as mp
 import scanpy as sc
 import scanpy.external as sce
+import scvi
 
 from beartype.typing import Optional, Any, Union, Literal, Callable
 from beartype import beartype
@@ -21,7 +22,8 @@ batch_methods = Literal["bbknn",
                         "combat",
                         "mnn",
                         "harmony",
-                        "scanorama"]
+                        "scanorama",
+                        "scvi"]
 
 #####################################################################
 # --------------------- Normalization methods --------------------- #
@@ -347,7 +349,7 @@ def wrap_corrections(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def batch_correction(adata: sc.AnnData,  # noqa: C901
-                     batch_key: str,
+                     batch_key: Union[str, list[str]],
                      method: Union[batch_methods,
                                    list[batch_methods],
                                    Callable] = ["bbknn", "mnn"],
@@ -376,13 +378,16 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
     +-----------+----------------------+
     | combat    | Matrix               |
     +-----------+----------------------+
+    | scvi      | Dimension reduction  |
+    +-----------+----------------------+
 
     Parameters
     ----------
     adata : sc.AnnData
         An annotated data matrix object to apply corrections to.
-    batch_key : str
-        The column in adata.obs containing batch information.
+    batch_key : Union[str, list[str]]
+        The column in adata.obs containing batch information. Alternatively provide a list of batch keys for multi-factor correction.
+        Multi-factor correction is only supported by harmony and scvi. The other methods will give a warning and use the first key!
     method : str or function
         Either one of the predefined methods or a custom function for batch correction.
         Note: The custom function is expected to accept an anndata object as the first parameter and return the batch corrected anndata.
@@ -393,6 +398,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
             - harmony
             - scanorama
             - combat
+            - scvi
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
     dim_red_kwargs : dict, default {}
@@ -424,9 +430,16 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
 
     logger.info(f"Running batch correction with '{method}'...")
 
-    # Check that batch_key is in adata object
-    if batch_key not in adata.obs.columns:
-        raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
+    # Check that batch_key is in the adata object
+    if (isinstance(batch_key, list) and any(k not in adata.obs.columns for k in batch_key)) or batch_key not in adata.obs.columns:
+        batch_key = [k for k in batch_key if k not in adata.obs.columns] if isinstance(batch_key, list) else [batch_key]
+
+        raise ValueError(f"The batch_key(s) {', '.join(batch_key)} are not in adata.obs.columns")
+
+    if isinstance(batch_key, list) and not isinstance(method, callable) and method not in ["harmony", "scvi"]:
+        logger.warning(f"Got multiple batch keys which is not supported by {method}. Using the first ({batch_key[0]}) batch key instead.")
+
+        batch_key = batch_key[0]
 
     # so dim_red_kwargs is unique for each function call
     dim_red_kwargs = copy.deepcopy(dim_red_kwargs)
@@ -492,7 +505,8 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
 
     elif method == "harmony":
-        adata.obs[batch_key] = adata.obs[batch_key].astype("str")  # harmony expects a batch key as string
+        for bk in batch_key:
+            adata.obs[bk] = adata.obs[bk].astype("str")  # harmony expects a batch key as string
 
         # harmony takes a PCA and corrects it
         # here we replace the old PCA with the corrected version
@@ -534,6 +548,18 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
             adata.X = sparse.csr_matrix(adata.X)
 
         dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
+    elif method == "scvi":
+        # setup the anndata
+        # TODO enable continuous_covariate_keys
+        scvi.model.SCVI.setup_anndata(adata, layer="counts", batch_key=batch_key[0], categorical_covariate_keys=batch_key[1:])
+
+        # initialize then train the model
+        # parameters are recommended from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
+        model = scvi.model.SCVI(adata, n_layers=2, n_latent=30, gene_likelihood="nb")
+        model.train()
+
+        # add the corrected latent space to the adata
+        adata.obsm["X_pca"] = model.get_latent_representation()
 
     elif callable(method):
         adata = method(adata, **kwargs)
