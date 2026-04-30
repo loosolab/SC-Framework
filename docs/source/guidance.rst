@@ -88,7 +88,7 @@ Technical metrics are metrics calculated from the data without the need of exter
 
 **Biological metrics**
 
-Biological metrics relate to external information such as counting the mitochondria related reads per cell. The SC-Framework integrates mitochondrial, ribosomal, apoptosis and gender related gene identification and counting.
+Biological metrics relate to external information such as counting the mitochondria related reads per cell. The SC-Framework integrates mitochondrial, ribosomal, apoptosis and gender related gene identification and counting, with mitchondrial and ribosomal being the most commonly used.
 
 The rule of thumb for these metrics is that high values mean the cell is stressed, which can mean it is low quality and should be filtered. However, individual thresholds are metric, dataset and sequencing method dependent. For example, cells with a mitochondrial reads above 5-10% are often filtered but this should be reconsidered if, e.g., the data contains muscle related cells (increased) or the data stems from single nucleus sequencing (decreased).
 
@@ -99,8 +99,21 @@ The rule of thumb for these metrics is that high values mean the cell is stresse
 Further references:
 
 - `Single-cell best practices - filtering <https://www.sc-best-practices.org/preprocessing_visualization/quality_control.html#filtering-low-quality-cells>`_
+- `Luecken et al. <https://doi.org/10.15252/msb.20188746>`_
 
-- highly variable genes
+
+Dimension reduction
+^^^^^^^^^^^^^^^^^^^
+
+
+
+Further references:
+
+- `Single-cell best practices - dimension reduction <https://www.sc-best-practices.org/preprocessing_visualization/dimensionality_reduction.html>`_
+- `UMAP <https://pair-code.github.io/understanding-umap/>`_
+- `tSNE <https://distill.pub/2016/misread-tsne/?_ga=2.135835192.888864733.1531353600-1779571267.1531353600>`_
+
+
 - pca + pc selection
 - nearest neighbors
 - batch correction (LISI)
