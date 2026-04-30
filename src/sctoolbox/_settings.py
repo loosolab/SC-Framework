@@ -1,7 +1,6 @@
 """Settings for running sctoolbox functions including paths to output directories, logging, verbosity etc."""
 
 import os
-import yaml
 import sys
 import logging
 
@@ -49,6 +48,8 @@ class SctoolboxConfig(object):
         The resolution in dots per inch used when saving plots.
     report_dpi : float, default 200
         The resolution in dots per inch used when saving report plots.
+    repo_dir : str
+        The path where additional repositories may be stored.
     """
 
     __name__ = "SctoolboxConfig"  # added to enable sphinx autodoc
@@ -75,7 +76,8 @@ class SctoolboxConfig(object):
                  log_file: Optional[str] = None,  # Path to log file
                  overwrite_log: bool = False,     # Overwrite log file if it already exists; default is to append
                  dpi: float = 600,                # The resolution in dots per inch, used to save figures.
-                 report_dpi: float = 200          # The resolution in dots per inch, used for report figures.
+                 report_dpi: float = 200,         # The resolution in dots per inch, used for report figures.
+                 repo_dir: str = ""               # The path to additional repositores.
                  ) -> None:
 
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories
@@ -150,7 +152,7 @@ class SctoolboxConfig(object):
                 self._validate_string(value)
 
         # Additional attribute-specific checks
-        if key in ["figure_dir", "table_dir", "adata_input_dir", "adata_output_dir", "report_dir"]:
+        if key in ["figure_dir", "table_dir", "adata_input_dir", "adata_output_dir", "report_dir", "repo_dir"]:
             value = os.path.join(value, '')  # add trailing slash if not present
             self._create_dir(value)
 
@@ -331,6 +333,7 @@ class SctoolboxConfig(object):
         KeyError
             If key is not found in config file.
         """
+        import yaml  # import here so it can be removed from the build-system requirements
 
         # Read yaml file
         with open(config_file, "r") as f:
