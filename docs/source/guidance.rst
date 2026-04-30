@@ -16,7 +16,7 @@ RNA
 
 
 Doublet detection
-~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^
 
 Doublets or multiplets are artifacts that are created when two or more cells are sequenced with the same barcode. They can appear as separate cell populations in the embedding step and should be removed. We utilize `Scrublet <https://github.com/swolock/scrublet>`_ for doublet detection and follow their recommendations. The stringency of whether a cell classifies as a doublet may be controled through the ``doublet_threshold`` parameter. On default, this is automatically set via Scrublet, however, manual intervention is possible. The ``doublet_threshold`` applies to the ``doublet_score`` a score that ranges from 0-1. The score may be interpreted as the chance of a cell being a doublet, where higher values mean *more likely*.
 
@@ -29,18 +29,46 @@ The barcodes are usually distributed bimodal, where the first (left) modality re
 
 Further references:
 
-- `Single-cell best practices <https://www.sc-best-practices.org/preprocessing_visualization/quality_control.html#doublet-detection>`_
+- `Single-cell best practices - doublet <https://www.sc-best-practices.org/preprocessing_visualization/quality_control.html#doublet-detection>`_
 - `Wolock et al. <https://doi.org/10.1016/j.cels.2018.11.005>`_
 
 Filter metrics
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
+
+Here we look at metrics commonly used in QC filtering. The SC-Framework has two methods to automatically set upper and lower thresholds for each metric, which are explained below. The automatic thresholds can be adjusted by the user as necessary.
+
+Automatic thresholds
+""""""""""""""""""""
+
+The SC-Framework has two methods to automatically set filter thresholds, called *MAD* and *GMM*. The *MAD* method, short for median absolute deviation, is calculated as
 
 
+.. math:: :label: mad_formula
+
+  MAD=median(|X - median(X)|)
+
+  MAD_{score}=median(X) \pm MAD \cdot n_{1, 2}
+
+where :math:`X` is the metric to find a threshold for and :math:`n_{1, 2}` are multipliers for upper and lower bounds. The *GMM* thresholds are calculated similar with the key difference of calculating the thresholds on the largest gaussian mixture within the data. The *GMM* method based on *MAD* developed by the SC-Framework.
+
+.. math:: :label: gmm_formula
+
+  GMM_{score}=mean(GMM(X)_{max}) \pm \sigma_{GMM(X)_{max}} \cdot n_{1, 2}
+
+
+where :math:`GMM(X)_{max}` is the largest component from a gaussian mixture model of the metric :math:`X` and :math:`n_{1, 2}` are multipliers for upper and lower bounds.
+
+.. note::
+
+  The automatic thresholds should be viewed as suggestions and can be adjusted as necessary.
+
+Further references:
+
+- `Single-cell best practices - filtering <https://www.sc-best-practices.org/preprocessing_visualization/quality_control.html#filtering-low-quality-cells>`_
 
 
 
 - filter (mito, ribo, apoptosis, gender, etc.); what are good values?
-- automated threshold calculation
 - highly variable genes
 - pca + pc selection
 - nearest neighbors
