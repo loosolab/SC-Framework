@@ -1,7 +1,7 @@
 Guidance & Recommendations
 ==========================
 
-Here we focus on key steps in the analysis, to give a better understanding on the influence of parameter choices. Also check the :doc:`/tutorials/index`.
+Here we focus on key steps in the analysis, to give a better understanding on the influence of parameter choices. Also check the :doc:`/tutorials/index`. The following should be viewed as suggestions and recommendations that worked for us and others (see the added references), however they should not be treated as definitive rules and may change in the future.
 
 # TODO
 # add details on why steps are done and what the influence of important parameters is
@@ -62,13 +62,44 @@ where :math:`GMM(X)_{max}` is the largest component from a gaussian mixture mode
 
   The automatic thresholds should be viewed as suggestions and can be adjusted as necessary.
 
+.. seealso::
+
+  :func:`sctoolbox.tools.qc_filter.mad_threshold`
+  :func:`sctoolbox.tools.qc_filter.gmm_threshold`
+
+
+Barcode (cell) Metrics
+""""""""""""""""""""""
+
+Filtering is process of removing low quality data, e.g. cells, while keeping biological relevant information. This is often a trade-off. Stricter filters will remove more low quality data but have the potential to also remove more biological details, while lenient filters keep more data, which increases the influence of low quality data, potentially hiding biological information. "Good" filtering thresholds are highly data dependent and usually require trial and error. However, there are some general guidelines, which are discussed in the following.
+
+.. figure:: image/filter_example.png
+   :alt: An example of SC QC cell filtering. A violin plot per filter metric shows thresholds the distribution of data samples.
+
+   A QC cell filter example showing a filter metric for each plot with thresholds. Low quality barcodes could be due to stressed cells, empty droplets, contamination, etc.
+
+Given the figure above the most basic idea is to select your thresholds in a way that outliers, i.e. subpopulations of low quality, are removed that show up with different metrics.
+
+**Technical metrics**
+
+Technical metrics are metrics calculated from the data without the need of external information. The most common are *n_genes*, the number of genes detected for a barcode, and *total_counts*, the total number of reads per cell. They often come in multiple variations, e.g. on a log scale.
+
+# TODO add recommendations
+
+**Biological metrics**
+
+Biological metrics relate to external information such as counting the mitochondria related reads per cell. The SC-Framework integrates mitochondrial, ribosomal, apoptosis and gender related gene identification and counting.
+
+The rule of thumb for these metrics is that high values mean the cell is stressed, which can mean it is low quality and should be filtered. However, individual thresholds are metric, dataset and sequencing method dependent. For example, cells with a mitochondrial reads above 5-10% are often filtered but this should be reconsidered if, e.g., the data contains muscle related cells (increased) or the data stems from single nucleus sequencing (decreased).
+
+# TODO ribo recommendation; around 60%?
+# TODO apoptosis? Not enough used?
+# TODO gender?
+
 Further references:
 
 - `Single-cell best practices - filtering <https://www.sc-best-practices.org/preprocessing_visualization/quality_control.html#filtering-low-quality-cells>`_
 
-
-
-- filter (mito, ribo, apoptosis, gender, etc.); what are good values?
 - highly variable genes
 - pca + pc selection
 - nearest neighbors
