@@ -505,7 +505,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
 
     elif method == "harmony":
-        for bk in batch_key:
+        for bk in batch_key if isinstance(batch_key, list) else [batch_key]:  # to ensure this is a list
             adata.obs[bk] = adata.obs[bk].astype("str")  # harmony expects a batch key as string
 
         # harmony takes a PCA and corrects it
