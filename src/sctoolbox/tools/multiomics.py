@@ -18,7 +18,7 @@ logger = settings.logger
 
 
 @beartype
-def merge_anndata(anndata_dict: dict[str, sc.AnnData],
+def merge_anndata(anndata_dict: dict[str, sc.AnnData],  # noqa: C901
                   join: Literal["inner", "outer"] = "inner") -> sc.AnnData:
     """
     Merge two h5ad files for dual cellxgene deployment.
@@ -80,17 +80,28 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
     obs_list = list()
     obsm_dict = dict()
 
+    skip_prefixes = list(minimal_adata_dict.keys()) + ["Joined"]
+
     # Add prefix to obsm dict keys, var index and obs columns
     for label, adata in minimal_adata_dict.items():
         # prefix to var index
-        adata.var.index = label + "_" + adata.var.index
-        adata.var.columns = label + "_" + adata.var.columns
+        adata.var.index = [idx if any(idx.startswith(prefix) for prefix in skip_prefixes) else f"{label}:{idx}"
+                           for idx in adata.var.index]
+        adata.var.columns = [col if any(col.startswith(prefix) for prefix in skip_prefixes) else f"{label}:{col}"
+                             for col in adata.var.columns]
         # prefix to obs columns
-        adata.obs.columns = label + "_" + adata.obs.columns
+        adata.obs.columns = [col if any(col.startswith(prefix) for prefix in skip_prefixes) else f"{label}:{col}"
+                             for col in adata.obs.columns]
         # Reorder adata cells
         adata = adata[obs_intersection, :]
         for obsm_key, matrix in dict(adata.obsm).items():
-            obsm_dict[f"X_{label}_{obsm_key.removeprefix('X_')}"] = matrix
+            bare_key = obsm_key.removeprefix('X_')
+            # Check if label is already in the key
+            if not bare_key.startswith(label + "_") and not bare_key.startswith("joined_"):
+                new_key = f"X_{label}_{bare_key}"
+            else:
+                new_key = f"X_{bare_key}"
+            obsm_dict[new_key] = matrix
         # save new adata to dict
         minimal_adata_dict[label] = adata
         # save obs in list
@@ -102,7 +113,9 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
     merged_adata.obs = reduce(lambda left, right: pd.merge(left, right,
                                                            how=join,
                                                            left_index=True,
-                                                           right_index=True), obs_list)
+                                                           right_index=True,
+                                                           suffixes=("", "_duplicate")), obs_list)
+    merged_adata.obs = merged_adata.obs.drop(columns=[col for col in merged_adata.obs.columns if col.endswith("_duplicate")])
     merged_adata.obsm = obsm_dict
 
     utils.tables.fill_na(merged_adata.obs)
