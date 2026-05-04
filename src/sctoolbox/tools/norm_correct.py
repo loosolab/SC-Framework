@@ -410,8 +410,12 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         The following parameters are set unless specified to avoid potential issues with the annoy package and processor architecture:
         - bbknn: `computation="cKDTree"`
         - scanorama: `approx=False`
-        - scvi: `scvi.model.SCVI(adata, n_layers=2, n_latent=30, gene_likelihood="nb")`
         See here for further information https://github.com/Teichlab/bbknn/issues/60, https://github.com/brianhie/scanorama?tab=readme-ov-file#troubleshooting
+        - scvi: 
+            This needs a nested dict to adress the two required scvi functions (scvi.model.SCVI.setup_anndata, scvi.model.SCVI). Use the following format.
+            {"setup_anndata": {layer: "raw"}, "SCVI": {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb"}}
+            'layer' will fallback to None.
+            Parameters are from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
 
     Returns
     -------
@@ -554,22 +558,30 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
     elif method == "scvi":
         if isinstance(batch_key, list):
             # TODO enable continuous_covariate_keys
-            scvi_kwargs = {
+            setup_kwargs = {
                 "batch_key": batch_key[0],
                 "categorical_covariate_keys": batch_key[1:] if len(batch_key) > 1 else None
             }
         else:
-            scvi_kwargs = {"batch_key": batch_key}
+            setup_kwargs = {"batch_key": batch_key}
+
+        # use raw layer if present and not given in kwargs. Otherwise fall back to .X (None = use .X)
+        if "raw" in adata.layers.keys():
+            setup_kwargs["layer"] = "raw"
+
+        if "setup_anndata" in kwargs:
+            setup_kwargs.update(kwargs)
 
         # setup the anndata
-        scvi.model.SCVI.setup_anndata(adata, layer="raw", **scvi_kwargs)
+        scvi.model.SCVI.setup_anndata(adata, **setup_kwargs)
 
         # initialize then train the model
         # parameters are recommended from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
-        scvi_defaults = {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb"}
-        scvi_defaults.update(kwargs)
+        scvi_kwargs = {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb"}
+        if "SCVI" in kwargs:
+            scvi_kwargs.update(kwargs)
 
-        model = scvi.model.SCVI(adata, **scvi_defaults)
+        model = scvi.model.SCVI(adata, **scvi_kwargs)
         model.train()
 
         # add the corrected latent space to the adata
@@ -578,7 +590,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         # adata.obsm["X_normalized_scVI"] = model.get_normalized_expression()
 
         # only redo neighbor graph
-        dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **dim_red_kwargs)
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, **dim_red_kwargs)
 
     elif callable(method):
         adata = method(adata, **kwargs)
