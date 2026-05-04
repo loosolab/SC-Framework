@@ -410,6 +410,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         The following parameters are set unless specified to avoid potential issues with the annoy package and processor architecture:
         - bbknn: `computation="cKDTree"`
         - scanorama: `approx=False`
+        - scvi: `scvi.model.SCVI(adata, n_layers=2, n_latent=30, gene_likelihood="nb")`
         See here for further information https://github.com/Teichlab/bbknn/issues/60, https://github.com/brianhie/scanorama?tab=readme-ov-file#troubleshooting
 
     Returns
@@ -565,7 +566,10 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
 
         # initialize then train the model
         # parameters are recommended from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
-        model = scvi.model.SCVI(adata, n_layers=2, n_latent=30, gene_likelihood="nb")
+        scvi_defaults = {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb"}
+        scvi_defaults.update(kwargs)
+
+        model = scvi.model.SCVI(adata, **scvi_defaults)
         model.train()
 
         # add the corrected latent space to the adata
