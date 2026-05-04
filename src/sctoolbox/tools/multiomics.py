@@ -488,7 +488,15 @@ def compare_clusters(mdata: mu.MuData,
     -------
     Tuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]
         Tuple of comparison matrices
+
+    Raises
+    ------
+    ValueError
+        If muon has more or less than 2 modalities.
     """
+    mod_list = list(mdata.mod.keys())
+    if len(mod_list) != 2:
+        raise ValueError("Muon object contains more or less than 2 modalities. This is currently not supported.")
     modality_1, modality_2 = list(mdata.mod.keys())
 
     # Assure that values for parameters clustercol_mod1 and clustercol_mod2 have the correct prefixes for mdata.obs

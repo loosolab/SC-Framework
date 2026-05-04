@@ -215,7 +215,15 @@ def compare_cluster_heatmap(mdata: mu.MuData,
     Tuple[matplotlib.figure.Figure, NDArray[Axes]]
         Figure and axes of the heatmap plots showing best matches for both modalities
         and the combined match score.
+
+    Raises
+    ------
+    ValueError
+        If muon has more or less than 2 modalities.
     """
+    mod_list = list(mdata.mod.keys())
+    if len(mod_list) != 2:
+        raise ValueError("Muon object contains more or less than 2 modalities. This is currently not supported.")
     modality_1, modality_2 = list(mdata.mod.keys())
 
     # Generate figure and axes objects for heatmaps and set figure title
@@ -359,9 +367,18 @@ def visualize_modality_grid(mdata: mu.MuData,
     -------
     Tuple[matplotlib.figure.Figure, NDArray[Axes]]
         Figure and axes of the UMAP plots.
+
+    Raises
+    ------
+    ValueError
+        If muon has more or less than 2 modalities.
     """
     # Setup correct keys
+    mod_list = list(mdata.mod.keys())
+    if len(mod_list) != 2:
+        raise ValueError("Muon object contains more or less than 2 modalities. This is currently not supported.")
     modality_1, modality_2 = list(mdata.mod.keys())
+
     best_match = modality_1 if use_mod_1 else modality_2
     embedding = f"{best_match}:{embedding}"
     clust_1 = f"{modality_1}:{clustercols[0]}"
