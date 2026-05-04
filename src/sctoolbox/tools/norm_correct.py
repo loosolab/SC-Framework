@@ -452,7 +452,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
     dim_red_kwargs = copy.deepcopy(dim_red_kwargs)
 
     # set default dimension reduction
-    if "method" not in dim_red_kwargs and method not in ["harmony", "scanorama"]:
+    if "method" not in dim_red_kwargs and method not in ["harmony", "scanorama", "scvi"]:
         dim_red_kwargs["method"] = "PCA"
 
     # ensure no side effects
