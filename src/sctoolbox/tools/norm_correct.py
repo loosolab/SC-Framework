@@ -411,7 +411,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         - bbknn: `computation="cKDTree"`
         - scanorama: `approx=False`
         See here for further information https://github.com/Teichlab/bbknn/issues/60, https://github.com/brianhie/scanorama?tab=readme-ov-file#troubleshooting
-        - scvi: 
+        - scvi:
             This needs a nested dict to adress the two required scvi functions (scvi.model.SCVI.setup_anndata, scvi.model.SCVI). Use the following format.
             {"setup_anndata": {layer: "raw"}, "SCVI": {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb"}}
             'layer' will fallback to None.
