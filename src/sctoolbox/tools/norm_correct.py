@@ -399,7 +399,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
             - harmony
             - scanorama
             - combat
-            - scvi
+            - scvi (ONLY latent space, expression normalization currently not used)
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
     dim_red_kwargs : dict, default {}
@@ -551,9 +551,17 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
 
         dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
     elif method == "scvi":
+        if isinstance(batch_key, list):
+            # TODO enable continuous_covariate_keys
+            scvi_kwargs = {
+                "batch_key": batch_key[0],
+                "categorical_covariate_keys": batch_key[1:] if len(batch_key) > 1 else None
+            }
+        else:
+            scvi_kwargs = {"batch_key": batch_key}
+
         # setup the anndata
-        # TODO enable continuous_covariate_keys
-        scvi.model.SCVI.setup_anndata(adata, layer="raw", batch_key=batch_key[0], categorical_covariate_keys=batch_key[1:])
+        scvi.model.SCVI.setup_anndata(adata, layer="raw", **scvi_kwargs)
 
         # initialize then train the model
         # parameters are recommended from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
@@ -562,9 +570,11 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
 
         # add the corrected latent space to the adata
         adata.obsm["X_pca"] = model.get_latent_representation()
+        # TODO enable normalized counts; Add as layer?
+        # adata.obsm["X_normalized_scVI"] = model.get_normalized_expression()
 
         # only redo neighbor graph
-        dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **{k: v for k, v in dim_red_kwargs.items() if k != "subset"})
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **dim_red_kwargs)
 
     elif callable(method):
         adata = method(adata, **kwargs)
