@@ -132,7 +132,7 @@ batch_correction = [
     'bbknn',
     'harmonypy<=0.0.10',  # latest scanpy version is incompatible with newest harmonypy version: https://github.com/scverse/scanpy/issues/3940
     'scanorama',
-    'scvi'
+    'scvi-tools'
 ]
 receptor_ligand = [
     'pycirclize>=1.7.1',
