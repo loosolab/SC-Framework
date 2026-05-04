@@ -87,7 +87,15 @@ def visualize_cluster_comparison(mdata: mu.MuData,  # noqa: C901
     -------
     Tuple[matplotlib.figure.Figure, NDArray[Axes]]
         Figure object and array of axes objects containing the plots.
+
+    Raises
+    ------
+    ValueError
+        If muon has more or less than 2 modalities.
     """
+    mod_list = list(mdata.mod.keys())
+    if len(mod_list) != 2:
+        raise ValueError("Muon object contains more or less than 2 modalities. This is currently not supported.")
     modality_1, modality_2 = list(mdata.mod.keys())
 
     # Assure that values for parameters clusters_mod1 and clusters_mod2 have the correct prefixes for mdata.obs

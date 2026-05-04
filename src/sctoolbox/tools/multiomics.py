@@ -126,6 +126,9 @@ def match_barcodes(adata_mod1: sc.AnnData,
     """
     Match cellbarcodes for multiomics anndatas.
 
+    The the barcode pairs are added to individual obs columns.
+    The obs.index is replaced with a matching unique ID.
+
     Parameters
     ----------
     adata_mod1 : sc.AnnData
@@ -251,26 +254,18 @@ def add_multiome_prefix(
 
 
 @beartype
-def join_modalities(adata_mod1: sc.AnnData,
-                    adata_mod2: sc.AnnData,
-                    modality_1: str,
-                    modality_2: str,
+def join_modalities(adata_list: List[sc.AnnData],
+                    modality_list: List[str],
                     keep_outer: bool = False) -> mu.MuData:
     """
-    Take two anndata objects, one for each of two modalities and join them to one new mudata object.
+    Take a list of anndata objects and join them to one new mudata object.
 
     Parameters
     ----------
-    adata_mod1 : anndata Object
-        Object containing all information related to modality 1.
-    adata_mod2 : anndata Object
-        Object containing all information related to modality 2.
-    modality_1 : str
-        Value with the name of the first modality that will be used as a key for the anndata object within the
-        joint mudata object.
-    modality_2 : str
-        Value with the name of the second modality that will be used as a key for the anndata object within
-        the joint mudata object.
+    adata_list : List[sc.AnnData]
+        List of anndata objects containing individual modalities.
+    modality_list : List[str]
+        List of modality names.
     keep_outer : bool, default False
         If True, keep cells that are present in only one modality.
 
@@ -278,9 +273,17 @@ def join_modalities(adata_mod1: sc.AnnData,
     -------
     mudata :
         Muon mudata object containnig both modalities.
+
+    Raises
+    ------
+    ValueError
+        If adata_list and modality_list have different lengths.
     """
+    if len(adata_list) != len(modality_list):
+        raise ValueError("Length of adata_list and modality_list does not match.")
+
     # Create mudata object from anndata objects for modality 1 and modality 2
-    mdata = mu.MuData({modality_1: adata_mod1, modality_2: adata_mod2})
+    mdata = mu.MuData(dict(zip(modality_list, adata_list)))
 
     # Check if cells that are not present in both modalities are to be kept or filtered out
     if not keep_outer:
@@ -381,14 +384,15 @@ def mean_percent_data_frame(data_frames: Iterable[pd.DataFrame],
 
 @beartype
 def cluster_comparison_data_frames(data_frame: pd.DataFrame,
-                                   modalities: List[str],
-                                   clustercols: List[str]) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+                                   modalities: Tuple[str, str],
+                                   clustercols: List[str]) -> Tuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]:
     """
-    Generate three comparison three matrices.
+    Generate three comparison matrices.
 
-    One that can be used to generate the heatmap for visualization, one that can be used
-    to generate the sankey diagram and one for display of cluster comparison between modalities.
-    The second matrix shows per row:
+    1. One that can be used to generate the heatmap for visualization.
+    2. One for display of cluster comparison between modalities.
+    3. One that can be usedto generate the sankey diagram.
+    The second matrix shows per column:
         - Cluster name from modality one as index.
         - Number of cells total assigned to modality 1 cluster.
         - A dictionary showing how many of the cells in modality 1 cluster have been assigned to each modality 2 cluster.
@@ -400,16 +404,18 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
     ----------
     data_frame : pd.DataFrame
         Data frame containing information on both modalities with clustering columns.
-    modalities : List[str]
-        List of values with the names of the modalities in the dataset.
+    modalities : Tuple[str, str]
+        Tuple of length two with the names of the modalities in the dataset.
     clustercols : List[str]
         List of value with the names of the modality clustering columns in the modality matrices or in the joint matrix.
 
     Returns
     -------
-    Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
+    TTuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]
         df_final, df_heatmap, df_sankey
-        Three data frames as described above.
+        Three arrays of length 2. Each containing pandas dataframes for each modality.
+
+    TODO Dataframes 1 and 3 are almost identical. Merge into one.
     """
     # New name for index and other columns
     index = "_".join([modalities[0], "clusters"])
@@ -497,10 +503,10 @@ def compare_clusters(mdata: mu.MuData,
     # Generate data frames for modality 1 and 2
     for i in range(0, 2):
         dfs_heatmaps[i], dfs_mods[i], dfs_sankey[i] = cluster_comparison_data_frames(mdata.obs,
-                                                                                     [modality_1, modality_2] if i == 0
-                                                                                     else [modality_2, modality_1],
-                                                                                     [clusters_mod1, clusters_mod2] if i == 0
-                                                                                     else [clusters_mod2, clusters_mod1])
+                                                                                     (modality_1, modality_2) if i == 0
+                                                                                     else (modality_2, modality_1),
+                                                                                     (clusters_mod1, clusters_mod2) if i == 0
+                                                                                     else (clusters_mod2, clusters_mod1))
     # Generate mean percent data frame
     dfs_mods[2] = mean_percent_data_frame(dfs_heatmaps, [modality_1, modality_2])
 
@@ -516,7 +522,8 @@ def compare_clusters(mdata: mu.MuData,
 @beartype
 def export_modality_adatas(mdata: mu.MuData,
                            obs_cols: Optional[List[str]] = None,
-                           obsm_keys: List[str] = ["X_mofa", "X_umap"]) -> None:
+                           obsm_keys: List[str] = ["X_mofa", "X_umap"],
+                           save: bool = True) -> List[sc.AnnData]:
     """
     Transfer obs columns and obsm embeddings from MuData to individual modality AnnData objects and save them.
 
@@ -529,6 +536,13 @@ def export_modality_adatas(mdata: mu.MuData,
         If None, all obs columns will be transferred.
     obsm_keys : List[str], default=["X_mofa", "X_umap"]
         List of obsm keys to transfer from MuData to individual AnnData objects.
+    save : bool, default True
+        If True save anndatas.
+
+    Returns
+    -------
+    List[sc.AnnData]
+        List of anndata objects.
     """
 
     # Select obs columns to transfer
@@ -543,6 +557,8 @@ def export_modality_adatas(mdata: mu.MuData,
         col if any(col.startswith(f"{modality}:") for modality in mdata.mod.keys()) else f"Joined:{col}"
         for col in obs_to_transfer.columns
     ]
+
+    adatas = []
 
     # Transfer obs columns from MuData to individual modality AnnData objects
     for modality, adata in mdata.mod.items():
@@ -564,6 +580,10 @@ def export_modality_adatas(mdata: mu.MuData,
             else:
                 logger.info(f"Warning: {key} not found in MuData obsm, skipping...")
 
-        # Save modality adata
-        adata_output = f"anndata_multiome_{modality}.h5ad"
-        utils.adata.save_h5ad(adata, adata_output)
+        if save:
+            # Save modality adata
+            adata_output = f"anndata_multiome_{modality}.h5ad"
+            utils.adata.save_h5ad(adata, adata_output)
+        adatas.append(adata)
+
+    return adatas
