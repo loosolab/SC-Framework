@@ -265,7 +265,7 @@ def tfidf(anndata: sc.AnnData,
 
 @beartype
 def wrap_corrections(adata: sc.AnnData,
-                     batch_key: str,
+                     batch_key: Union[str, list[str]],
                      methods: Union[batch_methods,
                                     list[batch_methods],
                                     Callable] = ["bbknn", "mnn"],
@@ -279,7 +279,8 @@ def wrap_corrections(adata: sc.AnnData,
     adata : sc.AnnData
         Annotated data matrix to apply batch corrections to.
     batch_key : str
-        Column in ``adata.obs`` containing batch labels.
+        Column in ``adata.obs`` containing batch labels. Provide a list of batch keys for multi-factor correction.
+        Multi-factor correction is only supported by harmony and scvi. The other methods will give a warning and use the first key
     methods : list[batch_methods] | Callable | batch_methods, default ["bbknn", "mnn"]
         Batch-correction method(s) to apply.
 
@@ -322,7 +323,7 @@ def wrap_corrections(adata: sc.AnnData,
         raise ValueError(f"Unknown methods in `method_kwargs` keys: {unknown_keys}")
 
     # Check the existence of packages before running batch_corrections
-    required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "scanorama": "scanorama"}
+    required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "scanorama": "scanorama", "scvi": "scvi"}
     for method in methods:
         if method in required_packages:  # not all packages need external tools
             f = io.StringIO()
@@ -431,13 +432,14 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
     logger.info(f"Running batch correction with '{method}'...")
 
     # Check that batch_key is in the adata object
-    if (isinstance(batch_key, list) and any(k not in adata.obs.columns for k in batch_key)) or batch_key not in adata.obs.columns:
+    if ((isinstance(batch_key, list) and any(k not in adata.obs.columns for k in batch_key))
+        or not isinstance(batch_key, list) and batch_key not in adata.obs.columns):
         batch_key = [k for k in batch_key if k not in adata.obs.columns] if isinstance(batch_key, list) else [batch_key]
 
         raise ValueError(f"The batch_key(s) {', '.join(batch_key)} are not in adata.obs.columns")
 
-    if isinstance(batch_key, list) and not isinstance(method, callable) and method not in ["harmony", "scvi"]:
-        logger.warning(f"Got multiple batch keys which is not supported by {method}. Using the first ({batch_key[0]}) batch key instead.")
+    if isinstance(batch_key, list) and not callable(method) and method not in ["harmony", "scvi"]:
+        logger.warning(f"Got multiple batch keys which is not supported by {method}. Using the first ('{batch_key[0]}') batch key instead.")
 
         batch_key = batch_key[0]
 
@@ -551,7 +553,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
     elif method == "scvi":
         # setup the anndata
         # TODO enable continuous_covariate_keys
-        scvi.model.SCVI.setup_anndata(adata, layer="counts", batch_key=batch_key[0], categorical_covariate_keys=batch_key[1:])
+        scvi.model.SCVI.setup_anndata(adata, layer="raw", batch_key=batch_key[0], categorical_covariate_keys=batch_key[1:])
 
         # initialize then train the model
         # parameters are recommended from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
@@ -560,6 +562,9 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
 
         # add the corrected latent space to the adata
         adata.obsm["X_pca"] = model.get_latent_representation()
+
+        # only redo neighbor graph
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **{k: v for k, v in dim_red_kwargs.items() if k != "subset"})
 
     elif callable(method):
         adata = method(adata, **kwargs)
