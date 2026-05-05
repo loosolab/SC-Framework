@@ -117,7 +117,7 @@ Next, we subset the PCs to remove batch effects and reduce noise. Therefore, we 
 Before calculating a 2D representation, a nearest neighbour graph of the cells is calculated using scanpy.pp.neighbors. We ask the user to provide the number of neighbours *n_neighbors*, its the size of local neighborhood used for manifold approximation. Small values capture local data, while large values will capture a more global view. Acceptable values are between 2 and 100. For more details see: `Scanpy readthedocs <https://scanpy.readthedocs.io/en/stable/api/generated/scanpy.pp.neighbors.html>`_.
 
 **Embedding UMAP/TSNE**
-2D/3D representations are achieved by a `UMAP <https://arxiv.org/abs/1802.03426>`_ or `t-SNE <https://www.jmlr.org/papers/volume9/vandermaaten08a/vandermaaten08a.pdf>`_ embedding on the neighbour graph. Here we are also using scanpy functions namely sc.tl.umap() and sc.tl.tsne(). Finding feasible parameters for the embedding can be quite challenging, therefore we have built wrapper functions that execute UMAP or t-SNE with user defined ranges of varying parameters. Here we ask to user to set either *dist_range* and *spread_range* to find UMAP parameters or *perplexity_range* and *learning_rate_range* for t-SNE parameters. For more details on the UMAP/t-SNE parameters see: `Scanpy readthedocs <https://scanpy.readthedocs.io/en/stable/generated/scanpy.tl.umap.html>`_.
+2D/3D representations are achieved by a `UMAP <https://arxiv.org/abs/1802.03426>`_ or `t-SNE <https://www.jmlr.org/papers/volume9/vandermaaten08a/vandermaaten08a.pdf>`_ embedding on the neighbour graph. Here we are also using scanpy functions namely sc.tl.umap() and sc.tl.tsne(). Finding feasible parameters for the embedding can be quite challenging, therefore we have built wrapper functions that execute UMAP or t-SNE with user defined ranges of varying parameters. Here we ask to user to set either *dist_range* and *spread_range* to find UMAP parameters or *perplexity_range* and *learning_rate_range* for t-SNE parameters. The ranges are given in the following format: (minimum, maximum, step wide). The wrapper then returns plots of all combinations and the user can infer the parameters to use for the embedding. For more details on the UMAP/t-SNE parameters see: `Scanpy readthedocs <https://scanpy.readthedocs.io/en/stable/generated/scanpy.tl.umap.html>`_.
 
 Batch correction
 ^^^^^^^^^^^^^^^^
@@ -127,6 +127,46 @@ A selection of batch methods are available to perform the correction. The user i
 Clustering
 ^^^^^^^^^^
 
+For clustering the leiden algorithm implemented by Scanpy sc.tl.leiden(). As for the embedding we can search for suitable parameters to cluster the cells, via a wrapper executing the clustering with varying parameters in the range defined by *cluster_res_range* which is set by the user. As for the embedding the ranges are in the following format: (minimum, maximum, step wide). All variations are plotted and the user can select which resolutions fits best. The number of columns displayed in the plot is set by the *cluster_ncols* parameter. For a more detailed overview about the leiden clustering see `From Louvain to Leiden: guaranteeing well-connected communities <https://www.nature.com/articles/s41598-019-41695-z>`_
+
+Marker Genes
+^^^^^^^^^^^^
+
+Calling marker genes is an important step before proceeding with a variety of downstream analysis steps. This comparison between groups often reffered to as differential expression analyis is handled by us in two ways purely Scanpy based for simple comparisons and we integrated a pyDeSeq2 workflow for more complex analyis if replicates are available. For the Scanpy based approach to streamline the process we build a wrapper function which first calls sc.tl.rank_genes_groups() to add the rank gene tables to the AnnData object and then filters the table by calling sc.tl.filter_rank_genes_groups(). In the notebook the user is asked to provide parameters tuning the marker gene selection, which are forwarded to the wrapper function. The following will explain these parameters in more detail. First there is *marker_labels* to select the column name in adata.var to use for the ranking. Secondly the ranking method to use, this is forwarded to sc.tl.rank_genes_groups(). Third *top_n*, which is forwarded to sc.tl.rank_genes_groups() as well stating how may genes to rank per group. Then there are filtering related parameters forwarded to sc.tl.filter_rank_genes_groups(). *min_in_group_fraction* is the minimum fraction of cells to express the gene/feature to be considered valid. *min_fold_change* is the minimum expression difference of a gene/feature across groups to be considered a marker. *max_out_group_fraction* sets the maximum fraction of cells in other groups expressing the feature/gene. For more information of the individual parameters see the `Scanpy readthedocs <https://scanpy.readthedocs.io/en/stable/generated/scanpy.tl.rank_genes_groups.html>`_
+
+For DESeq2 the user is asked to provide *sample_col* which can be seen as batch information, *condition_col*, stating what to compare and *layer_raw*, to set the layer to use. Before DEseq2 is called the data is normalized with sc.pp.normalize_total(). As for the Scanpy functions we build a wrapper to execute pydeseq2  which handles the parameters given by the user.
+
+ATAC
+----
+
+Barcode Filtering
+^^^^^^^^^^^^^^^^^
+
+As for RNA-seq data barcode filtering is also applied to ATAC-seq data. While most of the metrices used for RNA-seq can be applied for ATAC-seq likewise as the number of reads or feature counts, there are also ATAC specific QC metrices. In the following we will look into these in more detail.
+
+**FLD Score**
+
+The fragment length distribution (FLD) is a common quality proxy in ATAC-seq data. FLD Score is a metric calculated by `PEAKQC <https://academic.oup.com/bib/article/26/5/bbaf465/8255857>`_. The score positively correlates with a more pronounced FLD pattern, which accounts for DNA integrity and the correct tn5 ratio. Cells with low FLD scores can be exluded. A minimum threshold highly depends on the dataset and the goals of the analysis, removing outliers is often a easy way to start.
+
+**Overlap**
+
+Another ATAC-seq quality proxy can be the fraction of fragments overlapping certain features as promoter regions. As an enrichment of fragments overlapping promoter regions is expected in ATAC-seq, the metric infers the signal-to-noise ratio. Cells with low numbers of fragments overlapping with promoter regions shall be excluded. A ratio of 0.3 is a good startpoint as a lower threshold from our experience.
+
+**Transcription Start Site Enrichment (TSSe)**
+
+Transcription Start Site enrichment (`TSSe <https://www.encodeproject.org/atac-seq/>`_) is very similiar to the overlap of fragments in promoters, but it is bias corrected for the enrichment in the regions down- and upstream of the transcription start site. To start outlier cells with very low TSSe may be removed.
+
+**Fraction of Reads in Peaks (FRiP)**
+
+Fraction of Reads in Peaks (`FRiP <https://www.encodeproject.org/atac-seq/>`_) is another widely used metric to infer the signal-to-noise ratio. As it is expected that reads accumalate in open chromatin regions rather than ramdomly occuring. From our experience starting to filter cells with a FRiP of 0.1 seems to be effective but not really strict.
+
+
+Doublet detection (ATAC)
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Doublet removal in ATAC-seq data is based on a ATAC specific property. As ATAC-seq is based on DNA each genomic locus should be present exactly two times, one from each allele. `AMULET <https://ucarlab.org/wp-content/uploads/2024/11/AMULET-a-novel-read-count-based.pdf>`_ is a tool which nicely utilizes this property. We reused the core algorithm and implemented it into our framework. To execute it the user is asked to provide several parameters: *amulet_q_threshold* the q-value to call significant doublets (FDR-corrected p-value), *amulet_repeat_filter* is a optional blacklist of repetitive features to exclude, as these could multimap, *amulet_expected_overlap* should be two due to the biology, *amulet_max_insert_size* the maximum insert size of a fragment used to count, *amulet_min_overlap* minimum count per region to include in the statistic.
+
+
 
 
 Further references:
@@ -135,8 +175,6 @@ Further references:
 - `UMAP <https://pair-code.github.io/understanding-umap/>`_
 - `tSNE <https://distill.pub/2016/misread-tsne/?_ga=2.135835192.888864733.1531353600-1779571267.1531353600>`_
 
-
-- clustering (recluster; mention marker genes)
 - marker genes (needs details)
   - min_in_group_fraction
   - min_fold_change
@@ -150,7 +188,7 @@ ATAC
   - overlap
   - frip score
   - tsse
-  - binarize
+  - binarize (include?)
 - doublet
 - normalization (tf-idf vs total)
 - highly variable features
