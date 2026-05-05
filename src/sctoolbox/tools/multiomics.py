@@ -398,7 +398,7 @@ def mean_percent_data_frame(data_frames: Iterable[pd.DataFrame],
 @beartype
 def cluster_comparison_data_frames(data_frame: pd.DataFrame,
                                    modalities: Tuple[str, str],
-                                   clustercols: List[str]) -> Tuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]:
+                                   clustercols: Tuple[str, str]) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Generate three comparison matrices.
 
@@ -419,14 +419,14 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
         Data frame containing information on both modalities with clustering columns.
     modalities : Tuple[str, str]
         Tuple of length two with the names of the modalities in the dataset.
-    clustercols : List[str]
-        List of value with the names of the modality clustering columns in the modality matrices or in the joint matrix.
+    clustercols : Tuple[str, str]
+        Tuple of length two with the names of the modality clustering columns in the modality matrices or in the joint matrix.
 
     Returns
     -------
-    TTuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]
+    TTuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
         df_final, df_heatmap, df_sankey
-        Three arrays of length 2. Each containing pandas dataframes for each modality.
+        As describbed above
 
     TODO Dataframes 1 and 3 are almost identical. Merge into one.
     """

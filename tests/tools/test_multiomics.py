@@ -121,10 +121,10 @@ def test_merge_anndata(adata, adata2):
     new_obs_cols, new_obsm_entries, new_var_index = list(), list(), list()
     new_var_cols = ["source"]
     for key, value in adata_to_merge.items():
-        new_var_cols += [f"{key}_{i}" for i in value.var.columns]
-        new_obs_cols += [f"{key}_{i}" for i in value.obs.columns]
+        new_var_cols += [f"{key}:{i}" for i in value.var.columns]
+        new_obs_cols += [f"{key}:{i}" for i in value.obs.columns]
         new_obsm_entries += [f"X_{key}_{i.split('_')[-1]}" for i in list(value.obsm)]
-        new_var_index += [f"{key}_{i}" for i in value.var.index]
+        new_var_index += [f"{key}:{i}" for i in value.var.index]
 
     # Check if merged object is an AnnData object
     assert isinstance(merged_adata, anndata.AnnData)
@@ -207,7 +207,7 @@ def test_join_modalities(adata):
     adata1 = adata.copy()
     adata2 = adata.copy()
 
-    mdata = multi.join_modalities(adata1, adata2, "RNA", "ATAC")
+    mdata = multi.join_modalities([adata1, adata2], ["RNA", "ATAC"])
 
     assert isinstance(mdata, mu.MuData)
     assert "RNA" in mdata.mod
@@ -217,8 +217,8 @@ def test_join_modalities(adata):
 
 def test_join_modalities_keep_outer(adata):
     """Test that keep_outer=True retains cells not in both modalities."""
-    mdata_inner = multi.join_modalities(adata.copy(), adata[:100].copy(), "RNA", "ATAC", keep_outer=False)
-    mdata_outer = multi.join_modalities(adata.copy(), adata[:100].copy(), "RNA", "ATAC", keep_outer=True)
+    mdata_inner = multi.join_modalities([adata.copy(), adata[:100].copy()], ["RNA", "ATAC"], keep_outer=False)
+    mdata_outer = multi.join_modalities([adata.copy(), adata[:100].copy()], ["RNA", "ATAC"], keep_outer=True)
 
     assert mdata_inner.mod["RNA"].n_obs == 100
     assert mdata_outer.mod["RNA"].n_obs == adata.n_obs
@@ -237,7 +237,7 @@ def test_match_barcodes_not_inplace(adata_mod1, adata_mod2, barcode_map_file):
 def test_cluster_comparison_data_frames(mdata):
     """Test that three data frames are returned with correct structure."""
     df_heatmap, df_final, df_sankey = multi.cluster_comparison_data_frames(
-        mdata.obs, modalities=["RNA", "ATAC"], clustercols=["RNA:leiden", "ATAC:leiden"]
+        mdata.obs, modalities=("RNA", "ATAC"), clustercols=("RNA:leiden", "ATAC:leiden")
     )
 
     assert isinstance(df_heatmap, pd.DataFrame)
@@ -253,10 +253,10 @@ def test_mean_percent_data_frame(mdata):
     from pandas.io.formats.style import Styler
 
     df_heatmap_rna, _, _ = multi.cluster_comparison_data_frames(
-        mdata.obs, modalities=["RNA", "ATAC"], clustercols=["RNA:leiden", "ATAC:leiden"]
+        mdata.obs, modalities=("RNA", "ATAC"), clustercols=("RNA:leiden", "ATAC:leiden")
     )
     df_heatmap_atac, _, _ = multi.cluster_comparison_data_frames(
-        mdata.obs, modalities=["ATAC", "RNA"], clustercols=["ATAC:leiden", "RNA:leiden"]
+        mdata.obs, modalities=("ATAC", "RNA"), clustercols=("ATAC:leiden", "RNA:leiden")
     )
 
     result = multi.mean_percent_data_frame([df_heatmap_rna, df_heatmap_atac], ["RNA", "ATAC"])
