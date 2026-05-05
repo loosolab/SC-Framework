@@ -609,7 +609,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
 @deco.log_anndata
 @beartype
 def evaluate_batch_effect(adata: sc.AnnData,
-                          batch_key: str,
+                          batch_key: str | list[str],
                           obsm_key: str = 'X_umap',
                           col_name: str = 'LISI_score',
                           max_dims: int = 5,
@@ -622,7 +622,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object with PCA and umap/tsne for batch evaluation.
-    batch_key : str
+    batch_key : str | list[str]
         The column in adata.obs containing batch information.
     obsm_key : str, default 'X_umap'
         The column in adata.obsm containing coordinates.
@@ -659,6 +659,9 @@ def evaluate_batch_effect(adata: sc.AnnData,
     utils.checker.check_module("harmonypy")
     from harmonypy.lisi import compute_lisi
 
+    if not isinstance(batch_key, list):
+        batch_key = [batch_key]
+
     # Handle inplace option
     adata_m = adata if inplace else adata.copy()
 
@@ -666,12 +669,13 @@ def evaluate_batch_effect(adata: sc.AnnData,
     if obsm_key not in adata_m.obsm:
         raise KeyError(f"adata.obsm does not contain the obsm key: {obsm_key}")
 
-    if batch_key not in adata_m.obs:
-        raise KeyError(f"adata.obs does not contain the batch key: {batch_key}")
+    missing = [bk for bk in batch_key if bk not in adata_m.obs]
+    if missing:
+        raise KeyError(f"adata.obs does not contain the batch key(s): {','.join(missing)}")
 
     # run LISI on all adata objects
     obsm_matrix = adata_m.obsm[obsm_key][:, :max_dims]
-    lisi_res = compute_lisi(obsm_matrix, adata_m.obs, [batch_key], perplexity=perplexity)
+    lisi_res = compute_lisi(obsm_matrix, adata_m.obs, batch_key, perplexity=perplexity)
     adata_m.obs[col_name] = lisi_res.flatten()
 
     if not inplace:
