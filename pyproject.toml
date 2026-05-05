@@ -110,6 +110,7 @@ dependencies = [
         'Jinja2',
         'scikit-image',
         'PyGithub',
+        'openpyxl >=3.1.5'  # to speed up installation
 ]
 
 [project.optional-dependencies]
