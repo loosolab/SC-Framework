@@ -109,8 +109,7 @@ dependencies = [
         'boto3',
         'Jinja2',
         'scikit-image',
-        'PyGithub',
-        'openpyxl >=3.1.5'  # to speed up installation
+        'PyGithub'
 ]
 
 [project.optional-dependencies]
@@ -191,7 +190,8 @@ test = [
     "pytest",
     "pytest-mock",
     "pytest-cov",
-    "pytest-html"
+    "pytest-html",
+    "openpyxl"
 ]
 
 [project.scripts]
