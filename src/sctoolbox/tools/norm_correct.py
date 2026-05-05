@@ -581,6 +581,10 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         if "SCVI" in kwargs:
             scvi_kwargs.update(kwargs)
 
+        # get the number of components from the dimension reduction parameters
+        if "n_comps" in dim_red_kwargs:
+            scvi_kwargs["n_latent"] = dim_red_kwargs["n_comps"]
+
         model = scvi.model.SCVI(adata, **scvi_kwargs)
         model.train()
 
