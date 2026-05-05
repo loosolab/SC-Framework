@@ -166,8 +166,10 @@ Doublet detection (ATAC)
 
 Doublet removal in ATAC-seq data is based on a ATAC specific property. As ATAC-seq is based on DNA each genomic locus should be present exactly two times, one from each allele. `AMULET <https://ucarlab.org/wp-content/uploads/2024/11/AMULET-a-novel-read-count-based.pdf>`_ is a tool which nicely utilizes this property. We reused the core algorithm and implemented it into our framework. To execute it the user is asked to provide several parameters: *amulet_q_threshold* the q-value to call significant doublets (FDR-corrected p-value), *amulet_repeat_filter* is a optional blacklist of repetitive features to exclude, as these could multimap, *amulet_expected_overlap* should be two due to the biology, *amulet_max_insert_size* the maximum insert size of a fragment used to count, *amulet_min_overlap* minimum count per region to include in the statistic.
 
+Normalization (ATAC)
+^^^^^^^^^^^^^^^^^^^^
 
-
+The normalization method can be either TF-IDF or total count normalization. The user can set it via *norm_method*. Term frequency-inverse document frequencies (`TF-IDF <https://www.nature.com/articles/nature25981>`_), initially adopted by search engines, scores each variable (here open chromatin region) by their importance. It compares the frequency of a variable within a cell against the global occurrence over all cells thus highlighting cell defining variables. On the other hand, total count normalization adjusts the total count of each cell so that all cells have the same total count after normalization. A method frequently used for single cell RNA data.
 
 Further references:
 
@@ -192,4 +194,4 @@ ATAC
 - doublet
 - normalization (tf-idf vs total)
 - highly variable features
-- lsi vs pca
+- lsi vs pca (I think this is nicely shown in the notebook. Copy it?)
