@@ -1,6 +1,6 @@
 """Normalization and correction tools."""
 import numpy as np
-from scipy import sparse
+from scipy import sparse, spatial
 import io
 from contextlib import redirect_stderr
 import copy
@@ -556,6 +556,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
 
         dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
     elif method == "scvi":
+        # TODO don't ignore mask vars meaning only use highly variable genes for correction. See pca mask_var/use_highly_variable
         if isinstance(batch_key, list):
             # TODO enable continuous_covariate_keys
             setup_kwargs = {
@@ -589,11 +590,27 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         model.train(**(kwargs["train"] if "train" in kwargs else {}))
 
         # add the corrected latent space to the adata
-        adata.obsm["X_pca"] = model.get_latent_representation()
+        mean, variance = model.get_latent_representation(return_dist=True)
+        adata.obsm["X_pca"] = mean
         # TODO enable normalized counts; Add as layer?
         # adata.obsm["X_normalized_scVI"] = model.get_normalized_expression()
 
+        # remove/replace outdated PCA information
+        # remove the PCA loadings there is no equivalent in SCVI as it is non-linear
+        adata.varm.pop("PCs", None)
+        adata.uns["pca"] = {}
+
+        # add a variance_ratio equivalent
+        adata.uns["pca"]["variance"] = variance.mean(axis=0)
+        # I'm using the jensen-shannon distance. It compares the mean variance distr. to the component variance distr.
+        # If both are identical = 0 if they are "maximum" different = 1
+        # This won't add up to 1, like variance ratio of PCA does, but is a reasonable equivalent in the scvi context.
+        # The components are also not sorted by variance
+        adata.uns["pca"]["variance_ratio"] = np.array(list(spatial.distance.jensenshannon(p=variance.mean(axis=1), q=variance[:, i])
+                                                                                          for i in range(variance.shape[1])))
+
         # only redo neighbor graph
+        # TODO currently assumes SCVI components to follow the same ordering as PCA, and will apply the same component subset
         dim_red.dim_red(anndata=adata, inplace=True, method=None, **dim_red_kwargs)
 
     elif callable(method):
