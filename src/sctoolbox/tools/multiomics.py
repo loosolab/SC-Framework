@@ -426,7 +426,7 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
     -------
     TTuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
         df_final, df_heatmap, df_sankey
-        As describbed above
+        As described above
 
     TODO Dataframes 1 and 3 are almost identical. Merge into one.
     """
