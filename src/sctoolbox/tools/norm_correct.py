@@ -412,8 +412,8 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         - scanorama: `approx=False`
         See here for further information https://github.com/Teichlab/bbknn/issues/60, https://github.com/brianhie/scanorama?tab=readme-ov-file#troubleshooting
         - scvi:
-            This needs a nested dict to address the two required scvi functions (scvi.model.SCVI.setup_anndata, scvi.model.SCVI). Use the following format.
-            {"setup_anndata": {layer: "raw"}, "SCVI": {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb"}}
+            This needs a nested dict to address the three required scvi functions (scvi.model.SCVI.setup_anndata, scvi.model.SCVI, scvi.model.SCVI.train). Use the following format.
+            {"setup_anndata": {layer: "raw"}, "SCVI": {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb", "train": {}}}
             'layer' will fallback to None.
             Parameters are from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
 
@@ -582,11 +582,11 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
             scvi_kwargs.update(kwargs)
 
         # get the number of components from the dimension reduction parameters
-        if "n_comps" in dim_red_kwargs:
-            scvi_kwargs["n_latent"] = dim_red_kwargs["n_comps"]
+        if "method_kwargs" in dim_red_kwargs and "n_comps" in dim_red_kwargs["method_kwargs"]:
+            scvi_kwargs["n_latent"] = dim_red_kwargs["method_kwargs"]["n_comps"]
 
         model = scvi.model.SCVI(adata, **scvi_kwargs)
-        model.train()
+        model.train(**(kwargs["train"] if "train" in kwargs else {}))
 
         # add the corrected latent space to the adata
         adata.obsm["X_pca"] = model.get_latent_representation()
