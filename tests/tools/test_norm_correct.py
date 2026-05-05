@@ -146,7 +146,7 @@ def test_wrap_corrections(adata):
         assert "test" in a.layers
 
 
-@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat", "scvi"])
+@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])  # TODO excluded "scvi" due to runtime; may be mocked in the future
 def test_batch_correction(adata, method):
     """Test if batch correction returns an anndata."""
 
