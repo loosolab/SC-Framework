@@ -50,6 +50,7 @@
   log_file: "../logs/annotation_log.txt"
   overwrite_log: True
   report_dir: "../report/annotation/"
+  repo_dir: "../repositories/MarkerRepo"
 
 "group_markers":
   adata_input_dir: "../adatas/"
