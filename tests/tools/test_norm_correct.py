@@ -165,7 +165,7 @@ def test_evaluate_batch_effect(adata, key):
 
     ad_type = type(ad).__name__
     assert ad_type == "AnnData"
-    assert "LISI_score" in ad.obs
+    assert ad.obs.columns.str.startswith("LISI_score").any()
 
 
 @pytest.mark.parametrize("key", ["a", "b"])
