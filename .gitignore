@@ -199,3 +199,8 @@ atac_analysis/logs/
 atac_analysis/tables/
 atac_analysis/report/
 atac_analysis/tobias/
+
+# Development related artifacts 
+.claude/
+docs/planning/
+CLAUDE.md
