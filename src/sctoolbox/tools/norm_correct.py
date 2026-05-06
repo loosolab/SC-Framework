@@ -640,11 +640,11 @@ def evaluate_batch_effect(adata: sc.AnnData,
     adata : sc.AnnData
         Anndata object with PCA and umap/tsne for batch evaluation.
     batch_key : str | list[str]
-        The column in adata.obs containing batch information.
+        The column(s) in adata.obs containing batch information. Will calculate a score for each given key.
     obsm_key : str, default 'X_umap'
         The column in adata.obsm containing coordinates.
     col_name : str, default 'LISI_score'
-        Column name for storing the LISI score in .obs.
+        Column name for storing the LISI score in .obs. Will add a suffix in case of multiple batch keys, e.g. ``X_umap_batchkey1``.
     max_dims : int, default 5
         Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
     perplexity : int, default 30
@@ -692,8 +692,14 @@ def evaluate_batch_effect(adata: sc.AnnData,
 
     # run LISI on all adata objects
     obsm_matrix = adata_m.obsm[obsm_key][:, :max_dims]
-    lisi_res = compute_lisi(obsm_matrix, adata_m.obs, batch_key, perplexity=perplexity)
-    adata_m.obs[col_name] = lisi_res.flatten()
+    lisi_score = compute_lisi(obsm_matrix, adata_m.obs, batch_key, perplexity=perplexity)
+
+    # handle multi-batch
+    if isinstance(batch_key, list):
+        for bk, batch_lisi in zip(batch_key, map(list, zip(*lisi_score))):
+            adata_m.obs[f"{col_name}_{bk}"] = batch_lisi
+    else:
+        adata_m.obs[col_name] = lisi_score.flatten()
 
     if not inplace:
         return adata_m
@@ -701,7 +707,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
 
 @beartype
 def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
-                          batch_key: str,
+                          batch_key: str | list[str],
                           obsm_keys: str | list[str] = ['X_pca', 'X_umap'],
                           threads: Optional[int] = 1,
                           max_dims: int = 5,
@@ -714,8 +720,8 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
     adatas : dict[str, sc.AnnData]
         Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
         E.g.: {"bbknn": anndata}
-    batch_key : str
-        The column in adata.obs containing batch information.
+    batch_key : str |list[str]
+        The column(s) in adata.obs containing batch information.
     obsm_keys : str | list[str], default ['X_pca', 'X_umap']
         Key(s) to coordinates on which the score is calculated.
     threads : Optional[int], default 1
@@ -739,6 +745,9 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
     else:
         from tqdm import tqdm
 
+    if not isinstance(batch_key, list):
+        batch_key = [batch_key]
+
     # Handle inplace option
     adatas_m = adatas if inplace else copy.deepcopy(adatas)
 
@@ -761,6 +770,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
         utils.checker.check_module("harmonypy")
         from harmonypy.lisi import compute_lisi
 
+        # TODO why not use evaluate_batch_effect? Move parallel execution to evaluate_batch_effect?
         pool = mp.Pool(threads)
         jobs = {}
         for i, adata in enumerate(adatas_m.values()):
@@ -769,9 +779,9 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
 
             for obsm_key in obsm_keys:
                 obsm_matrix = adata.obsm[obsm_key][:, :max_dims]
-                obs_mat = adata.obs[[batch_key]]
+                obs_mat = adata.obs[batch_key]
 
-                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, [batch_key], perplexity,))
+                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, batch_key, perplexity,))
                 jobs[(i, obsm_key)] = job
         pool.close()
 
@@ -782,7 +792,14 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
         # Assign results to adata
         for adata_i, obsm_key in jobs:
             adata = list(adatas_m.values())[adata_i]
-            adata.obs[f"LISI_score_{obsm_key}"] = jobs[(adata_i, obsm_key)].get().flatten()
+            lisi_score = jobs[(adata_i, obsm_key)].get()
+
+            # handle multi-batch
+            if isinstance(batch_key, list):
+                for bk, batch_lisi in zip(batch_key, map(list, zip(*lisi_score))):
+                    adata.obs[f"LISI_score_{obsm_key}_{bk}"] = batch_lisi
+            else:
+                adata.obs[f"LISI_score_{obsm_key}"] = lisi_score.flatten()
 
     if not inplace:
         return adatas_m
