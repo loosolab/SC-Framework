@@ -32,8 +32,8 @@
 - Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
 - fix logging issue causing error on save (#333)
 - Pin scFates to >= 1.2.3 (#433)
-- CI improvements
 - lint according to new D420 rule
+- CI improvements
 - add scanpy score feature including apoptosis,mito,ribo and cell cycle (#401)
 
 ### Changes to notebooks
