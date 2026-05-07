@@ -9,6 +9,7 @@ dependencies:
 # jupyter dependencies
   - notebook==6.5.2
   - ipykernel  # needed to register environment as jupyter kernel
+  - jupyter_contrib_nbextensions
 # Dependencies used within the notebooks (but not the sctoolbox package)
   - pip>=24.2  # for installing additional packages
   - pip:

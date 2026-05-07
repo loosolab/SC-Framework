@@ -4,6 +4,19 @@
 #.rst files are automatically created during docs build
 docs/source/API/sctoolbox*.rst
 
+# doc files created during build
+docs/data/
+docs/source/API/**/
+docs/source/API/*.pdf
+docs/source/API/*.png
+docs/source/API/*.html
+docs/source/API/*.tsv
+docs/source/image/
+# may be removed if the file needs to be changed
+docs/source/API/plotting.rst
+docs/source/API/tools.rst
+docs/source/API/utils.rst
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -186,3 +199,8 @@ atac_analysis/logs/
 atac_analysis/tables/
 atac_analysis/report/
 atac_analysis/tobias/
+
+# Development related artifacts 
+.claude/
+docs/planning/
+CLAUDE.md

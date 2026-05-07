@@ -493,18 +493,12 @@ build-pages:
       artifacts: true
   stage: deploy
   before_script:
-    - pip install .[all]
+    - pip install .[all] --group docs
     - git submodule init
     - git submodule update
   script:
     - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
     - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
-    - pip install sphinx sphinx-rtd-theme
-    - pip install sphinx-exec-code
-    - pip install nbsphinx
-    - pip install nbsphinx_link
-    - pip install myst-parser
-    - pip install "docutils<=0.21"  # pinned until https://github.com/vidartf/nbsphinx-link/issues/25 is fixed
     - cd docs
     - make html
   artifacts:

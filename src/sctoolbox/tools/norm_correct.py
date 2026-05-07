@@ -538,7 +538,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         # LSI is also stored in "X_pca"
         sce.pp.scanorama_integrate(adata, key=batch_key, basis="X_pca", adjusted_basis="X_pca", **kwargs)
 
-        # only redo neihgbor graph
+        # only redo neighbour graph
         dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **{k: v for k, v in dim_red_kwargs.items() if k != "subset"})
 
         # sort the adata back to the original order

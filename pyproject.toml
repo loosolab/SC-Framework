@@ -159,7 +159,7 @@ velocity = [
     'scvelo>=0.3.4'
 ]
 palantir = [
-    'palantir'
+    'palantir>=1.4.4'  # to speed up installation
 ]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
@@ -187,6 +187,16 @@ test = [
     "pytest-mock",
     "pytest-cov",
     "pytest-html"
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinx-exec-code",
+    "nbsphinx",
+    "nbsphinx_link",
+    "myst-parser",
+    "docutils<=0.21",  # pinned until https://github.com/vidartf/nbsphinx-link/issues/25 is fixed
+    "sphinxcontrib-youtube"
 ]
 
 [project.scripts]

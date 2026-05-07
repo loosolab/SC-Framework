@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- Readthedocs overhaul (#312, #239, #351)
 - add multi-factor batch correction support and add the scvi correction (#272)
 - enhance `utils.assemblers.from_mtx(path)` to accept dicts (#367)
 - implemented SCF-analysis-setup CLI (#437)
