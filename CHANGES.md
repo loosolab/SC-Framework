@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- add multi-factor batch correction support and add the scvi correction (#272)
 - enhance `utils.assemblers.from_mtx(path)` to accept dicts (#367)
 - implemented SCF-analysis-setup CLI (#437)
 - implemented `sctoolbox.utils.creators.github_download`
@@ -31,12 +32,13 @@
 - Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
 - fix logging issue causing error on save (#333)
 - Pin scFates to >= 1.2.3 (#433)
-- CI improvements
 - lint according to new D420 rule
+- CI improvements
 - add scanpy score feature including apoptosis,mito,ribo and cell cycle (#401)
 - Add multiomics tools and plotting functions (#237)
 
 ### Changes to notebooks
+- RNA/ATAC batch: enable multi-factor batch correction (#272)
 - RNA/ATAC assembly: adjust for updated `from_mtx`
 - add a number prefix to notebook output figures (#440)
 - implemented the Palantir notebook

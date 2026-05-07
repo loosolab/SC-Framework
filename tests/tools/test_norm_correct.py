@@ -27,6 +27,7 @@ def adata():
 
     # Add batch column
     adata.obs['batch'] = ["a", "b"] * 100
+    adata.obs['batch2'] = (["c", "d", "e"] * 100)[:len(adata.obs)]
 
     sc.pp.highly_variable_genes(adata)
 
@@ -146,7 +147,7 @@ def test_wrap_corrections(adata):
         assert "test" in a.layers
 
 
-@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])
+@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])  # TODO excluded "scvi" due to runtime; may be mocked in the future
 def test_batch_correction(adata, method):
     """Test if batch correction returns an anndata."""
 
@@ -157,13 +158,14 @@ def test_batch_correction(adata, method):
     assert adata is not adata_corrected
 
 
-def test_evaluate_batch_effect(adata):
+@pytest.mark.parametrize("key", ["batch", ["batch", "batch2"]])
+def test_evaluate_batch_effect(adata, key):
     """Test if AnnData containing LISI column in .obs is returned."""
-    ad = tools.norm_correct.evaluate_batch_effect(adata, 'batch')
+    ad = tools.norm_correct.evaluate_batch_effect(adata, batch_key=key)
 
     ad_type = type(ad).__name__
     assert ad_type == "AnnData"
-    assert "LISI_score" in ad.obs
+    assert ad.obs.columns.str.startswith("LISI_score").any()
 
 
 @pytest.mark.parametrize("key", ["a", "b"])
@@ -176,9 +178,10 @@ def test_evaluate_batch_effect_keyerror(adata, key):
         tools.norm_correct.evaluate_batch_effect(adata, batch_key=key)
 
 
-def test_wrap_batch_evaluation(adata_batch_dict):
+@pytest.mark.parametrize("key", ["batch", ["batch", "batch2"]])
+def test_wrap_batch_evaluation(adata_batch_dict, key):
     """Test if DataFrame containing LISI column in .obs is returned."""
-    adata_dict = tools.norm_correct.wrap_batch_evaluation(adata_batch_dict, 'batch', inplace=False)
+    adata_dict = tools.norm_correct.wrap_batch_evaluation(adata_batch_dict, key, inplace=False)
     adata_dict_type = type(adata_dict).__name__
     adata_type = type(adata_dict['adata']).__name__
 
