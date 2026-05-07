@@ -123,6 +123,13 @@ Before computing a 2D representation, a nearest-neighbour graph of cells is cons
    :alt: Output of search_umap_parameters().
    :width: 60%
 
+Further references:
+
+- `Single-cell best practices - dimension reduction <https://www.sc-best-practices.org/preprocessing_visualization/dimensionality_reduction.html>`_
+- `UMAP <https://pair-code.github.io/understanding-umap/>`_
+- `tSNE <https://distill.pub/2016/misread-tsne/?_ga=2.135835192.888864733.1531353600-1779571267.1531353600>`_
+
+
 Batch correction
 ^^^^^^^^^^^^^^^^
 
@@ -213,13 +220,6 @@ Normalization (ATAC)
 ^^^^^^^^^^^^^^^^^^^^
 
 The normalization method is selected via *norm_method* and can be either TF-IDF or total count normalization. `TF-IDF <https://www.nature.com/articles/nature25981>`_ (term frequency-inverse document frequency), originally developed for text retrieval, scores each feature (here, an open chromatin region) by its importance within a cell relative to its prevalence across all cells. This highlights cell-defining accessible regions. Total count normalization, by contrast, rescales each cell so that all cells share the same total count after normalization — the same approach commonly applied to scRNA-seq data.
-
-Further references:
-
-- `Single-cell best practices - dimension reduction <https://www.sc-best-practices.org/preprocessing_visualization/dimensionality_reduction.html>`_
-- `UMAP <https://pair-code.github.io/understanding-umap/>`_
-- `tSNE <https://distill.pub/2016/misread-tsne/?_ga=2.135835192.888864733.1531353600-1779571267.1531353600>`_
-
 
 Multi-omics
 -----------
