@@ -33,7 +33,7 @@ Next, install the `SC-Framework package <https://pypi.org/project/SC-Framework/>
 
   pip install SC-Framework[all]
 
-1. Register environment as kernel
+3. Register environment as kernel
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 With all the tools installed the next step is to allow using them in Jupyter. To do this, register the Conda environment as a Jupyter kernel.
