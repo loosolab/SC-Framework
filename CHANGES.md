@@ -2,6 +2,7 @@
 
 ## 0.15.0 (in progress)
 - Readthedocs overhaul (#312, #239, #351)
+- add multi-factor batch correction support and add the scvi correction (#272)
 - enhance `utils.assemblers.from_mtx(path)` to accept dicts (#367)
 - implemented SCF-analysis-setup CLI (#437)
 - implemented `sctoolbox.utils.creators.github_download`
@@ -37,6 +38,7 @@
 - add scanpy score feature including apoptosis,mito,ribo and cell cycle (#401)
 
 ### Changes to notebooks
+- RNA/ATAC batch: enable multi-factor batch correction (#272)
 - RNA/ATAC assembly: adjust for updated `from_mtx`
 - add a number prefix to notebook output figures (#440)
 - implemented the Palantir notebook

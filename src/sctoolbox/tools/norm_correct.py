@@ -1,12 +1,13 @@
 """Normalization and correction tools."""
 import numpy as np
-from scipy import sparse
+from scipy import sparse, spatial
 import io
 from contextlib import redirect_stderr
 import copy
 import multiprocessing as mp
 import scanpy as sc
 import scanpy.external as sce
+import scvi
 
 from beartype.typing import Optional, Any, Union, Literal, Callable
 from beartype import beartype
@@ -21,7 +22,8 @@ batch_methods = Literal["bbknn",
                         "combat",
                         "mnn",
                         "harmony",
-                        "scanorama"]
+                        "scanorama",
+                        "scvi"]
 
 #####################################################################
 # --------------------- Normalization methods --------------------- #
@@ -263,7 +265,7 @@ def tfidf(anndata: sc.AnnData,
 
 @beartype
 def wrap_corrections(adata: sc.AnnData,
-                     batch_key: str,
+                     batch_key: Union[str, list[str]],
                      methods: Union[batch_methods,
                                     list[batch_methods],
                                     Callable] = ["bbknn", "mnn"],
@@ -277,7 +279,8 @@ def wrap_corrections(adata: sc.AnnData,
     adata : sc.AnnData
         Annotated data matrix to apply batch corrections to.
     batch_key : str
-        Column in ``adata.obs`` containing batch labels.
+        Column in ``adata.obs`` containing batch labels. Provide a list of batch keys for multi-factor correction.
+        Multi-factor correction is only supported by harmony and scvi. The other methods will give a warning and use the first key
     methods : list[batch_methods] | Callable | batch_methods, default ["bbknn", "mnn"]
         Batch-correction method(s) to apply.
 
@@ -320,7 +323,7 @@ def wrap_corrections(adata: sc.AnnData,
         raise ValueError(f"Unknown methods in `method_kwargs` keys: {unknown_keys}")
 
     # Check the existence of packages before running batch_corrections
-    required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "scanorama": "scanorama"}
+    required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "scanorama": "scanorama", "scvi": "scvi"}
     for method in methods:
         if method in required_packages:  # not all packages need external tools
             f = io.StringIO()
@@ -347,7 +350,7 @@ def wrap_corrections(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def batch_correction(adata: sc.AnnData,  # noqa: C901
-                     batch_key: str,
+                     batch_key: Union[str, list[str]],
                      method: Union[batch_methods,
                                    list[batch_methods],
                                    Callable] = ["bbknn", "mnn"],
@@ -376,13 +379,16 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
     +-----------+----------------------+
     | combat    | Matrix               |
     +-----------+----------------------+
+    | scvi      | Dimension reduction  |
+    +-----------+----------------------+
 
     Parameters
     ----------
     adata : sc.AnnData
         An annotated data matrix object to apply corrections to.
-    batch_key : str
-        The column in adata.obs containing batch information.
+    batch_key : Union[str, list[str]]
+        The column in adata.obs containing batch information. Alternatively provide a list of batch keys for multi-factor correction.
+        Multi-factor correction is only supported by harmony and scvi. The other methods will give a warning and use the first key!
     method : str or function
         Either one of the predefined methods or a custom function for batch correction.
         Note: The custom function is expected to accept an anndata object as the first parameter and return the batch corrected anndata.
@@ -393,6 +399,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
             - harmony
             - scanorama
             - combat
+            - scvi (ONLY latent space, expression normalization currently not used)
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
     dim_red_kwargs : dict, default {}
@@ -404,6 +411,11 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         - bbknn: `computation="cKDTree"`
         - scanorama: `approx=False`
         See here for further information https://github.com/Teichlab/bbknn/issues/60, https://github.com/brianhie/scanorama?tab=readme-ov-file#troubleshooting
+        - scvi:
+            This needs a nested dict to address the three required scvi functions (scvi.model.SCVI.setup_anndata, scvi.model.SCVI, scvi.model.SCVI.train). Use the following format.
+            {"setup_anndata": {layer: "raw"}, "SCVI": {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb", "train": {}}}
+            'layer' will fallback to None.
+            Parameters are from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
 
     Returns
     -------
@@ -424,15 +436,23 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
 
     logger.info(f"Running batch correction with '{method}'...")
 
-    # Check that batch_key is in adata object
-    if batch_key not in adata.obs.columns:
-        raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
+    # Check that batch_key is in the adata object
+    if ((isinstance(batch_key, list) and any(k not in adata.obs.columns for k in batch_key))
+        or not isinstance(batch_key, list) and batch_key not in adata.obs.columns):
+        batch_key = [k for k in batch_key if k not in adata.obs.columns] if isinstance(batch_key, list) else [batch_key]
+
+        raise ValueError(f"The batch_key(s) {', '.join(batch_key)} are not in adata.obs.columns")
+
+    if isinstance(batch_key, list) and not callable(method) and method not in ["harmony", "scvi"]:
+        logger.warning(f"Got multiple batch keys which is not supported by {method}. Using the first ('{batch_key[0]}') batch key instead.")
+
+        batch_key = batch_key[0]
 
     # so dim_red_kwargs is unique for each function call
     dim_red_kwargs = copy.deepcopy(dim_red_kwargs)
 
     # set default dimension reduction
-    if "method" not in dim_red_kwargs and method not in ["harmony", "scanorama"]:
+    if "method" not in dim_red_kwargs and method not in ["harmony", "scanorama", "scvi"]:
         dim_red_kwargs["method"] = "PCA"
 
     # ensure no side effects
@@ -492,7 +512,8 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
         dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
 
     elif method == "harmony":
-        adata.obs[batch_key] = adata.obs[batch_key].astype("str")  # harmony expects a batch key as string
+        for bk in batch_key if isinstance(batch_key, list) else [batch_key]:  # to ensure this is a list
+            adata.obs[bk] = adata.obs[bk].astype("str")  # harmony expects a batch key as string
 
         # harmony takes a PCA and corrects it
         # here we replace the old PCA with the corrected version
@@ -534,6 +555,63 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
             adata.X = sparse.csr_matrix(adata.X)
 
         dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
+    elif method == "scvi":
+        # TODO don't ignore mask vars meaning only use highly variable genes for correction. See pca mask_var/use_highly_variable
+        if isinstance(batch_key, list):
+            # TODO enable continuous_covariate_keys
+            setup_kwargs = {
+                "batch_key": batch_key[0],
+                "categorical_covariate_keys": batch_key[1:] if len(batch_key) > 1 else None
+            }
+        else:
+            setup_kwargs = {"batch_key": batch_key}
+
+        # use raw layer if present and not given in kwargs. Otherwise fall back to .X (None = use .X)
+        if "raw" in adata.layers.keys():
+            setup_kwargs["layer"] = "raw"
+
+        if "setup_anndata" in kwargs:
+            setup_kwargs.update(kwargs)
+
+        # setup the anndata
+        scvi.model.SCVI.setup_anndata(adata, **setup_kwargs)
+
+        # initialize then train the model
+        # parameters are recommended from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
+        scvi_kwargs = {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb"}
+        if "SCVI" in kwargs:
+            scvi_kwargs.update(kwargs)
+
+        # get the number of components from the dimension reduction parameters
+        if "method_kwargs" in dim_red_kwargs and "n_comps" in dim_red_kwargs["method_kwargs"]:
+            scvi_kwargs["n_latent"] = dim_red_kwargs["method_kwargs"]["n_comps"]
+
+        model = scvi.model.SCVI(adata, **scvi_kwargs)
+        model.train(**(kwargs["train"] if "train" in kwargs else {}))
+
+        # add the corrected latent space to the adata
+        mean, variance = model.get_latent_representation(return_dist=True)
+        adata.obsm["X_pca"] = mean
+        # TODO enable normalized counts; Add as layer?
+        # adata.obsm["X_normalized_scVI"] = model.get_normalized_expression()
+
+        # remove/replace outdated PCA information
+        # remove the PCA loadings there is no equivalent in SCVI as it is non-linear
+        adata.varm.pop("PCs", None)
+        adata.uns["pca"] = {}
+
+        # add a variance_ratio equivalent
+        adata.uns["pca"]["variance"] = variance.mean(axis=0)
+        # I'm using the jensen-shannon distance. It compares the mean variance distr. to the component variance distr.
+        # If both are identical = 0 if they are "maximum" different = 1
+        # This won't add up to 1, like variance ratio of PCA does, but is a reasonable equivalent in the scvi context.
+        # The components are also not sorted by variance
+        adata.uns["pca"]["variance_ratio"] = np.array(list(spatial.distance.jensenshannon(p=variance.mean(axis=1), q=variance[:, i])
+                                                                                          for i in range(variance.shape[1])))
+
+        # only redo neighbor graph
+        # TODO currently assumes SCVI components to follow the same ordering as PCA, and will apply the same component subset
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, **dim_red_kwargs)
 
     elif callable(method):
         adata = method(adata, **kwargs)
@@ -548,7 +626,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
 @deco.log_anndata
 @beartype
 def evaluate_batch_effect(adata: sc.AnnData,
-                          batch_key: str,
+                          batch_key: str | list[str],
                           obsm_key: str = 'X_umap',
                           col_name: str = 'LISI_score',
                           max_dims: int = 5,
@@ -561,12 +639,12 @@ def evaluate_batch_effect(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object with PCA and umap/tsne for batch evaluation.
-    batch_key : str
-        The column in adata.obs containing batch information.
+    batch_key : str | list[str]
+        The column(s) in adata.obs containing batch information. Will calculate a score for each given key.
     obsm_key : str, default 'X_umap'
         The column in adata.obsm containing coordinates.
     col_name : str, default 'LISI_score'
-        Column name for storing the LISI score in .obs.
+        Column name for storing the LISI score in .obs. Will add a suffix in case of multiple batch keys, e.g. ``X_umap_batchkey1``.
     max_dims : int, default 5
         Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
     perplexity : int, default 30
@@ -598,6 +676,9 @@ def evaluate_batch_effect(adata: sc.AnnData,
     utils.checker.check_module("harmonypy")
     from harmonypy.lisi import compute_lisi
 
+    if not isinstance(batch_key, list):
+        batch_key = [batch_key]
+
     # Handle inplace option
     adata_m = adata if inplace else adata.copy()
 
@@ -605,13 +686,20 @@ def evaluate_batch_effect(adata: sc.AnnData,
     if obsm_key not in adata_m.obsm:
         raise KeyError(f"adata.obsm does not contain the obsm key: {obsm_key}")
 
-    if batch_key not in adata_m.obs:
-        raise KeyError(f"adata.obs does not contain the batch key: {batch_key}")
+    missing = [bk for bk in batch_key if bk not in adata_m.obs]
+    if missing:
+        raise KeyError(f"adata.obs does not contain the batch key(s): {','.join(missing)}")
 
     # run LISI on all adata objects
     obsm_matrix = adata_m.obsm[obsm_key][:, :max_dims]
-    lisi_res = compute_lisi(obsm_matrix, adata_m.obs, [batch_key], perplexity=perplexity)
-    adata_m.obs[col_name] = lisi_res.flatten()
+    lisi_score = compute_lisi(obsm_matrix, adata_m.obs, batch_key, perplexity=perplexity)
+
+    # handle multi-batch
+    if isinstance(batch_key, list):
+        for bk, batch_lisi in zip(batch_key, map(list, zip(*lisi_score))):
+            adata_m.obs[f"{col_name}_{bk}"] = batch_lisi
+    else:
+        adata_m.obs[col_name] = lisi_score.flatten()
 
     if not inplace:
         return adata_m
@@ -619,7 +707,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
 
 @beartype
 def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
-                          batch_key: str,
+                          batch_key: str | list[str],
                           obsm_keys: str | list[str] = ['X_pca', 'X_umap'],
                           threads: Optional[int] = 1,
                           max_dims: int = 5,
@@ -632,8 +720,8 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
     adatas : dict[str, sc.AnnData]
         Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
         E.g.: {"bbknn": anndata}
-    batch_key : str
-        The column in adata.obs containing batch information.
+    batch_key : str |list[str]
+        The column(s) in adata.obs containing batch information.
     obsm_keys : str | list[str], default ['X_pca', 'X_umap']
         Key(s) to coordinates on which the score is calculated.
     threads : Optional[int], default 1
@@ -657,6 +745,9 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
     else:
         from tqdm import tqdm
 
+    if not isinstance(batch_key, list):
+        batch_key = [batch_key]
+
     # Handle inplace option
     adatas_m = adatas if inplace else copy.deepcopy(adatas)
 
@@ -679,6 +770,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
         utils.checker.check_module("harmonypy")
         from harmonypy.lisi import compute_lisi
 
+        # TODO why not use evaluate_batch_effect? Move parallel execution to evaluate_batch_effect?
         pool = mp.Pool(threads)
         jobs = {}
         for i, adata in enumerate(adatas_m.values()):
@@ -687,9 +779,9 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
 
             for obsm_key in obsm_keys:
                 obsm_matrix = adata.obsm[obsm_key][:, :max_dims]
-                obs_mat = adata.obs[[batch_key]]
+                obs_mat = adata.obs[batch_key]
 
-                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, [batch_key], perplexity,))
+                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, batch_key, perplexity,))
                 jobs[(i, obsm_key)] = job
         pool.close()
 
@@ -700,7 +792,14 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
         # Assign results to adata
         for adata_i, obsm_key in jobs:
             adata = list(adatas_m.values())[adata_i]
-            adata.obs[f"LISI_score_{obsm_key}"] = jobs[(adata_i, obsm_key)].get().flatten()
+            lisi_score = jobs[(adata_i, obsm_key)].get()
+
+            # handle multi-batch
+            if isinstance(batch_key, list):
+                for bk, batch_lisi in zip(batch_key, map(list, zip(*lisi_score))):
+                    adata.obs[f"LISI_score_{obsm_key}_{bk}"] = batch_lisi
+            else:
+                adata.obs[f"LISI_score_{obsm_key}"] = lisi_score.flatten()
 
     if not inplace:
         return adatas_m
