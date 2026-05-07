@@ -110,6 +110,8 @@ def visualize_cluster_comparison(mdata: mu.MuData,  # noqa: C901
     cluster_names_mod1 = mdata.obs[clusters_mod1].cat.categories
     cluster_names_mod2 = mdata.obs[clusters_mod2].cat.categories
 
+    fig_adj = len(cluster_names_mod1) + len(cluster_names_mod2)
+
     # Set variables containing embedding for modality 1 and for modality 2
     embedding_mod1 = ":".join([modality_1, embedding])
     embedding_mod2 = ":".join([modality_2, embedding])
@@ -119,7 +121,7 @@ def visualize_cluster_comparison(mdata: mu.MuData,  # noqa: C901
     n_rows = max(len(mdata.obs[clusters_mod2].unique()), len(mdata.obs[clusters_mod1].unique())) + 2
 
     # Generate figure and axes objects
-    fig, axes = plt.subplots(n_rows, 2, figsize=(12, 4 * n_rows))
+    fig, axes = plt.subplots(n_rows, 2, figsize=(12 + fig_adj / 10, 4 * n_rows))
     fig.suptitle(title, size=title_size)
 
     # Generate plots

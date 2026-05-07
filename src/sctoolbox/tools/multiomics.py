@@ -180,7 +180,6 @@ def match_barcodes(adata_mod1: sc.AnnData,
     raw_barcodes_mod2 = [i.split(sample_delimiter)[0] if sample_delimiter in i else i for i in adata_mod2.obs.index]
 
     if raw_barcodes_mod1 != raw_barcodes_mod2:
-
         # Get table to convert ATAC to RNA barcodes
         bc_conversion = pd.read_csv(barcode_map, sep='\t', header=None, names=['mod1', 'mod2'])
         bc_conversion["barcode_id"] = bc_conversion.index.astype(str)
@@ -195,11 +194,10 @@ def match_barcodes(adata_mod1: sc.AnnData,
         adata_mod2.obs = adata_mod2.obs.merge(bc_conversion, left_on="raw_barcode", right_on="mod2", how="left")
         # should be batch not sample column and only used if multiple batches?
         adata_mod2.obs.index = adata_mod2.obs["barcode_id"] + "-" + adata_mod2.obs[sample_mod2].astype(str)
-
     else:
         # Alter barcodes to match <cell tag>-<Sample> in both modalities
-        adata_mod1.obs.index = raw_barcodes_mod1 + "-" + adata_mod1.obs[sample_mod1].astype(str)
-        adata_mod2.obs.index = raw_barcodes_mod2 + "-" + adata_mod2.obs[sample_mod2].astype(str)
+        adata_mod1.obs.index = pd.Series(raw_barcodes_mod1).values + "-" + adata_mod1.obs[sample_mod1].astype(str)
+        adata_mod2.obs.index = pd.Series(raw_barcodes_mod2).values + "-" + adata_mod2.obs[sample_mod2].astype(str)
 
     # Remove possible NaN indices from anndatas after cell tag conversion
     adata_mod1 = adata_mod1[adata_mod1.obs.index.notnull()].copy()
