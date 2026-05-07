@@ -137,7 +137,7 @@ Batch correction
    :alt: https://www.10xgenomics.com/analysis-guides/introduction-batch-effect-correction.
    :width: 60%
 
-*https://www.10xgenomics.com/analysis-guides/introduction-batch-effect-correction*
+   *https://www.10xgenomics.com/analysis-guides/introduction-batch-effect-correction*
 
 SC-Framework supports several batch correction methods. The user selects which to run via *batch_methods*; available options are ``bbknn``, ``mnn``, ``harmony``, ``scanorama``, ``scvi``, and ``combat``. Because results can differ considerably between methods, the user reviews the corrected embeddings and selects the most appropriate correction. In addition to annotated embeddings, the Local Inverse Simpson Index (LISI) aids the decision by quantifying the degree of cell mixing with respect to the batch variable. LISI scores are computed using the `Harmony <https://www.nature.com/articles/s41592-019-0619-0#Sec11>`_ implementation.
 
@@ -188,7 +188,7 @@ The fragment length distribution (FLD) is a common quality proxy in ATAC-seq dat
    :alt: FLD score correlating with nucleosomal banding.
    :width: 60%
 
-*https://academic.oup.com/bib/article/26/5/bbaf465/8255857*
+   *https://academic.oup.com/bib/article/26/5/bbaf465/8255857*
 
 **Overlap**
 
@@ -202,7 +202,7 @@ Transcription Start Site enrichment (`TSSe <https://www.encodeproject.org/atac-s
    :alt: Transcription Start Site enrichment.
    :width: 30%
 
-*https://academic.oup.com/bib/article/26/5/bbaf465/8255857*
+   *https://academic.oup.com/bib/article/26/5/bbaf465/8255857*
 
 **Fraction of Reads in Peaks (FRiP)**
 
@@ -231,14 +231,16 @@ Multi-omics
 The multi-omics workflow integrates two independently analyzed modalities into a joint embedding using MOFA+. This allows you to perform clustering on the integrated latent space, compare cluster solutions across modalities, and ultimately prepare a combined dataset for visualization in CELLxGENE.
 
 .. figure:: image/multiomics-flowchart.png
-   :alt: Flowchart for multiomics analysis using the SC-Framework
-   :width: 60%
+   :alt: Flowchart for multiomics analysis using the SC-Framework.
+   :width: 100%
+
+   Flowchart for multiomics analysis using the SC-Framework.
 
 Step 1: Analyze Both Modalities Individually
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Before integrating your data, each modality must be processed independently using the standard single-modality analysis pipeline by running notebooks 1 to 4.
-To continue with the analysis, each AnnData object is required to have one clustering column in obs and at least one two-dimensional embedding (e.g., UMAP)
+To continue with the analysis, each AnnData object is required to have one clustering column in `.obs` and at least one two-dimensional embedding (e.g., UMAP)
 
 Step 2: Multi-omics Analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -246,19 +248,20 @@ Step 2: Multi-omics Analysis
 The main multi-omics analysis is done in the multiomics notebook. The process consists of three sub-steps:
 
 **2a. Comparing Clusterings from Individual Analyses**
+
 The clusterings obtained from the individual modality analyses are compared with one another. This is done by examining the clusters and embeddings from both modalities side by side, enabling you to assess visually and quantitatively how well the two modalities align at the level of individual cell populations.
 In addition to the visual comparison, a Cluster Comparison Score is calculated for each pair of clusters. This score ranges from 0 to 1; a higher score indicates greater overlap between the clusters being compared. Therefore, a score close to 1 suggests that the corresponding clusters from Modality A and Modality B capture a very similar set of cells, while a score close to 0 indicates little to no overlap.
 To further support the interpretation of these results, a set of additional plots is generated alongside the score matrix. These plots provide alternative views of the cluster relationships and help you to understand the similarities and differences between the two modalities' clustering solutions.
 
 **2b/c. Data integration and clustering**
+
 Both AnnData objects are converted into a single MuData object.
-This step uses MOFA+ to learn a joint latent space from both modalities. MOFA+ takes as input the two modalities and learns a joint latent space, from which an integrated embedding (UMAP) is calculated. This embedding captures the shared and complementary structures of both modalities.
+This step uses `MOFA+ <https://doi.org/10.1186/s13059-020-02015-1>`_ to learn a joint latent space from both modalities. MOFA+ takes as input the two modalities and learns a joint latent space, from which an integrated embedding (UMAP) is calculated. This embedding captures the shared and complementary structures of both modalities.
 The Leiden algorithm is then used to assign each cell to an integrated cluster based on this embedding.
 
 **2d. Data Export**
-For the data export, the integrated embedding and clustering are transferred to the individual AnnData objects.
-These individual objects can then be used for further downstream analyses.
-Additionally, to the individual AnnData, the combined MuData object is exported.
+
+For the data export, the integrated embedding and clustering are transferred to the individual AnnData objects. These individual objects can then be used for further downstream analyses. Additionally, to the individual AnnData, the combined MuData object is exported.
 
 Step 3: Downstream Analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
