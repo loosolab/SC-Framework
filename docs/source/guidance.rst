@@ -145,9 +145,9 @@ SC-Framework supports several batch correction methods. The user selects which t
    :alt: anndata_overview() after running batch corrections.
    :width: 60%
 
-Multi-factor batch correction, i.e. correcting multiple levels of batches simulatenously, can be enabled by providing a list of variables for correction via the ``batch_column`` parameter in the batch correction notebooks. A LISI score will be calculated for each batch-level to show detailed correction performance. **Only** ``harmony`` and ``scvi`` support multi-factor correction, the other tools will correct the first level from the list.
+Multi-factor batch correction, i.e. correcting multiple levels of batches simultaneously, can be enabled by providing a list of variables for correction via the ``batch_column`` parameter in the batch correction notebooks. A LISI score will be calculated for each batch-level to show detailed correction performance. **Only** ``harmony`` and ``scvi`` support multi-factor correction, the other tools will correct the first level from the list.
 
-From our experience we found ``harmony`` to perform well in most cases, while being resonably fast. A study by `Antonsson & Melsted (2025) <https://doi.org/10.1101/gr.279886.124>`_ supports this by recommending the usage of ``harmony``. Thus we recommend to always consider ``harmony`` when deciding for a batch correction.
+From our experience we found ``harmony`` to perform well in most cases, while being reasonably fast. A study by `Antonsson & Melsted (2025) <https://doi.org/10.1101/gr.279886.124>`_ supports this by recommending the usage of ``harmony``. Thus we recommend to always consider ``harmony`` when deciding for a batch correction.
 
 Clustering
 ^^^^^^^^^^
