@@ -1,0 +1,810 @@
+"""anndata.AnnData related functions."""
+
+import numpy as np
+import scanpy as sc
+from collections.abc import Sequence  # check if object is iterable
+from collections import OrderedDict
+import scipy
+import matplotlib.pyplot as plt
+from scipy.sparse import issparse
+import pandas as pd
+from pathlib import Path
+import yaml
+
+from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tuple, List, Literal
+from beartype import beartype
+
+import sctoolbox.utils.decorator as deco
+from sctoolbox.plotting.general import plot_table
+from sctoolbox._settings import settings
+logger = settings.logger
+
+
+@beartype
+def get_adata_subsets(adata: sc.AnnData, groupby: str) -> dict[str, sc.AnnData]:
+    """
+    Split an anndata object into a dict of sub-anndata objects based on a grouping column.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Anndata object to split.
+    groupby : str
+        Column name in adata.obs to split by.
+
+    Returns
+    -------
+    dict[str, sc.AnnData]
+        Dictionary of anndata objects in the format {<group1>: anndata, <group2>: anndata, (...)}.
+
+    Raises
+    ------
+    ValueError
+        If groupby is not found in `adata.obs.columns`.
+    """
+
+    if groupby not in adata.obs.columns:
+        raise ValueError(f"Column '{groupby}' not found in adata.obs")
+
+    group_names = adata.obs[groupby].astype("category").cat.categories.tolist()
+    adata_subsets = {name: adata[adata.obs[groupby] == name] for name in group_names}
+
+    logger.debug("Split adata into {} subsets based on column '{}'".format(len(adata_subsets), groupby))
+
+    return adata_subsets
+
+
+@deco.log_anndata
+@beartype
+def add_expr_to_obs(adata: sc.AnnData, gene: str) -> None:
+    """
+    Add expression of a gene from adata.X to adata.obs as a new column.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Anndata object to add expression to.
+    gene : str
+        Gene name to add expression of.
+
+    Raises
+    ------
+    Exception
+        If the gene is not found in the adata object.
+    """
+
+    boolean = adata.var.index == gene
+    if sum(boolean) == 0:
+        raise Exception(f"Gene {gene} not found in adata.var.index")
+
+    else:
+        idx = np.argwhere(boolean)[0][0]
+        adata.obs[gene] = adata.X[:, idx].todense().A1
+
+
+@deco.log_anndata
+@beartype
+def shuffle_cells(adata: sc.AnnData, seed: int = 42) -> sc.AnnData:
+    """
+    Shuffle cells in an adata object to improve plotting.
+
+    Otherwise, cells might be hidden due plotting samples in order e.g. sample1, sample2, etc.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Anndata object to shuffle cells in.
+    seed : int, default 42
+        Seed for random number generator.
+
+    Returns
+    -------
+    sc.AnnData
+        Anndata object with shuffled cells.
+    """
+
+    import random
+    state = random.getstate()
+
+    random.seed(seed)
+    shuffled_barcodes = random.sample(adata.obs.index.tolist(), len(adata))
+    adata = adata[shuffled_barcodes]
+
+    random.setstate(state)  # reset random state
+
+    return adata
+
+
+@beartype
+def get_minimal_adata(adata: sc.AnnData) -> sc.AnnData:
+    """
+    Return a minimal copy of an anndata object e.g. for estimating UMAP in parallel.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix.
+
+    Returns
+    -------
+    sc.AnnData
+        Minimal copy of anndata object.
+    """
+
+    adata_minimal = adata.copy()
+    adata_minimal.X = None
+    adata_minimal.layers = None
+    adata_minimal.raw = None
+
+    return adata_minimal
+
+
+@beartype
+def load_h5ad(path: str) -> sc.AnnData:
+    """
+    Load an anndata object from .h5ad file.
+
+    Parameters
+    ----------
+    path : str
+        Name of the file to load the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_input_dir' + 'sctoolbox.settings.adata_input_prefix' as prefix.
+
+    Returns
+    -------
+    sc.AnnData
+        Loaded anndata object.
+    """
+
+    adata_input = settings.full_adata_input_prefix + path
+    adata = sc.read_h5ad(filename=adata_input)
+
+    logger.info(f"The adata object was loaded from: {adata_input}")
+
+    if adata.raw:
+        logger.warning("Found AnnData.raw! Be aware that Scanpy favors '.raw' unless explicitly told to do otherwise."
+                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where necessary.")
+
+    return adata
+
+
+@deco.log_anndata
+@beartype
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, **kwargs: Any) -> None:
+    """
+    Save an anndata object to an .h5ad file.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Anndata object to save.
+    path : str
+        Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
+    report : Optional[list[str]]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Expects a list of three names: ["overview.md", "AnnData.obs.png", "AnnData.var.png"]
+    **kwargs : Any
+        Parameters forwarded to sc.AnnData.write
+    """
+    # fixes rank_genes nan in adata.uns[<rank_genes>]['names'] error
+    # https://github.com/scverse/scanpy/issues/61
+    rank_keys = set(['params', 'names', 'scores', 'pvals', 'pvals_adj', 'logfoldchanges'])  # the keys found with rank_genes_groups
+    for unk in adata.uns.keys():
+        if isinstance(adata.uns[unk], dict) and rank_keys.issubset(set(adata.uns[unk].keys())):
+            names = list()
+            dnames = adata.uns[unk]["names"].dtype.names  # save dtype names
+            for i in adata.uns[unk]["names"]:
+                names.append([j if j == j else "" for j in i])
+            tmp = pd.DataFrame(data=names).to_records(index=False)
+            tmp.dtype.names = dnames  # set old names back in place
+            adata.uns[unk]["names"] = tmp
+
+    # add file compression if not already present
+    # this was default prior to version 0.6.16
+    if "compression" not in kwargs:
+        kwargs["compression"] = "gzip"
+
+    # check var/obs/uns and replace any "/" with "|" as anndata does not allow "/" in any keys
+    # as of anndata>=0.12
+    for attr in ["obs", "var", "uns"]:
+        _rec_search(getattr(adata, attr), path=[attr], repl=("/", "|"))
+
+    # Save adata
+    adata_output = settings.full_adata_output_prefix + path
+    adata.write(filename=adata_output, **kwargs)
+
+    # generate report
+    if settings.report_dir and report:
+        with open(Path(settings.report_dir) / report[0], "w") as f:
+            f.write("\n".join([
+                "## Dataset",
+                f"{adata.shape[0]} observations x {adata.shape[1]} variables",
+                f"Observation information: {', '.join(adata.obs.columns)}",
+                f"Variable information: {', '.join(adata.var.columns)}",
+                f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
+            ]))
+
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        with open(meth_file, "w") as f:
+            method.update({"var_count": len(adata.var), "obs_count": len(adata.obs)})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
+
+        plot_table(adata.obs, report=report[1], crop=4)
+        plot_table(adata.var, report=report[2], crop=4)
+
+    logger.info(f"The adata object was saved to: {adata_output}")
+
+
+@beartype
+def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str, str] = ("/", "|")) -> None:
+    """
+    Help to search and replace characters in keys in nested dicts and pd.DataFrames column names.
+
+    Note: This is intended to be used on AnnData attributes such as .obs, .var, .uns.
+    Note: The function operates inplace.
+
+    Parameters
+    ----------
+    var : Union[Dict, pd.DataFrame]
+        The variable that will be searched. Either a dict or a pd.DataFrame.
+        In case of dict all keys will be searched and given characters are replaced (also for nested dicts).
+        In case of pd.DataFrame column names with given characters are updated (also if the DataFrame is nested inside a dict).
+    path : List[str]
+        The nesting path as a list. First element should be the name of an AnnData attribute e.g. 'obs'.
+    repl : Tuple[str, str], default ("/", "|")
+        Search for the first string and replace every occurrence with the second string.
+    """
+    # check DataFrame column names
+    if isinstance(var, pd.DataFrame):
+        # get column names with the offending character
+        col_names = []
+        for c in var.columns:
+            try:
+                if repl[0] in c:
+                    col_names.append(c)
+            except TypeError:
+                # if the column type doesn't support the 'in' operator skip
+                continue
+
+        if col_names:
+            # first element is an adata attribute
+            tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
+            path_str = f".{path[0]}{tmp_path}"
+
+            logger.warning(f"Found pd.DataFrame in {path_str} with '{repl[0]}' in column name(s) ({col_names}), which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
+            var.rename(columns={n: n.replace(*repl) for n in col_names}, inplace=True)
+    else:
+        # recursively check dict
+        # go through all items
+        for k, v in list(var.items()):
+            if repl[0] in k:
+                var[k.replace(*repl)] = var.pop(k)
+
+                # first element is an adata attribute
+                tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
+                path_str = f".{path[0]}{tmp_path}"
+                logger.warning(f"Found '{repl[0]}' in {path_str}['{k}'], which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
+            # open a nested dict
+            if isinstance(v, dict) or isinstance(v, pd.DataFrame):
+                _rec_search(v, repl=repl, path=path + [k])
+
+
+@beartype
+def add_uns_info(adata: sc.AnnData,  # noqa: C901
+                 key: str | list[str],
+                 value: Any,
+                 how: str = "overwrite") -> None:
+    """
+    Add information to adata.uns['sctoolbox'].
+
+    This is used for logging the parameters and options of different steps in the analysis.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        An AnnData object.
+    key : str | list[str]
+        The key to add to adata.uns['sctoolbox']. If the key is a list, it represents a path within a nested dictionary.
+    value : Any
+        The value to add to adata.uns['sctoolbox'].
+    how : str, default "overwrite"
+        When set to "overwrite" provided key will be overwritten. If "append" will add element to existing list or dict.
+
+    Raises
+    ------
+    ValueError
+        If value can not be appended.
+    """
+
+    if "sctoolbox" not in adata.uns:
+        adata.uns["sctoolbox"] = {}
+
+    if isinstance(key, str):
+        key = [key]
+
+    d = adata.uns["sctoolbox"]
+    for k in key[:-1]:  # iterate over all keys except the last one
+        if k not in d:
+            d[k] = d.get(k, {})
+        d = d[k]
+
+    # Add value to last key
+    last_key = key[-1]
+    if how == "overwrite":
+        d[last_key] = value  # last key contains value
+
+    elif how == "append":
+        if key[-1] not in d:
+            d[last_key] = value  # initialize with a value if key does not exist
+
+        else:  # append to existing key
+
+            current_value = d[last_key]
+
+            if isinstance(value, dict) and not isinstance(current_value, dict):
+                nested = "adata.uns['sctoolbox'][" + "][".join(key) + "]"
+                raise ValueError(f"Cannot append {value} to {nested} because it is not a dict.")
+            elif type(current_value).__name__ == "ndarray":  # convert numpy array to list in order to use "append"/extend"
+                d[last_key] = list(current_value)
+            else:
+                d[last_key] = [current_value]
+
+            # Append/extend/update value
+            if isinstance(value, list):
+                d[last_key].extend(value)
+            elif isinstance(value, dict):
+                d[last_key].update(value)  # update dict
+            else:
+                d[last_key].append(value)  # value is a single value
+
+            # If list; remove duplicates and keep the last occurrence
+            if isinstance(d[last_key], Sequence):
+                d[last_key] = list(reversed(OrderedDict.fromkeys(reversed(d[last_key]))))  # reverse list to keep last occurrence instead of first
+
+
+@beartype
+def in_uns(adata: sc.AnnData,
+           key: str | list[str]) -> bool:
+    """
+    Check whether a key or key path is in adata.uns.
+
+    Parameters
+    ----------
+    adata: sc.AnnData
+        The anndata object to check.
+    key: str | list[str]
+        The key(s) to check. A list is treated similar to a path which results in checking for nested lists. E.g.:
+        a key ['a', 'b', 'c'] would return true if adata.uns = {'a': {'b': {'c': ...}}}.
+
+    Returns
+    -------
+    bool
+        True if key or key path is found otherwise False.
+    """
+    d = adata.uns
+    for k in key:
+        if k in d:
+            d = d[k]
+        else:
+            return False
+    return True
+
+
+@beartype
+def get_uns(adata: sc.AnnData,
+            key: str | list[str]) -> Any:
+    """
+    Get value from adata.uns.
+
+    Parameters
+    ----------
+    adata: sc.AnnData
+        The anndata object.
+    key: str | list[str]
+        The key(s) of value. A list is treated similar to a path which results in checking for nested lists. E.g.:
+        a key ['a', 'b', 'c'] would return true if adata.uns = {'a': {'b': {'c': ...}}}.
+
+    Returns
+    -------
+    Any
+        Any value stored in adata.uns
+
+    Raises
+    ------
+    ValueError
+        If key not fóund in adata.uns sub dictionary.
+    """
+    d = adata.uns
+    path = ""
+    for k in key:
+        if k in d:
+            d = d[k]
+            path += f"['{k}']"
+        else:
+            raise ValueError(f"Key {k} not found in adata.uns{path}")
+    return d
+
+
+@beartype
+def get_cell_values(adata: sc.AnnData,
+                    element: str,
+                    var_col: Optional[str] = None) -> np.ndarray:
+    """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object.
+    element : str
+        The element to extract from adata.obs or adata.var, e.g. a column in adata.obs or an index in adata.var.
+    var_col : Optional[str], default None
+        Use the given column of adata.var instead of the index.
+        Adata.obs is skipped when this is set.
+
+    Returns
+    -------
+    np.ndarray
+        Array of values per cell in adata.
+
+    Raises
+    ------
+    ValueError
+        If element is not found in adata.obs or adata.var.
+        If var_col is not a column name of adata.var.
+    """
+
+    if element in adata.obs and var_col is None:
+        values = np.array(adata.obs[element].values)
+    elif element in adata.var.index or var_col is not None:
+        if var_col is None:
+            idx = list(adata.var.index).index(element)
+        else:
+            try:
+                idx = list(adata.var[var_col]).index(element)
+            except ValueError:
+                raise ValueError(f"{var_col} is not a column of adata.var.")
+
+        values = adata.X[:, idx]
+        values = values.todense().A1 if issparse(values) else values
+    else:
+        raise ValueError(f"Element '{element}' not found in adata.obs or adata.var.")
+
+    return values
+
+
+@beartype
+def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
+                          keep_obs: Optional[list[str]] = None,
+                          keep_var: Optional[list[str]] = None,
+                          delete_obs: Optional[list[str]] = None,
+                          delete_var: Optional[list[str]] = None,
+                          rename_obs: Optional[dict[str, str]] = None,
+                          rename_var: Optional[dict[str, str]] = None,
+                          keep_obsm: Optional[list[str]] = None,
+                          cmap: Optional[str] = None,
+                          palette: Optional[str | Sequence[str]] = None,
+                          layer: Optional[str] = None,
+                          inplace: bool = False) -> Optional[sc.AnnData]:
+    """
+    Prepare ``adata`` for cellxgene deployment.
+
+    Preparation includes removing and renaming gene and cell metadata, fixing
+    color maps, and checking for correctly formatted embedding names.
+
+    All embeddings stored in ``adata.obsm`` must have names starting with
+    ``"X_"``. This function verifies the prefix and appends it if missing.
+
+    Parameters
+    ----------
+    adata : sc.Anndata
+        AnnData object.
+    keep_obs : Optional[list[str]], default None
+        Columns in ``adata.obs`` to keep. If None, keep all. Mutually exclusive
+        with ``delete_obs``.
+    keep_var : Optional[list[str]], default None
+        Columns in ``adata.var`` to keep. If None, keep all. Mutually exclusive
+        with ``delete_var``.
+    delete_obs : Optional[list[str]], default None
+        Columns in ``adata.obs`` to delete. If None, delete none. Mutually
+        exclusive with ``keep_obs``.
+    delete_var : Optional[list[str]], default None
+        Columns in ``adata.var`` to delete. If None, delete none. Mutually
+        exclusive with ``keep_var``.
+    rename_obs : Optional[dict[str, str]], default None
+        Mapping of ``.obs`` columns to rename. Keys are old names, values are new
+        names.
+    rename_var : Optional[dict[str, str]], default None
+        Mapping of ``.var`` columns to rename. Keys are old names, values are new
+        names.
+    keep_obsm : Optional[list[str]], default None
+        Embeddings to keep; all others are removed. If None, keep all.
+        Embedding names may be provided with or without the ``"X_"`` prefix.
+    cmap : Optional[str], default None
+        Colormap to use for continuous variables. Used as a replacement for
+        broken colormaps. If None, uses the Scanpy default (via
+        ``mpl.rcParams["image.cmap"]``; see :func:`sc.pl.embedding`).
+    palette : Optional[str | Sequence[str]], default None
+        Palette/colormap to use for categorical annotation groups. Used as a
+        replacement for broken palettes. If None, uses the Scanpy default (via
+        ``mpl.rcParams["axes.prop_cycle"]``; see :func:`sc.pl.embedding`).
+    layer : Optional[str], default None
+        Layer to set as ``adata.X`` before upload.
+    inplace : bool, default False
+        If True, modify ``adata`` in place. If False, return a modified copy.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Deployment-ready AnnData object. Returns None if ``inplace`` is True.
+
+    Raises
+    ------
+    ValueError
+        If mutually exclusive parameters (``keep_obs``/``delete_obs`` or
+        ``keep_var``/``delete_var``) are both set.
+        If no embeddings are found in ``adata.obsm``.
+        If none of the requested embeddings are found when ``keep_obsm`` is provided.
+        If ``layer`` is set but no layer with that name exists.
+    """
+    if layer and layer not in adata.layers:
+        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
+
+    def clean_section(obj: sc.AnnData, axis: str = "obs", keep: Optional[list[str]] = None, delete: Optional[list[str]] = None, rename: Optional[dict[str, str]] = None) -> None:  # noqa: C901
+        """
+        Clean either obs or var section of given adata object.
+
+        Raises
+        ------
+        ValueError
+            If parameters keep and delete are set.
+        """
+        if keep is not None and delete is not None:
+            raise ValueError(f"'keep_{axis}' and 'delete_{axis}' are mutually exclusive. Please configure only one to proceed.")
+
+        if axis == "obs":
+            sec_table = obj.obs
+        elif axis == "var":
+            sec_table = obj.var
+
+        # drop columns
+        if keep is not None:
+            drop = set(sec_table.columns) - set(keep)
+        elif delete is not None:
+            drop = set(delete)
+        else:
+            drop = False
+
+        if drop is not False:
+            sec_table.drop(columns=drop, inplace=True)
+
+            # drop matching color maps
+            for col in drop:
+                if f"{col}_colors" in obj.uns.keys():
+                    obj.uns.pop(f"{col}_colors")
+
+        # rename columns
+        if rename:
+            sec_table.rename(columns=rename, inplace=True)
+
+            # rename color maps
+            for old, new in rename.items():
+                if f"{old}_colors" in obj.uns.keys():
+                    obj.uns[f"{new}_colors"] = obj.uns.pop(f"{old}_colors")
+
+        # convert Int32 to float64 columns
+        for c in sec_table:
+            if sec_table[c].dtype == 'Int32':
+                sec_table[c] = sec_table[c].astype('float64')
+
+        sec_table.index.names = ['index']
+
+    out = adata if inplace else adata.copy()
+
+    # TODO remove more adata internals not needed for cellxgene
+
+    # ----- .obsm -----
+    if keep_obsm:
+        out.obsm = {
+            (k if k.startswith("X_") else f"X_{k}"): v  # Add "X_" as prefix to key if missing
+            for k, v in out.obsm.items()                # Loop over all embeddings
+            if (k in keep_obsm) or (k.removeprefix("X_") in keep_obsm)  # Only keep embeddings found in keep_obsm
+        }
+    else:
+        # Add "X_" as prefix to key if missing
+        out.obsm = {(k if k.startswith("X_") else f"X_{k}"): v for k, v in out.obsm.items()}
+
+    # Anndata needs at least one embedding for cellxgene
+    if len(out.obsm) == 0:
+        raise ValueError("Unable to find any embeddings. At least one is needed for cellxgene.")
+
+    # ----- .obs -----
+    clean_section(out, axis="obs", keep=keep_obs, delete=delete_obs, rename=rename_obs)
+    out.obs_names_make_unique()
+
+    # ----- .var -----
+    clean_section(out, axis="var", keep=keep_var, delete=delete_var, rename=rename_var)
+    out.var_names_make_unique()
+
+    # ----- .X -----
+    # overwrite .X with another layer
+    if layer:
+        out.X = out.layers[layer].copy()
+
+    # convert .X to sparse matrix if needed
+    if not scipy.sparse.isspmatrix(out.X):
+        out.X = scipy.sparse.csc_matrix(out.X)
+
+    out.X = out.X.astype("float32")
+
+    # ----- .uns -----
+    for key in list(out.uns):  # avoid RuntimeError by forcing a copy of dict keys.
+        if key.endswith('colors'):
+            obs_key = key.split("_colors")[0]
+            # delete colors if they don't match a .obs column.
+            if obs_key not in out.obs.columns:
+                out.uns.pop(key)
+
+                logger.warning(f"Deleted .uns[{key}] since it did not match a .obs column.")
+                continue
+
+            # fix colors not in 6-digit hex format
+            # https://github.com/chanzuckerberg/cellxgene/issues/2598
+            out.uns[key] = np.array([(c if len(c) <= 7 else c[:-2]) for c in out.uns[key]])
+
+            # fix number of colors < number of categories
+            if len(out.uns[key]) != len(set(out.obs[obs_key])):
+                logger.warning(f"Coloring for adata.obs['{obs_key}'] broken. Reverting to {cmap if cmap else 'scanpy default'} color map.")
+
+                # scanpy replaces broken colormap before plotting
+                basis = list(out.obsm.keys())[0]
+                sc.pl.embedding(adata=out, basis=basis, color=obs_key, palette=palette, color_map=cmap, show=False)
+                plt.close()  # prevent that plot is shown
+
+    if not inplace:
+        return out
+
+
+@beartype
+def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], label: Optional[str] = "batch") -> sc.AnnData:
+    """
+    Concatenate several anndata objects by appending cells.
+
+    Essentially `sc.concat(adatas, join="outer", axis=0)` but retains adata.var information.
+
+    Parameters
+    ----------
+    adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]]
+        A combination of AnnData objects to concatenate. Forwarded to the `adatas` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat).
+    label: Optional[str], default "batch"
+        Name of the `adata.obs` column to place the batch information in. Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
+
+    Returns
+    -------
+    sc.AnnData
+        Returns the combined AnnData object.
+    """
+    # create adata
+    adata = sc.concat(adatas, join="outer", axis=0, label=label)
+
+    # manually combine var table, then add it to the adata
+    var = pd.concat(
+        [a.var for a in (adatas.values() if isinstance(adatas, Mapping) else adatas)],
+        join="outer"
+    )
+
+    # remove duplicates
+    # temporarily set index as column to use this as column for duplicate removal
+    ind_name = var.index.name
+    tmp_name = "_".join(var.columns) + "_" if len(var.columns) else "index"  # create a name that is not present in the var columns
+    var = var.reset_index(names=tmp_name).drop_duplicates(subset=tmp_name).set_index(tmp_name)
+    var.index.name = ind_name  # revert to the original index name
+
+    # add the var table to the adata while ensuring the correct order
+    adata.var = var.loc[adata.var_names]
+
+    return adata
+
+
+@deco.log_anndata
+@beartype
+def tidy_layers(  # noqa: C901
+    adata: sc.AnnData,
+    allow_raw: bool | str = False,
+    rename: Optional[Dict[str, str]] = None,
+    keep_X: Optional[str] = None,
+    replace_X: Optional[str] = None,
+    keep: Literal['all'] | list[str] = 'all',
+    inplace: bool = True) -> Optional[sc.AnnData]:
+    """
+    Clean up AnnData layers and special layers (X, raw).
+
+    The parameters are executed in the following order:
+    "allow_raw" -> "rename" -> "keep_X" -> "replace_X" -> "keep"
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The AnnData object to edit.
+    allow_raw : bool | str, default False
+        Whether to keep AnnData.raw. Provide a string to move AnnData.raw.X to a layer with the given name.
+        Note: Moving the raw matrix to a layer creates a subset on var to match adata.var.
+    rename : Optional[Dict[str, str]]
+        Rename AnnData.layers. In the form of `{"old_name": "new_name"}`.
+    keep_X : Optional[str]
+        Copy AnnData.X to the given name (AnnData.layers[keep_X]).
+    replace_X : Optional[str]
+        Overwrite the AnnData.X layer with on of the AnnData.layer layers.
+    keep : Literal['all'] | list[str], default 'all'
+        Name(s) of AnnData.layer layers to keep, others will be removed. Use 'all' to keep all layers.
+    inplace : bool, default True
+        Modify the AnnData inplace or return a modified copy.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        The modified AnnData object.
+
+    Raises
+    ------
+    KeyError
+        1. If the new name already exists. During renaming or when raw is saved as a layer.
+        2. If the layer to replace X with is not found.
+    """
+    if not inplace:
+        adata = adata.copy()
+
+    # ----- raw ----- #
+    # move raw to adata.layer
+    if isinstance(allow_raw, str):
+        if allow_raw in adata.layers:
+            raise KeyError(f"{allow_raw} is already a layer name.")
+        # Filter adata.raw to var to ensure the dimensions match (obs subset is automatic)
+        adata.layers[allow_raw] = adata.raw[:, adata.var.index].X.copy()
+    # delete raw
+    if not allow_raw or isinstance(allow_raw, str):
+        adata.raw = None
+
+    # ----- rename ----- #
+    if rename:
+        no_match = []
+        for old, new in rename.items():
+            if old in adata.layers:
+                if new in adata.layers:
+                    raise KeyError(f"{new} is already a layer name.")
+
+                adata.layers[new] = adata.layers[old].copy()
+                del adata.layers[old]
+            else:
+                no_match.append(old)
+
+        if no_match:
+            logger.warning(f"Can not rename name(s) {no_match}. Not found in `AnnData.layers`. Skipped.")
+
+    # ----- keep_X ----- #
+    if keep_X:
+        if keep_X not in adata.layers:
+            adata.layers[keep_X] = adata.X.copy()
+        else:
+            raise KeyError(f"{keep_X} is already a layer name.")
+
+    # ----- replace_X ----- #
+    if replace_X:
+        if replace_X in adata.layers:
+            adata.X = adata.layers[replace_X].copy()
+        else:
+            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({list(adata.layers.keys())}).")
+
+    # ----- keep ----- #
+    if keep != "all":
+        for layer in list(adata.layers.keys()):
+            if layer not in keep:
+                del adata.layers[layer]
+
+    if not inplace:
+        return adata

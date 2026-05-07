@@ -32,7 +32,13 @@ def add_logger_handler(logger, handler):
 
 @pytest.fixture(scope="function")  # create for each test
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA-seq AnnData object with QC variables and cell cycle genes.
+    """
     f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
     adata = sc.read_h5ad(f)
     adata.obs['sample'] = np.random.choice(["sample1", "sample2"], size=len(adata))
@@ -51,6 +57,8 @@ def adata():
 
     adata.obs["qc_variable1"] = np.append(np.random.normal(size=n1), np.random.normal(size=n2, loc=1, scale=2))
     adata.obs["qc_variable2"] = np.append(np.random.normal(size=n1), np.random.normal(size=n2, loc=1, scale=3))
+    adata.obs["doublet_score"] = np.append(np.random.normal(size=n1), np.random.normal(size=n2, loc=1, scale=3))
+    adata.uns["scrublet"] = {}
 
     n1 = int(adata.shape[1] * 0.8)
     n2 = adata.shape[1] - n1
@@ -73,7 +81,13 @@ def adata():
 
 @pytest.fixture
 def threshold_dict():
-    """Create dict with qc thresholds."""
+    """Create dict with qc thresholds.
+
+    Returns
+    -------
+    dict
+        Dictionary with QC variable thresholds.
+    """
     d = {"qc_variable1": {"min": 0.5, "max": 1.5},
          "qc_variable2": {"min": 0.5, "max": 1}}
     return d
@@ -81,7 +95,13 @@ def threshold_dict():
 
 @pytest.fixture
 def invalid_threshold_dict():
-    """Create invalid qc threshold dict."""
+    """Create invalid qc threshold dict.
+
+    Returns
+    -------
+    dict
+        Dictionary with invalid QC variable specifications.
+    """
     d = {"not_present": {"notmin": 0.5, "max": 1.5},
          "qc_variable2": {"min": 0.5, "max": 1}}
     return d
@@ -89,19 +109,37 @@ def invalid_threshold_dict():
 
 @pytest.fixture
 def s_list(adata):
-    """Return a list of first half of adata genes."""
+    """Return a list of first half of adata genes.
+
+    Returns
+    -------
+    list
+        List of gene names for S phase.
+    """
     return adata.var.index[:int(len(adata.var) / 2)].tolist()
 
 
 @pytest.fixture
 def g2m_list(adata):
-    """Return a list of second half of adata genes."""
+    """Return a list of second half of adata genes.
+
+    Returns
+    -------
+    list
+        List of gene names for G2M phase.
+    """
     return adata.var.index[int(len(adata.var) / 2):].tolist()
 
 
 @pytest.fixture
 def g2m_file(g2m_list):
-    """Write a tmp file, which is deleted after usage."""
+    """
+    Write a tmp file, which is deleted after usage.
+
+    Yields
+    ------
+    Path to a temporary file.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = os.path.join(tmpdir, "g2m_genes.txt")
 
@@ -113,7 +151,13 @@ def g2m_file(g2m_list):
 
 @pytest.fixture
 def s_file(s_list):
-    """Write a tmp file, which is deleted after usage."""
+    """
+    Write a tmp file, which is deleted after usage.
+
+    Yields
+    ------
+    Path to a temporary file.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = os.path.join(tmpdir, "s_genes.txt")
 
@@ -125,7 +169,13 @@ def s_file(s_list):
 
 @pytest.fixture(scope="session")
 def norm_dist():
-    """Return a normal distribution."""
+    """Return a normal distribution.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of 1000 normally distributed values.
+    """
     return np.random.normal(size=1000)
 
 
@@ -141,6 +191,32 @@ def test_estimate_doublets(adata, groupby, threads):
     qc.estimate_doublets(adata, groupby=groupby, plot=False, threads=threads, n_prin_comps=10)  # turn plot off to avoid block during testing
 
     assert "doublet_score" in adata.obs.columns
+
+
+def test_adjust_doublet_threshold(adata):
+    """Test whether doubet_prediction is updated based on adjusted threshold."""
+    threshold = 0.25
+    qc.adjust_doublet_threshold(adata, threshold=threshold)
+
+    print(adata.obs["predicted_doublet"])
+
+    # Column should exist
+    assert "predicted_doublet" in adata.obs.columns
+    assert list(adata.obs["predicted_doublet"]) == list(adata.obs["doublet_score"] > threshold)
+
+
+def test_adjust_doublet_threshold_failure(adata):
+    """Test whether doubet_prediction errors are caught."""
+    threshold = 0.25
+    with pytest.raises(KeyError, match="Column 'doublet_score' not found in adata.obs"):
+        adata_copy = adata.copy()
+        adata_copy.obs.drop("doublet_score", axis=1, inplace=True)
+        qc.adjust_doublet_threshold(adata_copy, threshold=threshold)
+
+    with pytest.raises(KeyError, match="Key 'scrublet' not found in adata.uns. Run estimate doublet first."):
+        adata_copy = adata.copy()
+        adata_copy.uns.pop("scrublet")
+        qc.adjust_doublet_threshold(adata_copy, threshold=threshold)
 
 
 def test_gmm_threshold(norm_dist):
@@ -182,7 +258,7 @@ def test_automatic_thresholds_failure(adata):
 
 
 def test_thresholds_as_table(threshold_dict):
-    """Test whether treshold dict is successfully converted to pandas table."""
+    """Test whether threshold dict is successfully converted to pandas table."""
 
     table = qc.thresholds_as_table(threshold_dict)
 

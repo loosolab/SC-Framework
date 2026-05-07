@@ -1,18 +1,16 @@
-"""
-Script to check if every notebook in directory has the latest version.
-"""
+"""Script to check if every notebook in directory has the latest version."""
 
 import argparse
 from pathlib import Path
 import nbformat
 from packaging import version
-import sys 
+import sys
 import os
 
 
 def check_notebook(nb_path: str, ver: str) -> None:
     """
-    Check notebook.
+    Check that the notebook version and the package version match.
 
     Parameters
     ----------
@@ -20,6 +18,13 @@ def check_notebook(nb_path: str, ver: str) -> None:
         Path to jupyter notebook.
     ver : str
         Current version of sc_framework.
+
+    Raises
+    ------
+    KeyError
+        If the version metadata is missing.
+    ValueError
+        If the package and notebook versions differ.
     """
 
     print(f"Checking {nb_path}")
@@ -56,7 +61,7 @@ def check_versions(path_list: str, ver: str) -> None:
     ----------
     path_list : str
         List of paths for directories containing jupyter notebooks.
-    version : str
+    ver : str
         Current version of sc_framework.
     """
 
@@ -69,7 +74,7 @@ def check_versions(path_list: str, ver: str) -> None:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         prog="check_notebook_version",
-        description="Loops recursivly through given directories and checks \
+        description="Loops recursively through given directories and checks \
             if the sc_framework version is up to date fore very notebook.")
     parser.add_argument('-n', '--notebook_paths', nargs='+', default=[], help="Directories containing .ipynb files")
     parser.add_argument('-v', '--version', help="Path to sctoolbox directory")

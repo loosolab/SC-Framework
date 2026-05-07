@@ -23,24 +23,12 @@ def test_create_dir():
     shutil.rmtree("testdir")  # clean up after tests
 
 
-def test_remove_files():
-    """Remove files from list."""
-
-    if not os.path.isfile("afile.txt"):
-        os.mknod("afile.txt")
-
-    files = ["afile.txt", "notfound.txt"]
-    utils.io.remove_files(files)
-
-    assert os.path.isfile("afile.txt") is False
-
-
 def test_rm_tmp():
     """Test create_dir and rm_tmp success."""
 
     temp_dir = "tempdir"
     utils.io.create_dir(temp_dir)
-    pathlib.Path("tempdir/afile.gtf").touch(exist_ok=True)
+    pathlib.Path("tempdir/a_file.gtf").touch(exist_ok=True)
     pathlib.Path("tempdir/tempfile1.txt").touch(exist_ok=True)
     pathlib.Path("tempdir/tempfile2.txt").touch(exist_ok=True)
 

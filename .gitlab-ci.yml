@@ -5,10 +5,10 @@
 # This is the Gitlab CI/CD pipeline for the SC FRAMEWORK repository.
 # The pipeline is divided into several stages:
 # 1. .pre: This stage is used to export variables and to get the sctoolbox version as global variable.
-# 2. build: This stage checks if something in the enviroment (setup.py or sctoolbox_env.yml) has changed.
+# 2. build: This stage checks if something in the environment (pyproject.toml or sctoolbox_env.yml) has changed.
 #           If yes then a new docker image will be build and pushed to the container registry.
 #           The newly build image is then used for testing later.
-#           If no changes were made to the enviroment nothing is build and the latest image is used later on.
+#           If no changes were made to the environment nothing is build and the latest image is used later on.
 #           In addition the python package is build and pushed to the Gitlab package registry but only when on the main branch.
 # 3. setup: This stage is used to get the container tag for the testing stage.
 # 4. test: This stage is used to lint the code and docstrings, to test if the minimal sctoolbox package can still be imported without additional dependencies,
@@ -48,7 +48,7 @@ extract-version:
   stage: .pre
   image: python:3.10-alpine3.19
   script:
-    - VERSION=$(python -c "import sys; sys.path.append('./sctoolbox'); from _version import __version__; print(__version__)")
+    - VERSION=$(python -c "import sys; sys.path.append('./src/sctoolbox'); from _version import __version__; print(__version__)")
     - echo "BUILD_VERSION=$VERSION"
     - echo "BUILD_VERSION=$VERSION" >> build.env
   artifacts:
@@ -62,24 +62,24 @@ extract-version:
 # ###################################################################### build ###############################################################################
 # ############################################################################################################################################################
 
-# The build job below checks if something in the enviroment (setup.py or sctoolbox_env.yml) has changed.
+# The build job below checks if something in the environment (pyproject.toml or sctoolbox_env.yml) has changed.
 # If yes then a new docker image will be build and pushed to the container registry.
 # The newly build image is then used for testing later. 
-# If no changes were made to the enviroment nothing is build and the latest image is used later on.
+# If no changes were made to the environment nothing is build and the latest image is used later on.
 
 # build job
 build:
   stage: build
-  image: docker:28.5 # TODO switch back to latest when our runners are updated. Ask Noah about the progress. # image as building environment
+  image: docker:28.5 # image as building environment (See https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/397)
   needs: [extract-version]
   tags:
-    - sctoolbox
+    - docker
   services:
       - name: "docker:dind" # docker in docker to build
         alias: docker
   before_script:
       - echo $BUILD_VERSION
-      - apk update && apk add git # install git for authentification and pushing to registry
+      - apk update && apk add git # install git for authentication and pushing to registry
       - apk update -qq && apk add git
       - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
   script:
@@ -99,7 +99,6 @@ build:
   rules:
     - if: $CI_COMMIT_BRANCH
       changes:  # if any of the files were changed
-        - setup.py
         - sctoolbox_env.yml
         - Dockerfile
         - MANIFEST.in
@@ -112,8 +111,6 @@ build:
 build-package:
   stage: build
   image: python:latest
-  tags:
-    - sctoolbox
   variables:
     TWINE_USERNAME: gitlab-ci-token  # used for authentication to the Gitlab package registry
     TWINE_PASSWORD: $CI_JOB_TOKEN
@@ -216,35 +213,46 @@ cache:
     - .cache/pip
     - venv/
 
-# lint code and docstrings
-# flake8 ignore rules:
-# E501 = Line too long
-# W503 = Line break occurred before a binary operator
-# D202 = No blank lines allowed after function docstring
-# DOC301 = __init__() should not have a docstring; <- conflicts with "D107 Missing docstring in __init__"
+# lint code and docstrings with ruff
+# Configuration is in pyproject.toml [tool.ruff] section
 lint:
-  image: 
-    name: python:3.10 # pybedtools is not compatible with python 3.11
+  image:
+    name: python:latest
     entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ]  # Fixes shell not found error (See Issue #129)
   inherit:
     default: false # do not inherit before_script
   stage: test
-  tags:
-    - sctoolbox
   script:
     - python --version
-    - pip install flake8
-    - pip install pydoclint>=0.1.7
-    - pip install flake8-docstrings  # adds pydocstyle to flake
-    - flake8 sctoolbox setup.py tests --ignore=E501,W503,D202,DOC301,DOC105 -sdpca True --docstring-convention numpy --show-source --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
+    - pip install ruff
+    - ruff check --preview .
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
       changes:
-        - setup.py
         - tests/*.py
         - tests/**/*.py
-        - sctoolbox/**/*.py
+        - src/sctoolbox/**/*.py
+        - pyproject.toml
+        - scripts/*.py
+        - rna_analysis/notebooks/*.ipynb
+        - atac_analysis/notebooks/*.ipynb
+        - general_notebooks/*.ipynb
+
+# check the spelling in the whole repository
+# Configuration is in pyproject.toml [tool.codespell] section
+spellcheck:
+  stage: test
+  image: python:latest
+  before_script:
+    - pip install codespell[toml]
+  script:
+    - python --version
+    - codespell --version
+    - codespell --toml pyproject.toml
+  allow_failure: true  # Optional: set to false if you want to block the MR on typos
+  only:
+    - merge_requests
 
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
 test import:
@@ -258,23 +266,22 @@ test import:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - setup.py
-        - sctoolbox/**/*.py
+        - pyproject.toml
+        - src/sctoolbox/**/*.py
 
 # Run tests
 test coverage:
     stage: test
     image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
     needs: [get-container-tag]
-    tags:
-      - sctoolbox
     coverage: '/TOTAL.*\s(\d*.\d*\%)/'
     before_script:
-      - pip install .[all]
+      - pip install .[all] --group test
+      - pip install git+https://github.com/Novartis/scar.git  # install scar here to test related functions. Should be removed if scar is available on conda and PyPI
     script:
       - echo $DYNAMIC_IMAGE_TAG
       - chmod +x scripts/bedGraphToBigWig  # make script executable
-      - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
+      - pytest tests
     artifacts:
       when: always
       paths:
@@ -286,11 +293,11 @@ test coverage:
     rules:
       - if: $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
         changes:
-          - setup.py
-          - sctoolbox_env.yml
+          - pyproject.toml
+          - src/sctoolbox_env.yml
           - Dockerfile
-          - sctoolbox/_version.py
-          - sctoolbox/**/*.py
+          - src/sctoolbox/_version.py
+          - src/sctoolbox/**/*.py
           - tests/*.py
           - tests/**/*.py
       - if: $CI_COMMIT_BRANCH == "main" # commits to dev (for coverage)
@@ -310,11 +317,11 @@ check-changes:
       changes:
         - tests/*.py
         - tests/**/*.py
-        - setup.py
+        - pyproject.toml
         - sctoolbox_env.yml
         - Dockerfile
-        - sctoolbox/_version.py
-        - sctoolbox/**/*.py
+        - src/sctoolbox/_version.py
+        - src/sctoolbox/**/*.py
         - rna_analysis/notebooks/*.ipynb
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb
@@ -330,8 +337,8 @@ check-version:
     - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
     - git diff-tree --name-only -r "HEAD..origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > changed_files.txt
     - cat changed_files.txt
-    - if grep -q "sctoolbox/_version.py" changed_files.txt; then echo "The 'sctoolbox/_version.py' file was changed."; else echo "The 'sctoolbox/_version.py' file must be changed for merge requests to main!"; exit 1; fi
-    - version=$(sed -e 's/.*\"\(.*\)\".*/\1/' <<< $(head -n 1 sctoolbox/_version.py)) # Get version from _version.py file
+    - if grep -q "src/sctoolbox/_version.py" changed_files.txt; then echo "The 'src/sctoolbox/_version.py' file was changed."; else echo "The 'src/sctoolbox/_version.py' file must be changed for merge requests to main!"; exit 1; fi
+    - version=$(sed -e 's/.*\"\(.*\)\".*/\1/' <<< $(head -n 1 src/sctoolbox/_version.py)) # Get version from _version.py file
     - echo ${version} # for debugging
     - if [[ ! ${version} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then exit 1; fi
   rules:
@@ -355,13 +362,19 @@ notebook-output-check:
 
 # Test notebooks
 notebooks-RNA:
-  image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
+  image:
+    name: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
+    pull_policy: always  # to avoid using outdated images
   needs: [get-container-tag]
   inherit:
     default: false
   stage: test
-  tags:
-      - sctoolbox
+  timeout: 2h
+  variables:
+    KUBERNETES_MEMORY_LIMIT: "32Gi"
+    KUBERNETES_MEMORY_REQUEST: "16Gi"
+    RUNNER_SCRIPT_TIMEOUT: 1h45m
+    RUNNER_AFTER_SCRIPT_TIMEOUT: 15m  # reserve 15 minutes to ensure artifact upload
   artifacts:
     when: always
     paths:
@@ -379,35 +392,41 @@ notebooks-RNA:
     # prepare notebook run
     - pip install papermill
     - python -m ipykernel install --user --name sctoolbox
-    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/proportion_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb ./general_notebooks/annotation.ipynb ./general_notebooks/GSEA.ipynb ./general_notebooks/group_markers.ipynb ./general_notebooks/pseudotime_analysis.ipynb
+    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/proportion_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb ./general_notebooks/annotation.ipynb ./general_notebooks/GSEA.ipynb ./general_notebooks/group_markers.ipynb ./general_notebooks/pseudotime_analysis.ipynb ./general_notebooks/Palantir.ipynb
   script:
     - python scripts/run_notebooks.py RNA
   after_script:
     - pwd
     - echo -------------------------------------------------- RNA logs --------------------------------------------------
-    - "[ -d 'rna_analysis/logs/' ] && ls -l 'rna_analysis/logs/' || echo 'Log dir not found! Please check the artifacts to identify potential errors that occured within the notebooks.'"
+    - "[ -d 'rna_analysis/logs/' ] && ls -l 'rna_analysis/logs/' || echo 'Log dir not found! Please check the artifacts to identify potential errors that occurred within the notebooks.'"
     - if [[ -d rna_analysis/logs/ && "$(ls -A rna_analysis/logs/)" ]]; then for f in rna_analysis/logs/*; do echo "==> $f <=="; cat $f; done; fi
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" && $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:  # if any of the files were changed
-        - setup.py
+        - pyproject.toml
         - sctoolbox_env.yml
         - Dockerfile
-        - sctoolbox/_version.py
+        - src/sctoolbox/_version.py
         - rna_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb
         - scripts/run_notebooks.py
 
 # Test notebooks
 notebooks-ATAC:
-  image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
+  image:
+    name: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
+    pull_policy: always  # to avoid using outdated images
   needs: [get-container-tag]
   inherit:
     default: false
   stage: test
-  tags:
-      - sctoolbox
+  timeout: 2h
+  variables:
+    KUBERNETES_MEMORY_LIMIT: "32Gi"
+    KUBERNETES_MEMORY_REQUEST: "16Gi"
+    RUNNER_SCRIPT_TIMEOUT: 1h45m
+    RUNNER_AFTER_SCRIPT_TIMEOUT: 15m  # reserve 15 minutes to ensure artifact upload
   artifacts:
     when: always
     paths:
@@ -432,16 +451,16 @@ notebooks-ATAC:
   after_script:
     - pwd
     - echo -------------------------------------------------- ATAC logs --------------------------------------------------
-    - "[ -d 'atac_analysis/logs/' ] && ls -l 'atac_analysis/logs/' || echo 'Log dir not found! Please check the artifacts to identify potential errors that occured within the notebooks.'"
+    - "[ -d 'atac_analysis/logs/' ] && ls -l 'atac_analysis/logs/' || echo 'Log dir not found! Please check the artifacts to identify potential errors that occurred within the notebooks.'"
     - if [[ -d atac_analysis/logs/ && "$(ls -A atac_analysis/logs/)" ]]; then for f in atac_analysis/logs/*; do echo "==> $f <=="; cat $f; done; fi
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" && $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:  # if any of the files were changed
-        - setup.py
+        - pyproject.toml
         - sctoolbox_env.yml
         - Dockerfile
-        - sctoolbox/_version.py
+        - src/sctoolbox/_version.py
         - atac_analysis/notebooks/*.ipynb
         #- general_notebooks/*.ipynb
         - scripts/run_notebooks.py
@@ -458,7 +477,7 @@ check-notebook-version:
     pip install nbformat packaging
   script:
     - python --version
-    - python scripts/check_notebook_version.py -n rna_analysis/notebooks/ atac_analysis/notebooks/ general_notebooks/ -v sctoolbox
+    - python scripts/check_notebook_version.py -n rna_analysis/notebooks/ atac_analysis/notebooks/ general_notebooks/ -v src/sctoolbox
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
 
@@ -474,17 +493,12 @@ build-pages:
       artifacts: true
   stage: deploy
   before_script:
-    - pip install .[all]
+    - pip install .[all] --group docs
     - git submodule init
     - git submodule update
   script:
     - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
     - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
-    - pip install sphinx sphinx-rtd-theme
-    - pip install sphinx-exec-code
-    - pip install nbsphinx
-    - pip install nbsphinx_link
-    - pip install myst-parser
     - cd docs
     - make html
   artifacts:
@@ -496,7 +510,7 @@ build-pages:
       allow_failure: true
     - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
       changes:
-        - sctoolbox/**/*.py
+        - src/sctoolbox/**/*.py
         - rna_analysis/notebooks/*.ipynb
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb  # changes in general notebooks
@@ -529,7 +543,7 @@ deploy-pages:
       allow_failure: true
     - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
       changes:
-        - sctoolbox/**/*.py
+        - src/sctoolbox/**/*.py
         - rna_analysis/notebooks/*.ipynb
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb  # changes in general notebooks
@@ -593,8 +607,6 @@ PyPI:
       artifacts: true
     # release a fully tested package to PyPI
     - job: GitLab-release
-  tags:
-    - sctoolbox
   variables:
     TWINE_USERNAME: __token__  # used for authentication to PyPI
     TWINE_PASSWORD: $PYPI_API_TOKEN
@@ -607,6 +619,7 @@ PyPI:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"  # always and only run for commits to main
       allow_failure: false
+  retry: 2
 
 
 # ############################################################################################################################################################

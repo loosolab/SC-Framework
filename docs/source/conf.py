@@ -43,8 +43,14 @@ extensions = ['matplotlib.sphinxext.plot_directive',  # for plot examples in doc
               'sphinx.ext.intersphinx',
               "nbsphinx",
               "nbsphinx_link",
-              "myst_parser"
+              "myst_parser",
+              "sphinxcontrib.youtube"
               ]
+
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
 
 napoleon_numpy_docstring = True
 autodoc_member_order = 'bysource'
@@ -69,8 +75,8 @@ for link in links:
     os.remove(link)
 
 # Create nblinks for current notebooks
-notebooks = glob.glob("../../*_analysis/notebooks/*.ipynb") # captures both rna-notebooks, atac-notebooks etc.
-notebooks.extend(glob.glob("../../*_notebooks/*.ipynb")) # capture general_notebooks
+notebooks = glob.glob("../../*_analysis/notebooks/*.ipynb")  # captures both rna-notebooks, atac-notebooks etc.
+notebooks.extend(glob.glob("../../*_notebooks/*.ipynb"))  # capture general_notebooks
 for f in notebooks:
 
     if "rna_analysis" in f:
@@ -80,7 +86,7 @@ for f in notebooks:
     elif "general_notebooks" in f:
         notebook_folder = "general-notebooks/"
     else:
-        raise ValueError("Did not recoginze notebook type.")
+        raise ValueError("Did not recognize notebook type.")
 
     os.makedirs(notebook_folder, exist_ok=True)  # create folder if it doesn't exist
 

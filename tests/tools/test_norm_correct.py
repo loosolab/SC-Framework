@@ -14,13 +14,20 @@ import sctoolbox.utils as utils
 
 @pytest.fixture(scope="session")
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA-seq AnnData object with batch annotation and highly variable genes.
+    """
 
     f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
     adata = sc.read_h5ad(f)
 
     # Add batch column
     adata.obs['batch'] = ["a", "b"] * 100
+    adata.obs['batch2'] = (["c", "d", "e"] * 100)[:len(adata.obs)]
 
     sc.pp.highly_variable_genes(adata)
 
@@ -29,7 +36,13 @@ def adata():
 
 @pytest.fixture
 def adata_mm10():
-    """Fixture for an AnnData object."""
+    """Fixture for an AnnData object.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object.
+    """
     adata_mm10 = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad'))
     return adata_mm10
 
@@ -37,7 +50,13 @@ def adata_mm10():
 # adapted from muon package
 @pytest.fixture
 def tfidf_x():
-    """Create anndata with random expression."""
+    """Create anndata with random expression.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with random expression matrix for TF-IDF testing.
+    """
     np.random.seed(2020)
     x = np.abs(np.random.normal(size=(4, 5)))
     adata_X = ad.AnnData(x)
@@ -46,7 +65,13 @@ def tfidf_x():
 
 @pytest.fixture
 def adata_batch_dict(adata):
-    """Create dict containing adata with a batch column in obs."""
+    """Create dict containing adata with a batch column in obs.
+
+    Returns
+    -------
+    dict
+        Dictionary with AnnData object containing batch information.
+    """
     anndata_batch_dict = adata.copy()
 
     return {'adata': anndata_batch_dict}
@@ -56,9 +81,9 @@ def adata_batch_dict(adata):
 
 
 @pytest.mark.parametrize("method", ["tfidf", "total"])
-def test_atac_norm(adata_mm10, method):
-    """Test atac_norm success."""
-    adata_norm = tools.norm_correct.atac_norm(adata_mm10, method=method, target_sum=1e6)  # return from function is a dict
+def test_normalize_adata_success(adata_mm10, method):
+    """Test normalize_adata success."""
+    adata_norm = tools.norm_correct.normalize_adata(adata_mm10, method=method, target_sum=1e6)  # return from function is a dict
 
     if method == "tfidf":
         assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
@@ -122,7 +147,7 @@ def test_wrap_corrections(adata):
         assert "test" in a.layers
 
 
-@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])
+@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])  # TODO excluded "scvi" due to runtime; may be mocked in the future
 def test_batch_correction(adata, method):
     """Test if batch correction returns an anndata."""
 
@@ -133,13 +158,14 @@ def test_batch_correction(adata, method):
     assert adata is not adata_corrected
 
 
-def test_evaluate_batch_effect(adata):
+@pytest.mark.parametrize("key", ["batch", ["batch", "batch2"]])
+def test_evaluate_batch_effect(adata, key):
     """Test if AnnData containing LISI column in .obs is returned."""
-    ad = tools.norm_correct.evaluate_batch_effect(adata, 'batch')
+    ad = tools.norm_correct.evaluate_batch_effect(adata, batch_key=key)
 
     ad_type = type(ad).__name__
     assert ad_type == "AnnData"
-    assert "LISI_score" in ad.obs
+    assert ad.obs.columns.str.startswith("LISI_score").any()
 
 
 @pytest.mark.parametrize("key", ["a", "b"])
@@ -152,9 +178,10 @@ def test_evaluate_batch_effect_keyerror(adata, key):
         tools.norm_correct.evaluate_batch_effect(adata, batch_key=key)
 
 
-def test_wrap_batch_evaluation(adata_batch_dict):
+@pytest.mark.parametrize("key", ["batch", ["batch", "batch2"]])
+def test_wrap_batch_evaluation(adata_batch_dict, key):
     """Test if DataFrame containing LISI column in .obs is returned."""
-    adata_dict = tools.norm_correct.wrap_batch_evaluation(adata_batch_dict, 'batch', inplace=False)
+    adata_dict = tools.norm_correct.wrap_batch_evaluation(adata_batch_dict, key, inplace=False)
     adata_dict_type = type(adata_dict).__name__
     adata_type = type(adata_dict['adata']).__name__
 

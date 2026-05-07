@@ -1,0 +1,805 @@
+"""Normalization and correction tools."""
+import numpy as np
+from scipy import sparse, spatial
+import io
+from contextlib import redirect_stderr
+import copy
+import multiprocessing as mp
+import scanpy as sc
+import scanpy.external as sce
+import scvi
+
+from beartype.typing import Optional, Any, Union, Literal, Callable
+from beartype import beartype
+
+import sctoolbox.utils as utils
+import sctoolbox.tools.dim_reduction as dim_red
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
+
+batch_methods = Literal["bbknn",
+                        "combat",
+                        "mnn",
+                        "harmony",
+                        "scanorama",
+                        "scvi"]
+
+#####################################################################
+# --------------------- Normalization methods --------------------- #
+#####################################################################
+
+
+@deco.log_anndata
+@beartype
+def normalize_adata(adata: sc.AnnData,
+                    method: Literal["total", "tfidf"] | list[Literal["total", "tfidf"]],
+                    exclude_highly_expressed: bool = True,
+                    use_highly_variable: bool = False,
+                    target_sum: Optional[float] = None,
+                    keep_layer: Optional[str] = "raw",
+                    n_comps: int = 50,
+                    report: bool = False) -> Union[dict[str, sc.AnnData], sc.AnnData]:
+    """
+    Normalize the count matrix and calculate dimension reduction using different methods.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix.
+    method : Literal["total", "tfidf"] | list[Literal["total", "tfidf"]]
+        Normalization method. Either 'total' and/or 'tfidf'.
+        - 'total': Performs normalization for total counts, log1p and PCA.
+        - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
+    exclude_highly_expressed : bool, default True
+        Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
+    use_highly_variable : bool, default False
+        Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
+    target_sum : Optional[float], default None
+        Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
+    keep_layer : Optional[str], default "raw"
+        Will create a copy of the .X matrix with the given name before applying normalization.
+    n_comps : int, default 50
+        The number of components to calculate.
+    report : bool, default False
+        Enable report method slide. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+
+    Returns
+    -------
+    Union[dict[str, sc.AnnData], sc.AnnData]
+        Annotated data matrix with normalized count matrix and PCA/LSI calculated.
+        If method is a list, a dictionary with the method as key and the corresponding anndata object as value is returned.
+    """
+
+    if isinstance(method, str):
+        return normalize_and_dim_reduct(anndata=adata,
+                                        method=method,
+                                        exclude_highly_expressed=exclude_highly_expressed,
+                                        use_highly_variable=use_highly_variable,
+                                        target_sum=target_sum,
+                                        keep_layer=keep_layer,
+                                        n_comps=n_comps,
+                                        report=report)
+
+    elif isinstance(method, list):
+        adatas = {}
+        for method_str in method:  # method is a list
+
+            adatas[method_str] = normalize_and_dim_reduct(anndata=adata,
+                                                          method=method_str,
+                                                          exclude_highly_expressed=exclude_highly_expressed,
+                                                          use_highly_variable=use_highly_variable,
+                                                          target_sum=target_sum,
+                                                          keep_layer=keep_layer,
+                                                          n_comps=n_comps,
+                                                          report=report)
+
+        return adatas
+
+
+@deco.log_anndata
+@beartype
+def normalize_and_dim_reduct(anndata: sc.AnnData,
+                             method: Literal["total", "tfidf"],
+                             exclude_highly_expressed: bool = True,
+                             use_highly_variable: bool = False,
+                             target_sum: Optional[float] = None,
+                             inplace: bool = False,
+                             keep_layer: Optional[str] = "raw",
+                             n_comps: int = 50,
+                             report: bool = False) -> Optional[sc.AnnData]:
+    """
+    Normalize the count matrix and calculate dimension reduction using different methods.
+
+    Parameters
+    ----------
+    anndata : sc.AnnData
+        Annotated data matrix.
+    method : Literal["total", "tfidf"],
+        The normalization method. Either 'total' or 'tfidf'.
+    exclude_highly_expressed : bool, default True
+        Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
+    use_highly_variable : bool, default False
+        Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
+    target_sum : Optional[float], default None
+        Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
+    inplace : bool, default False
+        If True, change the anndata object inplace. Otherwise return changed anndata object.
+    keep_layer : Optional[str], default "raw"
+        Will create a copy of the .X matrix with the given name before applying normalization.
+    n_comps : int, default 50
+        The number of components to calculate.
+    report : bool, default False
+        Enable report method slide. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Annotated data matrix with normalized count matrix and PCA/LSI calculated.
+    """
+
+    adata = anndata if inplace else anndata.copy()
+
+    if keep_layer:
+        if keep_layer in adata.layers:
+            logger.warning(f"A layer with the name '{keep_layer}' already exists. Skipping to avoid layer overwrite.")
+        else:
+            adata.layers[keep_layer] = adata.X.copy()
+
+    if method == "total":  # perform total normalization and pca
+        logger.info('Performing total normalization and PCA...')
+        sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
+        sc.pp.log1p(adata)
+        sc.pp.pca(adata, mask_var="highly_variable" if use_highly_variable else None, n_comps=n_comps)
+
+    elif method == "tfidf":
+        logger.info('Performing TFIDF and LSI...')
+        tfidf(adata, inplace=True)
+        dim_red.lsi(adata, use_highly_variable=use_highly_variable, n_comps=n_comps)  # corresponds to PCA
+
+    # report
+    if settings.report_dir and report:
+        utils.io.update_yaml({"norm": method}, "method.yml", path_prefix="report")
+
+    if not inplace:
+        return adata
+
+
+@beartype
+def tfidf(anndata: sc.AnnData,
+          log_tf: bool = True,
+          log_idf: bool = True,
+          log_tfidf: bool = False,
+          scale_factor: int = int(1e4),
+          inplace: bool = False,
+          layer: Optional[str] = None) -> Optional[sc.AnnData]:
+    """
+    Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
+
+    TF: peak counts are normalised by total number of counts per cell.
+    DF: total number of counts for each peak.
+    IDF: number of cells divided by DF.
+    By default, log(TF) * log(IDF) is returned.
+
+    Parameters
+    ----------
+    anndata : sc.AnnData
+        AnnData object with peak counts.
+    log_tf : bool, default True
+        Log-transform TF term if True.
+    log_idf : bool, default True
+        Log-transform IDF term if True.
+    log_tfidf : bool, default Frue
+        Log-transform TF*IDF term if True. Can only be used when log_tf and log_idf are False.
+    scale_factor : int, default 1e4
+        Scale factor to multiply the TF-IDF matrix by.
+    inplace : bool, default False
+        If True, change the anndata object inplace. Otherwise return changed anndata object.
+    layer : Optional[str], default None
+        Perform tfidf on given layer. If None tfidf is run on adata.X.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        TF-IDF normalized anndata object.
+
+    Raises
+    ------
+    AttributeError
+        log(TF*IDF) requires log(TF) and log(IDF) to be False.
+
+    Notes
+    -----
+    Function is from the muon package.
+    This function overwrites the .X matrix.
+    """
+
+    adata = anndata if inplace else anndata.copy()
+    matrix = adata.layers[layer] if layer else adata.X
+
+    if log_tfidf and (log_tf or log_idf):
+        raise AttributeError(
+            "When returning log(TF*IDF), \
+            applying neither log(TF) nor log(IDF) is possible."
+        )
+
+    if sparse.issparse(matrix):
+        n_peaks = np.asarray(matrix.sum(axis=1)).reshape(-1)
+        n_peaks = sparse.dia_matrix((1.0 / n_peaks, 0), shape=(n_peaks.size, n_peaks.size))
+        # This prevents making TF dense
+        tf = np.dot(n_peaks, matrix)
+    else:
+        n_peaks = np.asarray(matrix.sum(axis=1)).reshape(-1, 1)
+        tf = matrix / n_peaks
+    if scale_factor is not None and scale_factor != 0 and scale_factor != 1:
+        tf = tf * scale_factor
+    if log_tf:
+        tf = np.log1p(tf)
+
+    idf = np.asarray(adata.shape[0] / matrix.sum(axis=0)).reshape(-1)
+    if log_idf:
+        idf = np.log1p(idf)
+
+    if sparse.issparse(tf):
+        idf = sparse.dia_matrix((idf, 0), shape=(idf.size, idf.size))
+        tf_idf = np.dot(tf, idf)
+    else:
+        tf_idf = np.dot(sparse.csr_matrix(tf), sparse.csr_matrix(np.diag(idf)))
+
+    if log_tfidf:
+        tf_idf = np.log1p(tf_idf)
+
+    if layer:
+        adata.layers[layer] = np.nan_to_num(tf_idf, nan=0)
+    else:
+        adata.X = np.nan_to_num(tf_idf, nan=0)
+
+    if not inplace:
+        return adata
+
+
+###################################################################################
+# --------------------------- Batch correction methods -------------------------- #
+###################################################################################
+
+
+@beartype
+def wrap_corrections(adata: sc.AnnData,
+                     batch_key: Union[str, list[str]],
+                     methods: Union[batch_methods,
+                                    list[batch_methods],
+                                    Callable] = ["bbknn", "mnn"],
+                     method_kwargs: dict = {},
+                     keep_layer: Optional[str] = "norm") -> dict[str, sc.AnnData]:
+    """
+    Compute multiple batch corrections for ``adata`` using :func:`batch_correction`.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix to apply batch corrections to.
+    batch_key : str
+        Column in ``adata.obs`` containing batch labels. Provide a list of batch keys for multi-factor correction.
+        Multi-factor correction is only supported by harmony and scvi. The other methods will give a warning and use the first key
+    methods : list[batch_methods] | Callable | batch_methods, default ["bbknn", "mnn"]
+        Batch-correction method(s) to apply.
+
+        Supported built-in methods are:
+
+        - ``"bbknn"``
+        - ``"mnn"``
+        - ``"harmony"``
+        - ``"scanorama"``
+        - ``"combat"``
+
+        Alternatively, provide a custom batch correction function. See
+        :func:`batch_correction` for more information.
+    method_kwargs : dict, default {}
+        Dict with methods as keys. Values are dicts of additional parameters
+        forwarded to the method. See :func:`batch_correction`.
+    keep_layer : Optional[str], default "norm"
+        If not None, store a copy of ``adata.X`` in ``adata.layers[keep_layer]``
+        before applying correction.
+
+    Returns
+    -------
+    dict[str, sc.AnnData]
+        Dictionary of batch corrected AnnData objects. The key is the correction
+        method and the value is the corrected AnnData object.
+
+    Raises
+    ------
+    ValueError
+        If not all methods in ``methods`` are valid.
+    """
+
+    # Ensure that methods can be looped over
+    if isinstance(methods, str):
+        methods = [methods]
+
+    # check method_kwargs keys
+    unknown_keys = set(method_kwargs.keys()) - set(methods)
+    if unknown_keys:
+        raise ValueError(f"Unknown methods in `method_kwargs` keys: {unknown_keys}")
+
+    # Check the existence of packages before running batch_corrections
+    required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "scanorama": "scanorama", "scvi": "scvi"}
+    for method in methods:
+        if method in required_packages:  # not all packages need external tools
+            f = io.StringIO()
+            with redirect_stderr(f):  # make the output of check_module silent; mnnpy prints ugly warnings
+                utils.checker.check_module(required_packages[method])
+
+    # keep .X as layer; will propagate through the batch corrections
+    if keep_layer:
+        if keep_layer in adata.layers:
+            logger.warning(f"A layer with the name '{keep_layer}' already exists. Skipping to avoid layer overwrite.")
+        else:
+            adata.layers[keep_layer] = adata.X.copy()
+
+    # Collect batch correction per method
+    anndata_dict = {'uncorrected': adata.copy()}
+    for method in methods:
+        anndata_dict[method] = batch_correction(adata, batch_key, method, **method_kwargs.setdefault(method, {}))  # batch correction returns the corrected adata
+
+    logger.info("Finished batch correction(s)!")
+
+    return anndata_dict
+
+
+@deco.log_anndata
+@beartype
+def batch_correction(adata: sc.AnnData,  # noqa: C901
+                     batch_key: Union[str, list[str]],
+                     method: Union[batch_methods,
+                                   list[batch_methods],
+                                   Callable] = ["bbknn", "mnn"],
+                     highly_variable: bool = True,
+                     dim_red_kwargs: dict = {},
+                     **kwargs: Any) -> sc.AnnData:
+    """
+    Perform batch correction on the adata object using the 'method' given.
+
+    Different correction methods will perform the batch correction on different aspects of the data,
+    meaning calculations following the correction have to be redone. Here is an overview on the analysis
+    steps until batch correction and where each of the methods is applied:
+
+    Matrix (adata.X) -> Dimension reduction (e.g. PCA) -> Nearest neighbor
+
+    +-----------+----------------------+
+    | Method    | Applied to/ replaces |
+    +===========+======================+
+    | bbknn     | Nearest neighbor     |
+    +-----------+----------------------+
+    | mnn       | Matrix               |
+    +-----------+----------------------+
+    | harmony   | Dimension reduction  |
+    +-----------+----------------------+
+    | scanorama | Dimension reduction  |
+    +-----------+----------------------+
+    | combat    | Matrix               |
+    +-----------+----------------------+
+    | scvi      | Dimension reduction  |
+    +-----------+----------------------+
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        An annotated data matrix object to apply corrections to.
+    batch_key : Union[str, list[str]]
+        The column in adata.obs containing batch information. Alternatively provide a list of batch keys for multi-factor correction.
+        Multi-factor correction is only supported by harmony and scvi. The other methods will give a warning and use the first key!
+    method : str or function
+        Either one of the predefined methods or a custom function for batch correction.
+        Note: The custom function is expected to accept an anndata object as the first parameter and return the batch corrected anndata.
+
+        Available methods:
+            - bbknn
+            - mnn
+            - harmony
+            - scanorama
+            - combat
+            - scvi (ONLY latent space, expression normalization currently not used)
+    highly_variable : bool, default True
+        Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
+    dim_red_kwargs : dict, default {}
+        Arguments to redo the steps following the selected batch correction (see table above). Forwarded to :func:`sctoolbox.tools.dim_reduction.dim_red`.
+        Will default to PCA unless specified otherwise (:code:`{"method": "PCA"}`).
+    **kwargs : Any
+        Additional arguments will be forwarded to the method function.
+        The following parameters are set unless specified to avoid potential issues with the annoy package and processor architecture:
+        - bbknn: `computation="cKDTree"`
+        - scanorama: `approx=False`
+        See here for further information https://github.com/Teichlab/bbknn/issues/60, https://github.com/brianhie/scanorama?tab=readme-ov-file#troubleshooting
+        - scvi:
+            This needs a nested dict to address the three required scvi functions (scvi.model.SCVI.setup_anndata, scvi.model.SCVI, scvi.model.SCVI.train). Use the following format.
+            {"setup_anndata": {layer: "raw"}, "SCVI": {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb", "train": {}}}
+            'layer' will fallback to None.
+            Parameters are from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
+
+    Returns
+    -------
+    sc.AnnData
+        A copy of the anndata with applied batch correction.
+
+    Raises
+    ------
+    ValueError
+        1. If batch_key column is not in adata.obs
+        2. If batch correction method is invalid.
+    KeyError
+        If PCA has not been calculated before running bbknn.
+    """
+
+    if not callable(method):
+        method = method.lower()
+
+    logger.info(f"Running batch correction with '{method}'...")
+
+    # Check that batch_key is in the adata object
+    if ((isinstance(batch_key, list) and any(k not in adata.obs.columns for k in batch_key))
+        or not isinstance(batch_key, list) and batch_key not in adata.obs.columns):
+        batch_key = [k for k in batch_key if k not in adata.obs.columns] if isinstance(batch_key, list) else [batch_key]
+
+        raise ValueError(f"The batch_key(s) {', '.join(batch_key)} are not in adata.obs.columns")
+
+    if isinstance(batch_key, list) and not callable(method) and method not in ["harmony", "scvi"]:
+        logger.warning(f"Got multiple batch keys which is not supported by {method}. Using the first ('{batch_key[0]}') batch key instead.")
+
+        batch_key = batch_key[0]
+
+    # so dim_red_kwargs is unique for each function call
+    dim_red_kwargs = copy.deepcopy(dim_red_kwargs)
+
+    # set default dimension reduction
+    if "method" not in dim_red_kwargs and method not in ["harmony", "scanorama", "scvi"]:
+        dim_red_kwargs["method"] = "PCA"
+
+    # ensure no side effects
+    adata = adata.copy()
+
+    # Run batch correction depending on method
+    if method == "bbknn":
+        import bbknn  # sc.external.pp.bbknn() is broken due to n_trees / annoy_n_trees change
+
+        # Get number of pcs in adata, as bbknn hardcodes n_pcs=50
+        try:
+            n_pcs = adata.obsm["X_pca"].shape[1]
+        except KeyError:
+            raise KeyError("PCA has not been calculated. Please run sc.pp.pca() before running bbknn.")
+
+        # to avoid annoy issues
+        if "computation" not in kwargs:
+            kwargs["computation"] = "cKDTree"
+
+        # Run bbknn
+        adata = bbknn.bbknn(adata, batch_key=batch_key, n_pcs=n_pcs, copy=True, **kwargs)  # bbknn is an alternative to neighbors
+
+    elif method == "mnn":
+        is_sparse = sparse.issparse(adata.X)
+        var_table = adata.var  # var_table before batch correction
+
+        # split adata on batch_key
+        batch_categories = list(set(adata.obs[batch_key]))
+        adatas = [adata[adata.obs[batch_key] == category] for category in batch_categories]
+
+        # Set highly variable genes as var_subset if chosen (and available)
+        var_subset = None
+        if highly_variable and "highly_variable" in adata.var.columns:
+            var_subset = adata.var[adata.var.highly_variable].index
+
+        # give individual adatas to mnn_correct
+        corrected_adatas, _, _ = sce.pp.mnn_correct(adatas, batch_key=batch_key, var_subset=var_subset,
+                                                    batch_categories=batch_categories, do_concatenate=False, **kwargs)
+
+        # Join corrected adatas
+        corrected_adatas = corrected_adatas[0]  # the output is a dict of list ([adata1, adata2, (...)], )
+        adata = sc.concat(corrected_adatas, join="outer", uns_merge="first")
+        adata.var = var_table  # add var table back into corrected adata
+
+        sc.pp.scale(adata)  # from the mnnpy github example
+
+        # convert the matrix to sparse if it was sparse before
+        if is_sparse:
+            adata.X = sparse.csr_matrix(adata.X)
+
+        # dimension reduction and neighbor graph
+        if dim_red_kwargs["method"] == "PCA":
+            dim_red_kwargs.setdefault("method_kwargs", {}).update({"mask_var": "highly_variable" if highly_variable else None})
+        elif dim_red_kwargs["method"] == "LSI":
+            dim_red_kwargs.setdefault("method_kwargs", {}).update({"use_highly_variable": highly_variable})
+
+        dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
+
+    elif method == "harmony":
+        for bk in batch_key if isinstance(batch_key, list) else [batch_key]:  # to ensure this is a list
+            adata.obs[bk] = adata.obs[bk].astype("str")  # harmony expects a batch key as string
+
+        # harmony takes a PCA and corrects it
+        # here we replace the old PCA with the corrected version
+        # LSI is also stored in "X_pca"
+        sce.pp.harmony_integrate(adata, key=batch_key, basis="X_pca", adjusted_basis="X_pca", **kwargs)
+
+        # only redo neighbor graph
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **{k: v for k, v in dim_red_kwargs.items() if k != "subset"})
+
+    elif method == "scanorama":
+        # scanorama expect the batch key in a sorted format
+        # therefore anndata.obs should be sorted based on batch column before this method.
+        original_order = adata.obs.index
+        adata = adata[adata.obs[batch_key].argsort()]  # sort the whole adata to make sure obs is the same order as matrix
+
+        # to avoid annoy issues
+        if "approx" not in kwargs:
+            kwargs["approx"] = False
+
+        # scanorama takes a PCA and corrects it
+        # here we replace the old PCA with the corrected version
+        # LSI is also stored in "X_pca"
+        sce.pp.scanorama_integrate(adata, key=batch_key, basis="X_pca", adjusted_basis="X_pca", **kwargs)
+
+        # only redo neighbour graph
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **{k: v for k, v in dim_red_kwargs.items() if k != "subset"})
+
+        # sort the adata back to the original order
+        adata = adata[original_order]
+
+    elif method == "combat":
+        is_sparse = sparse.issparse(adata.X)
+
+        # run combat
+        sc.pp.combat(adata, key=batch_key, inplace=True, **kwargs)
+
+        # convert the matrix to sparse if it was sparse before
+        if is_sparse:
+            adata.X = sparse.csr_matrix(adata.X)
+
+        dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
+    elif method == "scvi":
+        # TODO don't ignore mask vars meaning only use highly variable genes for correction. See pca mask_var/use_highly_variable
+        if isinstance(batch_key, list):
+            # TODO enable continuous_covariate_keys
+            setup_kwargs = {
+                "batch_key": batch_key[0],
+                "categorical_covariate_keys": batch_key[1:] if len(batch_key) > 1 else None
+            }
+        else:
+            setup_kwargs = {"batch_key": batch_key}
+
+        # use raw layer if present and not given in kwargs. Otherwise fall back to .X (None = use .X)
+        if "raw" in adata.layers.keys():
+            setup_kwargs["layer"] = "raw"
+
+        if "setup_anndata" in kwargs:
+            setup_kwargs.update(kwargs)
+
+        # setup the anndata
+        scvi.model.SCVI.setup_anndata(adata, **setup_kwargs)
+
+        # initialize then train the model
+        # parameters are recommended from https://docs.scvi-tools.org/en/stable/tutorials/notebooks/scrna/harmonization.html#integration-with-scvi
+        scvi_kwargs = {"n_layers": 2, "n_latent": 30, "gene_likelihood": "nb"}
+        if "SCVI" in kwargs:
+            scvi_kwargs.update(kwargs)
+
+        # get the number of components from the dimension reduction parameters
+        if "method_kwargs" in dim_red_kwargs and "n_comps" in dim_red_kwargs["method_kwargs"]:
+            scvi_kwargs["n_latent"] = dim_red_kwargs["method_kwargs"]["n_comps"]
+
+        model = scvi.model.SCVI(adata, **scvi_kwargs)
+        model.train(**(kwargs["train"] if "train" in kwargs else {}))
+
+        # add the corrected latent space to the adata
+        mean, variance = model.get_latent_representation(return_dist=True)
+        adata.obsm["X_pca"] = mean
+        # TODO enable normalized counts; Add as layer?
+        # adata.obsm["X_normalized_scVI"] = model.get_normalized_expression()
+
+        # remove/replace outdated PCA information
+        # remove the PCA loadings there is no equivalent in SCVI as it is non-linear
+        adata.varm.pop("PCs", None)
+        adata.uns["pca"] = {}
+
+        # add a variance_ratio equivalent
+        adata.uns["pca"]["variance"] = variance.mean(axis=0)
+        # I'm using the jensen-shannon distance. It compares the mean variance distr. to the component variance distr.
+        # If both are identical = 0 if they are "maximum" different = 1
+        # This won't add up to 1, like variance ratio of PCA does, but is a reasonable equivalent in the scvi context.
+        # The components are also not sorted by variance
+        adata.uns["pca"]["variance_ratio"] = np.array(list(spatial.distance.jensenshannon(p=variance.mean(axis=1), q=variance[:, i])
+                                                                                          for i in range(variance.shape[1])))
+
+        # only redo neighbor graph
+        # TODO currently assumes SCVI components to follow the same ordering as PCA, and will apply the same component subset
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, **dim_red_kwargs)
+
+    elif callable(method):
+        adata = method(adata, **kwargs)
+
+        dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
+    else:
+        raise ValueError(f"Method '{method}' is not a valid batch correction method.")
+
+    return adata  # the corrected adata object
+
+
+@deco.log_anndata
+@beartype
+def evaluate_batch_effect(adata: sc.AnnData,
+                          batch_key: str | list[str],
+                          obsm_key: str = 'X_umap',
+                          col_name: str = 'LISI_score',
+                          max_dims: int = 5,
+                          perplexity: int = 30,
+                          inplace: bool = False) -> Optional[sc.AnnData]:
+    """
+    Evaluate batch effect methods using LISI.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Anndata object with PCA and umap/tsne for batch evaluation.
+    batch_key : str | list[str]
+        The column(s) in adata.obs containing batch information. Will calculate a score for each given key.
+    obsm_key : str, default 'X_umap'
+        The column in adata.obsm containing coordinates.
+    col_name : str, default 'LISI_score'
+        Column name for storing the LISI score in .obs. Will add a suffix in case of multiple batch keys, e.g. ``X_umap_batchkey1``.
+    max_dims : int, default 5
+        Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
+    perplexity : int, default 30
+        Perplexity for the LISI score calculation.
+    inplace : bool, default False
+        Whether to work inplace on the anndata object.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
+
+    Raises
+    ------
+    KeyError
+        1. If obsm_key is not in adata.obsm.
+        2. If batch_key is no column in adata.obs.
+
+    Notes
+    -----
+    - LISI score is calculated for each cell and it is between 1-n for a data-frame with n categorical variables.
+    - indicates the effective number of different categories represented in the local neighborhood of each cell.
+    - If the cells are well-mixed, then we expect the LISI score to be near n for a data with n batches.
+    - The higher the LISI score is, the better batch correction method worked to normalize the batch effect and mix the cells from different batches.
+    - For further information on LISI: https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
+    """
+
+    # Load LISI
+    utils.checker.check_module("harmonypy")
+    from harmonypy.lisi import compute_lisi
+
+    if not isinstance(batch_key, list):
+        batch_key = [batch_key]
+
+    # Handle inplace option
+    adata_m = adata if inplace else adata.copy()
+
+    # checks
+    if obsm_key not in adata_m.obsm:
+        raise KeyError(f"adata.obsm does not contain the obsm key: {obsm_key}")
+
+    missing = [bk for bk in batch_key if bk not in adata_m.obs]
+    if missing:
+        raise KeyError(f"adata.obs does not contain the batch key(s): {','.join(missing)}")
+
+    # run LISI on all adata objects
+    obsm_matrix = adata_m.obsm[obsm_key][:, :max_dims]
+    lisi_score = compute_lisi(obsm_matrix, adata_m.obs, batch_key, perplexity=perplexity)
+
+    # handle multi-batch
+    if isinstance(batch_key, list):
+        for bk, batch_lisi in zip(batch_key, map(list, zip(*lisi_score))):
+            adata_m.obs[f"{col_name}_{bk}"] = batch_lisi
+    else:
+        adata_m.obs[col_name] = lisi_score.flatten()
+
+    if not inplace:
+        return adata_m
+
+
+@beartype
+def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
+                          batch_key: str | list[str],
+                          obsm_keys: str | list[str] = ['X_pca', 'X_umap'],
+                          threads: Optional[int] = 1,
+                          max_dims: int = 5,
+                          inplace: bool = False) -> Optional[dict[str, sc.AnnData]]:
+    """
+    Evaluate batch correction methods for a dict of anndata objects (using LISI score calculation).
+
+    Parameters
+    ----------
+    adatas : dict[str, sc.AnnData]
+        Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
+        E.g.: {"bbknn": anndata}
+    batch_key : str |list[str]
+        The column(s) in adata.obs containing batch information.
+    obsm_keys : str | list[str], default ['X_pca', 'X_umap']
+        Key(s) to coordinates on which the score is calculated.
+    threads : Optional[int], default 1
+        Number of threads to use for parallelization. Set None to use settings.get_threads().
+    max_dims : int, default 5
+        Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
+    inplace : bool, default False
+        Whether to work inplace on the anndata dict.
+
+    Returns
+    -------
+    Optional[dict[str, sc.AnnData]]
+        Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
+    """
+
+    if threads is None:
+        threads = settings.get_threads()
+
+    if utils.jupyter._is_notebook() is True:
+        from tqdm import tqdm_notebook as tqdm
+    else:
+        from tqdm import tqdm
+
+    if not isinstance(batch_key, list):
+        batch_key = [batch_key]
+
+    # Handle inplace option
+    adatas_m = adatas if inplace else copy.deepcopy(adatas)
+
+    # Ensure that obsm_key can be looped over
+    if isinstance(obsm_keys, str):
+        obsm_keys = [obsm_keys]
+
+    # Evaluate batch effect for every adata
+    if threads == 1:
+
+        pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
+        for adata in adatas_m.values():
+            n_cells = adata.shape[0]
+            perplexity = min(30, int(n_cells / 3))  # adjust perplexity for small datasets
+
+            for obsm in obsm_keys:
+                evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, max_dims=max_dims, perplexity=perplexity, inplace=True)
+                pbar.update()
+    else:
+        utils.checker.check_module("harmonypy")
+        from harmonypy.lisi import compute_lisi
+
+        # TODO why not use evaluate_batch_effect? Move parallel execution to evaluate_batch_effect?
+        pool = mp.Pool(threads)
+        jobs = {}
+        for i, adata in enumerate(adatas_m.values()):
+            n_cells = adata.shape[0]
+            perplexity = min(30, int(n_cells / 3))  # adjust perplexity for small datasets
+
+            for obsm_key in obsm_keys:
+                obsm_matrix = adata.obsm[obsm_key][:, :max_dims]
+                obs_mat = adata.obs[batch_key]
+
+                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, batch_key, perplexity,))
+                jobs[(i, obsm_key)] = job
+        pool.close()
+
+        # Monitor all jobs with a pbar
+        utils.multiprocessing.monitor_jobs(jobs, "Calculating LISI scores")  # waits for all jobs to finish
+        pool.join()
+
+        # Assign results to adata
+        for adata_i, obsm_key in jobs:
+            adata = list(adatas_m.values())[adata_i]
+            lisi_score = jobs[(adata_i, obsm_key)].get()
+
+            # handle multi-batch
+            if isinstance(batch_key, list):
+                for bk, batch_lisi in zip(batch_key, map(list, zip(*lisi_score))):
+                    adata.obs[f"LISI_score_{obsm_key}_{bk}"] = batch_lisi
+            else:
+                adata.obs[f"LISI_score_{obsm_key}"] = lisi_score.flatten()
+
+    if not inplace:
+        return adatas_m

@@ -17,9 +17,15 @@ plt.switch_backend("Agg")
 # ------------------------------ FIXTURES --------------------------------- #
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with processed data and ranked genes.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 
@@ -51,7 +57,13 @@ def adata():
 
 @pytest.fixture
 def pairwise_ranked_genes():
-    """Return a DataFrame of genes ranked in groups."""
+    """Return a DataFrame of genes ranked in groups.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with pairwise gene rankings across groups.
+    """
     return pd.DataFrame(data={"1/2_group": ["C1", "C1", "C2", "C2"],
                               "1/3_group": ["C1", "NS", "C2", "C2"],
                               "2/3_group": ["C1", "C1", "NS", "C2"]},
@@ -60,7 +72,13 @@ def pairwise_ranked_genes():
 
 @pytest.fixture
 def pairwise_ranked_genes_nosig():
-    """Return a DataFrame of genes ranked in groups with none significant."""
+    """Return a DataFrame of genes ranked in groups with none significant.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with no significant genes in any pairwise comparison.
+    """
     return pd.DataFrame(data={"1/2_group": ["NS", "NS", "NS", "NS"],
                               "1/3_group": ["NS", "NS", "NS", "NS"],
                               "2/3_group": ["NS", "NS", "NS", "NS"]},

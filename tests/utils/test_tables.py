@@ -11,7 +11,13 @@ import sctoolbox.utils.tables as tables
 
 @pytest.fixture
 def na_dataframe():
-    """Return DataFrame with columns of multiple types containing NA."""
+    """Return DataFrame with columns of multiple types containing NA.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with columns of multiple types containing NA.
+    """
     data = {'int': [3, 2, 1, np.nan],
             'float': [1.2, 3.4, 5.6, np.nan],
             'string': ['a', 'b', 'c', np.nan],
