@@ -139,7 +139,7 @@ def match_barcodes(adata_mod1: sc.AnnData,
     """
     Match cellbarcodes for multiomics anndatas.
 
-    The the barcode pairs are added to individual obs columns.
+    The barcode pairs are added to individual obs columns.
     The ``anndata.obs.index`` is replaced with a matching unique ID.
 
     Parameters
