@@ -139,11 +139,15 @@ Batch correction
 
 *https://www.10xgenomics.com/analysis-guides/introduction-batch-effect-correction*
 
-SC-Framework supports several batch correction methods. The user selects which to run via *batch_methods*; available options are ``bbknn``, ``mnn``, ``harmony``, ``scanorama``, and ``combat``. Because results can differ considerably between methods, the user reviews the corrected embeddings and selects the most appropriate correction. In addition to annotated embeddings, the Local Inverse Simpson Index (LISI) aids the decision by quantifying the degree of cell mixing with respect to the batch variable. LISI scores are computed using the `Harmony <https://www.nature.com/articles/s41592-019-0619-0#Sec11>`_ implementation.
+SC-Framework supports several batch correction methods. The user selects which to run via *batch_methods*; available options are ``bbknn``, ``mnn``, ``harmony``, ``scanorama``, ``scvi``, and ``combat``. Because results can differ considerably between methods, the user reviews the corrected embeddings and selects the most appropriate correction. In addition to annotated embeddings, the Local Inverse Simpson Index (LISI) aids the decision by quantifying the degree of cell mixing with respect to the batch variable. LISI scores are computed using the `Harmony <https://www.nature.com/articles/s41592-019-0619-0#Sec11>`_ implementation.
 
 .. figure:: image/batch_corr_framework.png
    :alt: anndata_overview() after running batch corrections.
    :width: 60%
+
+Multi-factor batch correction, i.e. correcting multiple levels of batches simulatenously, can be enabled by providing a list of variables for correction via the ``batch_column`` parameter in the batch correction notebooks. A LISI score will be calculated for each batch-level to show detailed correction performance. **Only** ``harmony`` and ``scvi`` support multi-factor correction, the other tools will correct the first level from the list.
+
+From our experience we found ``harmony`` to perform well in most cases, while being resonably fast. A study by `Antonsson & Melsted (2025) <https://doi.org/10.1101/gr.279886.124>`_ supports this by recommending the usage of ``harmony``. Thus we recommend to always consider ``harmony`` when deciding for a batch correction.
 
 Clustering
 ^^^^^^^^^^
