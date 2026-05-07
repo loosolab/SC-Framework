@@ -12,6 +12,7 @@ __all__ = [
     "gsea",
     "highly_variable",
     "marker_genes",
+    "multiomics",
     "qc_filter",
     "velocity",
     "planet_plot"

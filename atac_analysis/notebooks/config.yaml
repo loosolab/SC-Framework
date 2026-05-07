@@ -91,3 +91,10 @@
   log_file: "../logs/palantir_log.txt"
   overwrite_log: True
   report_dir: "../report/palantir/"
+
+"multiomics":
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/multiomics/"
+  log_file: "../logs/multiomics.txt"
+  overwrite_log: True
+  report_dir: "../report/multiomics/" 

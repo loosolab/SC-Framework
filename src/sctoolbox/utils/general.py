@@ -97,7 +97,7 @@ def get_package_versions() -> dict[str, str]:
 
 
 _vip_packages = ["sctoolbox", "scanpy", "anndata", "numpy", "pandas", "peakqc", "scFates", "gseapy",
-                 "pydeseq2", "scvelo", "markerrepo", "scanpro", "uropa", "tobias", "palantir"]
+                 "pydeseq2", "scvelo", "markerrepo", "scanpro", "uropa", "tobias", "palantir", "muon"]
 
 
 @beartype

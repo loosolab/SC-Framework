@@ -77,8 +77,8 @@ keywords = [
 ]
 dependencies = [
         'pysam',
-        'matplotlib',
-        'matplotlib_venn',
+        'matplotlib>=3.8.4',  # to speed up installation
+        'matplotlib_venn>=1.1.2',  # to speed up installation
         'scanpy[leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
@@ -94,10 +94,9 @@ dependencies = [
         'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
         'scrublet',
         'IPython',
-        'openpyxl',
-        'ipympl',
+        'ipympl>=0.8.2',  # to speed up installation 
         'apybiomart',
-        'requests',
+        'requests>=2.32.5',  # to speed up installation
         'python-gitlab',
         'psutil',
         'deprecation',
@@ -110,7 +109,7 @@ dependencies = [
         'boto3',
         'Jinja2',
         'scikit-image',
-        'PyGithub',
+        'PyGithub'
 ]
 
 [project.optional-dependencies]
@@ -121,7 +120,7 @@ converter = [
 atac = [
     'uropa',
     'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
-    'pygenometracks>=3.8',
+    'pygenometracks>=3.9',
     'peakqc',
     'tobias>=0.17.2',  # to avoid installation error
     'pyranges'
@@ -136,12 +135,14 @@ batch_correction = [
     'scvi-tools'
 ]
 receptor_ligand = [
-    'pycirclize>=1.7.1',
-    'liana',
-    'networkx>=3.5'
+    'pycirclize>=1.10.1',
+    'liana>=1.7.0',  # to speed up installation
+    'networkx>=3.5',
+    'plotnine>=0.15.2'  # is a liana dependency; set to speed up installation
 ]
 pseudotime = [
-    'scFates>=1.2.4'  # https://github.com/LouisFaure/scFates/issues/54; https://github.com/LouisFaure/scFates/issues/58
+    'scFates>=1.2.4',  # https://github.com/LouisFaure/scFates/issues/54; https://github.com/LouisFaure/scFates/issues/58
+    'adjustText>=1.3.0'  # is a scFates dependency; set to speed up installation
 ]
 gsea = [
     'gseapy>=1.2.1'  # https://github.com/zqfang/GSEApy/issues/353
@@ -168,13 +169,17 @@ pilot = [
 #   'pilotpy @ git+https://github.com/loosolab/PILOT_scframework.git',  # PyPI doesn't accept git packages
     'palantir>=1.4.4'
 ]
+multiome = [
+    'muon>=0.1.7',
+    'mofapy2'
+]
 # core and downstream are intended to install commonly used dependencies
 # e.g. scar is deliberately skipped to to save disk space
 core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity,palantir,pilot]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity,palantir,pilot,multiome]'
 ]
 # all is intended to install everything
 all = [
@@ -186,7 +191,8 @@ test = [
     "pytest",
     "pytest-mock",
     "pytest-cov",
-    "pytest-html"
+    "pytest-html",
+    "openpyxl"
 ]
 docs = [
     "sphinx",

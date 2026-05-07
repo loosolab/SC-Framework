@@ -4,6 +4,7 @@ import scanpy as sc
 import functools
 import pandas as pd
 import matplotlib
+import muon as mu
 
 from beartype.typing import Callable, Any
 from beartype import beartype
@@ -35,12 +36,12 @@ def log_anndata(func: Callable) -> Callable:
         # find anndata object within parameters (if there are more use the first one)
         adata = None
         for param in list(args) + list(kwargs.values()):
-            if isinstance(param, sc.AnnData):
+            if isinstance(param, sc.AnnData) or isinstance(param, mu.MuData):
                 adata = param
                 break
 
         if adata is None:
-            raise ValueError("Can only log functions that receive an AnnData object as parameter.")
+            raise ValueError("Can only log functions that receive an AnnData or MuData object as parameter.")
 
         # init adata if necessary
         if "sctoolbox" not in adata.uns.keys():
@@ -57,6 +58,7 @@ def log_anndata(func: Callable) -> Callable:
         args_repr = {f"arg{i + 1}": element for i, element in enumerate(args)}  # create dict with arg1, arg2, ... as keys instead of list to prevent errors with wrongly shaped arrays
         kwargs_repr = kwargs
         convert = {sc.AnnData: repr,
+                   mu.MuData: repr,
                    tuple: list,
                    matplotlib.axes._axes.Axes: str,
                    dict: str}  # nested dicts are not allowed
