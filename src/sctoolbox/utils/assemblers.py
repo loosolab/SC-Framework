@@ -493,10 +493,10 @@ def from_mtx(path: str | Dict[str, Tuple[str, str, str] | Tuple[str, str]],  # n
             adata_objects[-1].obs["key"] = key
     else:
         # initialize path as path object
-        path = Path(path)
+        path_obj = Path(path)
 
         # recursively find mtx files
-        mtx_files = list(path.rglob(mtx))
+        mtx_files = list(path_obj.rglob(mtx))
 
         if not mtx_files:
             raise ValueError('No files were found with the given directory and suffixes.')
@@ -526,7 +526,7 @@ def from_mtx(path: str | Dict[str, Tuple[str, str, str] | Tuple[str, str]],  # n
             )
 
             # add relative path to obs as it could contain e.g. sample information
-            adata_objects[-1].obs["rel_path"] = str(m.parents[0].relative_to(path))
+            adata_objects[-1].obs["rel_path"] = str(m.parents[0].relative_to(path_obj))
 
     # create final adata
     if len(adata_objects) > 1:
