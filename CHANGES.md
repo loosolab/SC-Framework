@@ -1,7 +1,7 @@
 # Changelog
 
-## 0.15.1 (08.05.2026)
-- from_mtx: Bugfix
+## 0.15.1 (08-05-2026)
+- from_mtx: Fix read option when providing str instead of dict
 
 ## 0.15.0 (07-05-2026)
 - Readthedocs overhaul (#312, #239, #351)
