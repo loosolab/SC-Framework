@@ -293,6 +293,11 @@ def join_modalities(adata_list: List[sc.AnnData],
     if len(adata_list) != len(modality_list):
         raise ValueError("Length of adata_list and modality_list does not match.")
 
+    # Set index name to None. Index names can break the workflow furhter downstream
+    for adata in adata_list:
+        adata.obs.index.name = None
+        adata.var.index.name = None
+
     # Create mudata object from anndata objects for modality 1 and modality 2
     mdata = mu.MuData(dict(zip(modality_list, adata_list)))
 
