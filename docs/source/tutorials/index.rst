@@ -19,4 +19,11 @@ Follow the links below to see exemplary multi-notebook analysis workflows.
 
    scATAC-seq_Analysis/index
 
+**Multi-omics Tutorial**
+
+.. toctree::
+   :maxdepth: 2
+
+   Multiome_Analysis/index
+
 **More example analysis can be found** `here <https://github.com/loosolab/Code_Schultheis_et_al_2025_SC-Framework>`_ **.**
