@@ -145,7 +145,7 @@ The images can be found in our GitLab `Container registry <https://gitlab.gwdg.d
 
 .. code-block:: bash
 
-  docker docker run --rm -d -p 8123:8080 --volume /path/on/your/machine:/data docker.gitlab.gwdg.de/loosolab/software/sc_framework:latest bash -c "jupyter-notebook --allow-root --ip=0.0.0.0 --notebook-dir=/data --no-browser --NotebookApp.token='' --debug --port 8080"
+  docker run --rm -d -p 8123:8080 --volume /path/on/your/machine:/data docker.gitlab.gwdg.de/loosolab/software/sc_framework:latest bash -c "jupyter-notebook --allow-root --ip=0.0.0.0 --notebook-dir=/data --no-browser --NotebookApp.token='' --debug --port 8080"
 
 This will start a docker container with a Jupyter notebook server that has the SC-Framework analysis environment.
 
