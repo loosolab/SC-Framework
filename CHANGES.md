@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.15.1 (08-05-2026)
+- Reduce package build size (#448)
+
 ## 0.15.0 (07-05-2026)
 - Readthedocs overhaul (#312, #239, #351)
 - add multi-factor batch correction support and add the scvi correction (#272)

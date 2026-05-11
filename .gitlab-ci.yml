@@ -120,6 +120,18 @@ build-package:
   script:
     # build the package and upload to the GitLab package registry
     - python -m build --sdist --wheel  # build the package
+    # fail early if any dist file exceeds PyPI's 100 MB per-file upload limit
+    - |
+      PYPI_LIMIT_MB=100
+      for f in dist/*; do
+        size_mb=$(du -m "$f" | cut -f1)
+        echo "$f: ${size_mb} MB"
+        if [ "$size_mb" -gt "$PYPI_LIMIT_MB" ]; then
+          echo "ERROR: $f (${size_mb} MB) exceeds PyPI upload limit of ${PYPI_LIMIT_MB} MB"
+          exit 1
+        fi
+      done
+    # upload to gitlab package registry
     - python -m twine upload --verbose --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*  # upload the package to the GitLab package registry
     # collect the current changes and export as variable
     - changelog=$(python scripts/collect_changes.py CHANGES.md $BUILD_VERSION)
