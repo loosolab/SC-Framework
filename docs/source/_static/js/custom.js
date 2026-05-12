@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'Tutorial_ligand_receptor.ipynb': [2, 4, 6, 8, 10, 13, 15],
         'Tutorial_marker.ipynb': [2, 4, 6, 8, 17, 21],
         'Tutorial_proportion.ipynb': [2, 4],
-        'Tutorial_01_mullti.ipynb': [2, 5, 8, 17, 21, 23, 25, 27, 29]
+        'Tutorial_mullti.ipynb': [2, 5, 8, 17, 21, 23, 25, 27, 29]
         // add other notebooks here
     };
 

@@ -6,4 +6,4 @@ For the multiomics analysis, we will download the data and run the multi-omics n
     :maxdepth: 1
 
     Tutorial_00
-    Tutorial_01_multi
+    Tutorial_multi
