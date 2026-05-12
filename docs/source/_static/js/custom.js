@@ -1,4 +1,5 @@
-document.addEventListener('DOMContentLoaded', function () {
+window.addEventListener('load', function () {
+
     // Map notebook filenames (or partial URL) to an array of zero-based cell indexes to highlight
     const highlightMap = {
         'Tutorial_00.ipynb': [1],
