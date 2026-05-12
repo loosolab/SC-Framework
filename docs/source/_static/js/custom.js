@@ -1,4 +1,5 @@
-document.addEventListener('DOMContentLoaded', function () {
+window.addEventListener('load', function () {
+
     // Map notebook filenames (or partial URL) to an array of zero-based cell indexes to highlight
     const highlightMap = {
         'Tutorial_00.ipynb': [1],
@@ -9,7 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
         'Tutorial_annotation.ipynb': [3, 6, 9, 11],
         'Tutorial_ligand_receptor.ipynb': [2, 4, 6, 8, 10, 13, 15],
         'Tutorial_marker.ipynb': [2, 4, 6, 8, 17, 21],
-        'Tutorial_proportion.ipynb': [2, 4]
+        'Tutorial_proportion.ipynb': [2, 4],
+        'Tutorial_mullti.ipynb': [2, 5, 8, 17, 21, 23, 25, 27, 29]
         // add other notebooks here
     };
 
@@ -23,11 +25,35 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     } 
 
-    // Select code cells in the page — adjust selector if needed for your output format
-    let all_cells = document.querySelectorAll('.input_area')
-    let selection = indexesToColor
+    function applyHighlights() {
 
-    let sel_cells = selection.map(x=>all_cells[x]);
-    let ca = sel_cells.map(e=>Array.from(e.querySelectorAll('.highlight'))).flat();
-    ca.forEach(e=>e.style.background="powderblue")
+        // ── Use the outer container instead ───────────────────────────────────
+        const all_cells = document.querySelectorAll('div.nbinput.docutils');
+        console.log(`Found ${all_cells.length} cells`);
+
+        // Safety check
+        const maxIndex = Math.max(...indexesToColor);
+        if (all_cells.length < maxIndex + 1) {
+            console.warn(`Expected ${maxIndex + 1} cells, found ${all_cells.length}`);
+            return false;
+        }
+
+        indexesToColor.forEach(i => {
+            const cell = all_cells[i];
+
+            // ── Only select the code area, NOT the prompt ─────────────────────
+            const code_area = cell.querySelector('.input_area.highlight-ipython3');
+            if (code_area) {
+                const highlights = code_area.querySelectorAll('.highlight');
+                highlights.forEach(h => h.style.background = "powderblue");
+            } else {
+                console.warn(`No input_area found in cell ${i}`);
+            }
+        });
+
+        return true;
+    }
+
+    // Try immediately
+    if (applyHighlights()) return;
 });
