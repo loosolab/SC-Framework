@@ -25,11 +25,35 @@ window.addEventListener('load', function () {
         return;
     } 
 
-    // Select code cells in the page — adjust selector if needed for your output format
-    let all_cells = document.querySelectorAll('.input_area')
-    let selection = indexesToColor
+    function applyHighlights() {
 
-    let sel_cells = selection.map(x=>all_cells[x]);
-    let ca = sel_cells.map(e=>Array.from(e.querySelectorAll('.highlight'))).flat();
-    ca.forEach(e=>e.style.background="powderblue")
+        // ── Use the outer container instead ───────────────────────────────────
+        const all_cells = document.querySelectorAll('div.nbinput.docutils');
+        console.log(`Found ${all_cells.length} cells`);
+
+        // Safety check
+        const maxIndex = Math.max(...indexesToColor);
+        if (all_cells.length < maxIndex + 1) {
+            console.warn(`Expected ${maxIndex + 1} cells, found ${all_cells.length}`);
+            return false;
+        }
+
+        indexesToColor.forEach(i => {
+            const cell = all_cells[i];
+
+            // ── Only select the code area, NOT the prompt ─────────────────────
+            const code_area = cell.querySelector('.input_area.highlight-ipython3');
+            if (code_area) {
+                const highlights = code_area.querySelectorAll('.highlight');
+                highlights.forEach(h => h.style.background = "powderblue");
+            } else {
+                console.warn(`No input_area found in cell ${i}`);
+            }
+        });
+
+        return true;
+    }
+
+    // Try immediately
+    if (applyHighlights()) return;
 });
