@@ -11,7 +11,7 @@ window.addEventListener('load', function () {
         'Tutorial_ligand_receptor.ipynb': [2, 4, 6, 8, 10, 13, 15],
         'Tutorial_marker.ipynb': [2, 4, 6, 8, 17, 21],
         'Tutorial_proportion.ipynb': [2, 4],
-        'Tutorial_mullti.ipynb': [2, 5, 8, 17, 21, 23, 25, 27, 29]
+        'Tutorial_multi.ipynb': [1, 4, 7, 16, 20, 22, 24, 26, 28]
         // add other notebooks here
     };
 
