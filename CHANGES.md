@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.15.1 (08-05-2026)
+## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
 - Reduce package build size (#448)
 - link guidance.rst in the notebokks (#450)
