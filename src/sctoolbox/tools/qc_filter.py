@@ -57,17 +57,12 @@ def calculate_qc_metrics(adata: sc.AnnData,
     inplace : bool, default False
         If the anndata object should be modified in place.
     **kwargs : Any
-        Additional parameters forwarded to scanpy.pp.calculate_qc_metrics.
+        Additional parameters forwarded to `scanpy.pp.calculate_qc_metrics <https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html>`_.
 
     Returns
     -------
     Optional[sc.AnnData]
         Returns anndata object with added quality metrics to .obs and .var. Returns None if `inplace=True`.
-
-    See Also
-    --------
-    scanpy.pp.calculate_qc_metrics
-        https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html
 
     Examples
     --------
@@ -122,30 +117,30 @@ def predict_cell_cycle(adata: sc.AnnData,  # noqa: C901
     adata : sc.AnnData
         Anndata object to predict cell cycle on.
     species : Optional[str]
-        The species of data. Available species are: human, mouse, rat and zebrafish.
-        If both s_genes and g2m_genes are given, set species=None,
+        The species of data. Available species are: **human**, **mouse**, **rat** and **zebrafish**.
+        If both `s_genes` and `g2m_genes` are given, set ``species=None``,
         otherwise species is ignored.
     s_genes : Optional[str | list[str]], default None
         If no species is given or desired species is not supported, you can provide
         a list of genes for the S-phase or a txt file containing one gene in each row.
-        If only s_genes is provided and species is a supported input, the default
-        g2m_genes list will be used, otherwise the function will not run.
+        If only `s_genes` is provided and species is a supported input, the default
+        `g2m_genes` list will be used, otherwise the function will not run.
     g2m_genes :  Optional[str | list[str]], default None
         If no species is given or desired species is not supported, you can provide
         a list of genes for the G2M-phase or a txt file containing one gene per row.
-        If only g2m_genes is provided and species is a supported input, the default
-        s_genes list will be used, otherwise the function will not run.
+        If only `g2m_genes` is provided and species is a supported input, the default
+        `s_genes` list will be used, otherwise the function will not run.
     groupby : Optional[str], default None
-        Name of a column in adata.obs to split the bar plot showing counts and proportions of each phase.
+        Name of a column in ``adata.obs`` to split the bar plot showing counts and proportions of each phase.
         If None, the plot shows cell counts per phase.
     plot : bool, default True
         Plot a bar plot to show counts of cells in each phase.
     gene_column : Optional[str], default None
-        Name of the column in adata.var that contains the gene names. Uses adata.var.index as default.
+        Name of the column in ``adata.var`` that contains the gene names. Uses ``adata.var.index`` as default.
     save : Optional[str], default None
         Path to save the plot.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Name of the output file used for report creation. Will be silently skipped if ``sctoolbox.settings.report_dir`` is None.
     inplace : bool, default True
         if True, add new columns to the original anndata object.
 
@@ -157,11 +152,12 @@ def predict_cell_cycle(adata: sc.AnnData,  # noqa: C901
     Raises
     ------
     ValueError
-        1: If s_genes or g2m_genes is not None and not of type list.
-        2: If no cellcycle genes available for the given species.
-        3. If given species is not supported and s_genes or g2m_genes are not given.
+        - `s_genes` or `g2m_genes` is neither None nor of type list.
+        - No cellcycle genes are available for the given species.
+        - Given species is not supported and neither `s_genes` nor `g2m_genes` are given.
+
     FileNotFoundError
-        If the s_genes or g2m_genes file can not be found.
+        The s_genes or `g2m_genes` file can not be found.
     """
 
     if not inplace:
@@ -272,8 +268,8 @@ def estimate_doublets(adata: sc.AnnData,  # noqa: C901
     """
     Estimate doublet cells using scrublet.
 
-    Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
-    as well as a "scrublet" key in adata.uns.
+    Adds additional columns `doublet_score` and `predicted_doublet` in ``adata.obs``,
+    as well as a `scrublet` key in ``adata.uns``.
 
     Parameters
     ----------
@@ -291,13 +287,13 @@ def estimate_doublets(adata: sc.AnnData,  # noqa: C901
         Key in adata.obs to use for batching during doublet estimation. If threads > 1,
         the adata is split into separate runs across threads. Otherwise each batch is run separately.
     threads : Optional[int], default 4
-        Number of threads to use. None to use settings.get_threads.
+        Number of threads to use. None to use ``settings.get_threads``.
     fill_na : bool, default True
-        If True, replaces NA values returned by scrublet with 0 and False. Scrublet returns NA if it cannot calculate
+        If True, replaces NA values returned by scrublet with 0 and False. Scrublet returns `NA` if it cannot calculate
         a doublet score. Keep in mind that this does not mean that it is no doublet.
         By setting this parameter true it is assmuned that it is no doublet.
     **kwargs : Any
-        Additional arguments are passed to scanpy.external.pp.scrublet.
+        Additional arguments are passed to `scanpy.pp.scrublet <https://scanpy.readthedocs.io/en/stable/api/generated/scanpy.pp.scrublet.html>`_.
 
     Returns
     -------
@@ -411,7 +407,7 @@ def _run_scrublet(adata: sc.AnnData,
     threshold : float, default 0.25
         Threshold for doublet detection.
     **kwargs : Any
-        Additional arguments are passed to scanpy.external.pp.scrublet.
+        Additional arguments are passed to `scanpy.pp.scrublet <https://scanpy.readthedocs.io/en/stable/api/generated/scanpy.pp.scrublet.html>`_.
 
     Returns
     -------
@@ -452,14 +448,14 @@ def adjust_doublet_threshold(adata: sc.AnnData,
                              prediction_col: str = "predicted_doublet",
                              inplace: bool = True) -> Optional[sc.AnnData]:
     """
-    Add a boolean 'predicted_doublet' column to adata.obs based on a threshold.
+    Add a boolean `predicted_doublet` column to ``adata.obs`` based on a threshold.
 
     Parameters
     ----------
     adata : anndata.AnnData
-        AnnData object containing a 'doublet_score' column in adata.obs.
+        AnnData object containing a `doublet_score` column in adata.obs.
     threshold : float
-        Doublet score threshold. Cells with score > threshold are marked as doublets.
+        Doublet score threshold. Cells with ``score > threshold`` are marked as doublets.
     score_col : str, default 'doublet_score'
         Column containing doublet scores (float).
     prediction_col : str, default 'predicted_doublet'
@@ -476,8 +472,8 @@ def adjust_doublet_threshold(adata: sc.AnnData,
     Raises
     ------
     KeyError
-        If adata.obs does not have the column'doublet_score'.
-        If 'scrublet' is not in  adata.uns.
+        If ``adata.obs`` does not have the column `doublet_score`.
+        If `scrublet` is not in  ``adata.uns``.
     """
     if score_col not in adata.obs.columns:
         raise KeyError(f"Column '{score_col}' not found in adata.obs")
@@ -506,18 +502,18 @@ def predict_sex(adata: sc.AnnData,  # noqa: C901
                 report: Optional[str] = None,
                 **kwargs: Any) -> None:
     """
-    Predict sex based on expression of Xist (or another gene).
+    Predict sex based on expression of `Xist` (or another gene).
 
     Parameters
     ----------
     adata : sc.AnnData
         An anndata object to predict sex for.
     groupby : str
-        Column in adata.obs to group by.
+        Column in ``adata.obs`` to group by.
     gene : str, default "Xist"
         Name of a female-specific gene to use for estimating Male/Female split.
     gene_column : Optional[str], default None
-        Name of the column in adata.var that contains the gene names. If not provided, adata.var.index is used.
+        Name of the column in ``adata.var`` that contains the gene names. If not provided, ``adata.var.index`` is used.
     threshold : float, default 0.3
         Threshold for the minimum fraction of cells expressing the gene for the group to be considered "Female".
     plot : bool, default True
@@ -525,13 +521,13 @@ def predict_sex(adata: sc.AnnData,  # noqa: C901
     save : Optional[str], default None
         If provided, the plot will be saved to this path.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Name of the output file used for report creation. Will be silently skipped if ``sctoolbox.settings.report_dir`` is None.
     **kwargs : Any
-        Additional arguments are passed to scanpy.pl.violin.
+        Additional arguments are passed to `scanpy.pl.violin <https://scanpy.readthedocs.io/en/1.10.x/generated/scanpy.pl.violin.html>`_.
 
     Notes
     -----
-    adata.X will be converted to numpy.ndarray if it is of type numpy.matrix.
+    ``adata.X`` will be converted to ``numpy.ndarray`` if it is of type ``numpy.matrix``.
     """
 
     # Normalize data before estimating expression
@@ -633,7 +629,7 @@ def gmm_threshold(data: npt.ArrayLike,
 
     The function will fit a gaussian mixture model, and find the threshold
     based on the mean and standard deviation (SD) of the largest mixture in the model.
-    The threshold is calculates as mean(largest component) +/- SD * n.
+    The threshold is calculates as ``mean(largest component) +/- SD * n``.
 
     The number of mixtures aka components is estimated using the Bayesian information criterion (BIC) criterion.
 
@@ -744,7 +740,7 @@ def mad_threshold(data: npt.ArrayLike,
     """
     Compute an automatic threshold using the median absolute deviation (MAD).
 
-    The threshold is calculated as median(data) -/+ MAD * n.
+    The threshold is calculated as ``median(data) -/+ MAD * n``.
 
     Parameters
     ----------
@@ -870,7 +866,7 @@ def thresholds_as_table(threshold_dict: dict[str, dict[Union[int, float, str], U
     threshold_dict : dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]]
         Dictionary with thresholds.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Name of the output file used for report creation. Will be silently skipped if ``sctoolbox.settings.report_dir`` is None.
 
     Returns
     -------
@@ -1060,7 +1056,7 @@ def get_thresholds(adata: sc.AnnData,  # noqa: C901
     Notes
     -----
     - Metrics that are not present in the :class:`~anndata.AnnData` object are removed with a warning.
-    - A warning is emitted if thresholds stored in ``adata`` are detected (unless``ignore_stored=True``).
+    - A warning is emitted if thresholds stored in ``adata`` are detected (unless ``ignore_stored=True``).
     """
     # remove keys not present in the adata
     manual_thresholds = _match_columns(adata=adata, d=manual_thresholds, which=which)
@@ -1233,7 +1229,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
     overwrite : bool, default False
         Set to overwrite previously applied filters.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Name of the output file used for report creation. Will be silently skipped if ``sctoolbox.settings.report_dir`` is None.
 
     Returns
     -------
@@ -1349,15 +1345,15 @@ def _filter_object(adata: sc.AnnData,  # noqa: C901
         Whether to update the anndata object inplace.
     name : Optional[str | list[str]], default None
         Name of the applied filter.
-        Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
-        A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
-        If the given name already exists a RuntimeError is raised unless `overwrite=True`.
+        Will create a report in ``adata.uns['sctoolbox']['report']['filter'][<which>]`` containing the values given in `value`.
+        A list will be treated as a path e.g. ``['a', 'b']`` will resolve to ``adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b']``.
+        If the given name already exists a RuntimeError is raised unless ``overwrite=True``.
     value : Optional[Dict], default None
         The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Name of the output file used for report creation. Will be silently skipped if ``sctoolbox.settings.report_dir`` is None.
 
     Returns
     -------
@@ -1370,7 +1366,7 @@ def _filter_object(adata: sc.AnnData,  # noqa: C901
         - Filter is a non existent column name or not of type boolean.
         - The boolean filter length is unequal to the appropriate AnnData dimension.
     RuntimeError
-        Raised if a previous filtering is detected in adata.uns['sctoolbox']['report']['filter'][<which>] and overwrite = False.
+        Raised if a previous filtering is detected in ``adata.uns['sctoolbox']['report']['filter'][<which>]`` and ``overwrite = False``.
     """
     report_path = _uns_report_path + [which]
     if name:
@@ -1506,15 +1502,15 @@ def filter_cells(adata: sc.AnnData,
         If True, filter inplace. If False, return filtered adata object.
     name : Optional[str | list[tr]], default None
         Name of the applied filter.
-        Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
-        A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
-        If the given key already exists a RuntimeError is raised unless `overwrite=True`.
+        Will create a report in ``adata.uns['sctoolbox']['report']['filter'][<which>]`` containing the values given in `value`.
+        A list will be treated as a path e.g. ``['a', 'b']`` will resolve to ``adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b']``.
+        If the given key already exists a RuntimeError is raised unless ``overwrite=True``.
     value : Optional[Dict], default None
         The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Name of the output file used for report creation. Will be silently skipped if ``sctoolbox.settings.report_dir`` is None.
 
     Returns
     -------
@@ -1550,15 +1546,15 @@ def filter_genes(adata: sc.AnnData,
         If True, filter inplace. If False, return filtered adata object.
     name : Optional[str | list[tr]], default None
         Name of the applied filter.
-        Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
-        A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
+        Will create a report in ``adata.uns['sctoolbox']['report']['filter'][<which>]`` containing the values given in `value`.
+        A list will be treated as a path e.g. ``['a', 'b']`` will resolve to ``adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b']``.
         If the given key already exists a RuntimeError is raised unless `overwrite=True`.
     value : Optional[Dict], default None
         The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Name of the output file used for report creation. Will be silently skipped if ``sctoolbox.settings.report_dir`` is None.
 
     Returns
     -------
@@ -1590,7 +1586,7 @@ def denoise_data(adata: sc.AnnData,
     adata_raw : sc.AnnData
         Raw anndata object with all droplets
     feature_type : Literal["Gene Expression", "Peaks", "CRISPR Guide Capture", "Multiplexing Capture"], default "Gene Expression"
-        Type of data e.g. Gene Expression for scRNA, Peaks for scATAC. If None, the values found in column adata.var['feature_types'] are used.
+        Type of data e.g. Gene Expression for scRNA, Peaks for scATAC. If None, the values found in column ``adata.var['feature_types']`` are used.
     epochs : int, default 150
         Number of iterations to train the model
     prob : float, default 0.995
@@ -1602,7 +1598,7 @@ def denoise_data(adata: sc.AnnData,
     overwrite : bool, default False
         Set to perform denoising on top of existing denoising.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Name of the output file used for report creation. Will be silently skipped if ``sctoolbox.settings.report_dir`` is None.
 
     Returns
     -------
@@ -1612,10 +1608,10 @@ def denoise_data(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        When feature_type is None and adata.var does not have column 'feature_types'.
-        When feature_type is None and features in adata.var['feature_types'] are not supported.
+        When feature_type is None and ``adata.var`` does not have column 'feature_types'.
+        When feature_type is None and features in ``adata.var['feature_types']`` are not supported.
     RuntimeError
-        Raised if a previous denoising is detected in adata.uns['sctoolbox']['report']['filter']['denoise'] and overwrite = False.
+        Raised if a previous denoising is detected in ``adata.uns['sctoolbox']['report']['filter']['denoise']`` and ``overwrite = False``.
     """
     utils.checker.check_module("scar", "scAR is available on https://github.com/Novartis/scar. To install do e.g. 'pip install scar@git+https://github.com/Novartis/scar.git'.")
     import scar

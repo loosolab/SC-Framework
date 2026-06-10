@@ -21,6 +21,7 @@ def adata_with_batch(adata_fun_scope):
         AnnData object with batch annotation and highly variable genes.
     """
     adata_fun_scope.obs['batch'] = (["a", "b"] * ((len(adata_fun_scope) // 2) + 1))[:len(adata_fun_scope)]
+    adata_fun_scope.obs['batch2'] = (["c", "d", "e"] * 100)[:len(adata_fun_scope)]
 
     sc.pp.highly_variable_genes(adata_fun_scope)
 
@@ -128,7 +129,7 @@ def test_wrap_corrections(adata_with_batch):
         assert "test" in a.layers
 
 
-@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])
+@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])  # TODO excluded "scvi" due to runtime; may be mocked in the future
 def test_batch_correction(adata_with_batch, method):
     """Test if batch correction returns an anndata."""
 
@@ -139,12 +140,14 @@ def test_batch_correction(adata_with_batch, method):
     assert adata_with_batch is not adata_corrected
 
 
-def test_evaluate_batch_effect(adata_with_batch):
+@pytest.mark.parametrize("key", ["batch", ["batch", "batch2"]])
+def test_evaluate_batch_effect(adata_with_batch, key):
     """Test if AnnData containing LISI column in .obs is returned."""
-    ad = tools.norm_correct.evaluate_batch_effect(adata_with_batch, 'batch')
+    ad = tools.norm_correct.evaluate_batch_effect(adata_with_batch, batch_key=key)
 
-    assert isinstance(ad, sc.AnnData)
-    assert "LISI_score" in ad.obs
+    ad_type = type(ad).__name__
+    assert ad_type == "AnnData"
+    assert ad.obs.columns.str.startswith("LISI_score").any()
 
 
 @pytest.mark.parametrize("key", ["a", "b"])
@@ -157,8 +160,9 @@ def test_evaluate_batch_effect_keyerror(adata_with_batch, key):
         tools.norm_correct.evaluate_batch_effect(adata_with_batch, batch_key=key)
 
 
-def test_wrap_batch_evaluation(adata_batch_dict):
+@pytest.mark.parametrize("key", ["batch", ["batch", "batch2"]])
+def test_wrap_batch_evaluation(adata_batch_dict, key):
     """Test if DataFrame containing LISI column in .obs is returned."""
-    adata_dict = tools.norm_correct.wrap_batch_evaluation(adata_batch_dict, 'batch', inplace=False)
+    adata_dict = tools.norm_correct.wrap_batch_evaluation(adata_batch_dict, key, inplace=False)
     assert isinstance(adata_dict, dict)
     assert isinstance(adata_dict['adata'], sc.AnnData)

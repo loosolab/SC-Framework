@@ -72,7 +72,7 @@ The analysis was performed with the SC-Framework (Schultheis et al., doi: 10.528
 {%- endif -%}
 {#- ----- cell type annotation notebook -#}
 {%- if args["annotation"] -%}
-    Cell groups were annotated using the SC-Frameworks MarkerRepo (https://gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features), a tool to identify cell types based on matches between marker genes and its internal database. {##} 
+    Cell groups were annotated using the SC-Frameworks MarkerRepo (https://github.com/loosolab/MarkerRepo), a tool to identify cell types based on matches between marker genes and its internal database. {##} 
 {%- endif -%}
 {#- ----- GSEA -#}
 {%- if args["GSEA"] -%}

@@ -120,6 +120,18 @@ build-package:
   script:
     # build the package and upload to the GitLab package registry
     - python -m build --sdist --wheel  # build the package
+    # fail early if any dist file exceeds PyPI's 100 MB per-file upload limit
+    - |
+      PYPI_LIMIT_MB=100
+      for f in dist/*; do
+        size_mb=$(du -m "$f" | cut -f1)
+        echo "$f: ${size_mb} MB"
+        if [ "$size_mb" -gt "$PYPI_LIMIT_MB" ]; then
+          echo "ERROR: $f (${size_mb} MB) exceeds PyPI upload limit of ${PYPI_LIMIT_MB} MB"
+          exit 1
+        fi
+      done
+    # upload to gitlab package registry
     - python -m twine upload --verbose --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*  # upload the package to the GitLab package registry
     # collect the current changes and export as variable
     - changelog=$(python scripts/collect_changes.py CHANGES.md $BUILD_VERSION)
@@ -276,7 +288,7 @@ test coverage:
     needs: [get-container-tag]
     coverage: '/TOTAL.*\s(\d*.\d*\%)/'
     before_script:
-      - pip install .[all]
+      - pip install .[all] --group test
       - pip install git+https://github.com/Novartis/scar.git  # install scar here to test related functions. Should be removed if scar is available on conda and PyPI
     script:
       - echo $DYNAMIC_IMAGE_TAG
@@ -493,18 +505,12 @@ build-pages:
       artifacts: true
   stage: deploy
   before_script:
-    - pip install .[all]
+    - pip install .[all] --group docs
     - git submodule init
     - git submodule update
   script:
     - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
     - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
-    - pip install sphinx sphinx-rtd-theme
-    - pip install sphinx-exec-code
-    - pip install nbsphinx
-    - pip install nbsphinx_link
-    - pip install myst-parser
-    - pip install "docutils<=0.21"  # pinned until https://github.com/vidartf/nbsphinx-link/issues/25 is fixed
     - cd docs
     - make html
   artifacts:

@@ -354,7 +354,11 @@ def subset_PCA(adata: sc.AnnData,
         select = [i - 1 for i in select]
 
         adata.obsm["X_pca"] = adata.obsm["X_pca"][:, select]
-        adata.varm["PCs"] = adata.varm["PCs"][:, select]
+
+        # subset the loadings if they exist
+        # they don't exist if the PCA is replaced with another embedding that doesn't have loadings (e.g. scvi)
+        if "PCs" in adata.varm:
+            adata.varm["PCs"] = adata.varm["PCs"][:, select]
 
         if "variance_ratio" in adata.uns.get("pca", {}):
             adata.uns["pca"]["variance_ratio"] = adata.uns["pca"]["variance_ratio"][select]

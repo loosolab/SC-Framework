@@ -1,6 +1,17 @@
 # Changelog
 
-## 0.15.0 (in progress)
+## 0.15.1 (15-05-2026)
+- from_mtx: Fix read option when providing str instead of dict
+- Reduce package build size (#448)
+- link guidance.rst in the notebokks (#450)
+
+### Changes to notebooks
+- General/multiomics: Set plotly render option to notebook mode
+
+## 0.15.0 (07-05-2026)
+- Readthedocs overhaul (#312, #239, #351)
+- add multi-factor batch correction support and add the scvi correction (#272)
+- enhance `utils.assemblers.from_mtx(path)` to accept dicts (#367)
 - implemented SCF-analysis-setup CLI (#437)
 - implemented `sctoolbox.utils.creators.github_download`
 - spellcheck the project
@@ -30,11 +41,14 @@
 - Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
 - fix logging issue causing error on save (#333)
 - Pin scFates to >= 1.2.3 (#433)
-- CI improvements
 - lint according to new D420 rule
+- CI improvements
 - add scanpy score feature including apoptosis,mito,ribo and cell cycle (#401)
+- Add multiomics tools and plotting functions (#237)
 
 ### Changes to notebooks
+- RNA/ATAC batch: enable multi-factor batch correction (#272)
+- RNA/ATAC assembly: adjust for updated `from_mtx`
 - add a number prefix to notebook output figures (#440)
 - implemented the Palantir notebook
 - Notebook 2: Show doubled threshold in plot and make it adjustable afterwards (#328)
@@ -47,7 +61,10 @@
 - ATAC/02: add peakqc references
 - Pseudotime: Run tl.merge_empty_segments after tl.pseudotime
 - Notebook 4: Fix report issue when reclustering (#431)
+- Pilot: Implemented Pilot Notebook (#353)
 - RNA Notebook 2: added apoptosis score and fixed section numbers (#401)
+- General/annotation: utilize settings to define the repository path
+- General: Add multiomics notebook (#237)
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload

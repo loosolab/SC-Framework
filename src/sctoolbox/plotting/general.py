@@ -1165,3 +1165,97 @@ def plot_table(table: pd.DataFrame,  # noqa: C901
         plt.close()
 
     return ax
+
+
+@beartype
+def plot_heatmap(data_frame: pd.DataFrame,
+                 ax: Optional[plt.Axes] = None,
+                 index: Optional[Union[str, list[str]]] = None,
+                 columns: Optional[Union[str, list[str]]] = None,
+                 values: Optional[Union[str, list[str]]] = None,
+                 cmap: str = "crest",
+                 title: str = "",
+                 title_size: Optional[int] = 16,
+                 flip: bool = False,
+                 vmin: Optional[float] = None,
+                 vmax: Optional[float] = None,
+                 x_label: Optional[str] = None,
+                 y_label: Optional[str] = None,
+                 figsize: tuple[int, int] = (10, 10),
+                 rotation_x: int = 45,
+                 rotation_y: int = 0
+                 ) -> plt.Axes:
+    """
+    Plot a heatmap from the given data frame.
+
+    Parameters
+    ----------
+    data_frame : pd.DataFrame
+        Data frame containing the values to be plotted into a heatmap.
+    ax : plt.Axes, default=None
+        Ax on which to plot the heatmap. If not given, a new figure and axes will be created.
+    index : str or list[str], default=None
+        Column(s) to use as index when pivoting data frame for plotting. Mandatory parameter.
+    columns : str or list[str], default=None
+        Column(s) to pivot data frame on for plotting. Mandatory parameter.
+    values : str or list[str], default=None
+        Column(s) to use for populating new frames values. If not specified,
+        all remaining columns will be used and the result will have hierarchically indexed columns.
+    cmap : str, default="crest"
+        Color map for the heatmap plots. The default color map used is 'crest'.
+    title : str, default=""
+        Title for the heatmap plot.
+    title_size : int, default=16
+        Font size of the title. If not given, the default matplotlib font size is used.
+    flip : bool, default=False
+        Value that determines if axes of the data frame will be flipped or not.
+    vmin : float, default=None
+        Value to anchor lowest value in color map of heatmap. If not given the value is inferred from the data.
+    vmax : float, default=None
+        Value to anchor highest value in color map of heatmap. If not given the value is inferred from the data.
+    x_label : str, default=None
+        Label for the x-axis. If not given, the default label is used.
+    y_label : str, default=None
+        Label for the y-axis. If not given, the default label is used.
+    figsize : tuple[int, int], default=(10, 10)
+        Size of the figure. Only used if ax is not given.
+    rotation_x : int, default=45
+        Rotation of x-axis tick labels.
+    rotation_y : int, default=0
+        Rotation of y-axis tick labels.
+
+    Returns
+    -------
+    plt.Axes
+        Axes object containing the heatmap.
+
+    TODO Integrate into sctoolbox environment like settings, logging, etc.
+    """
+    # Create figure and axes if not given
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    # Pivot data frame for plotting if index and columns are given
+    # Otherwise, use data frame as is
+    if index is not None and columns is not None:
+        df = data_frame.pivot(index=index, columns=columns, values=values)
+    else:
+        df = data_frame
+
+    # Flip the table if specified
+    if flip:
+        df = df.transpose()
+
+    # Plot heatmap
+    sns.heatmap(df, cmap=cmap, ax=ax, vmin=vmin, vmax=vmax, yticklabels=True)
+    ax.set_title(title, fontsize=title_size)
+    ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=rotation_x, ha='right')
+    ax.set_yticks(ax.get_yticks(), ax.get_yticklabels(), rotation=rotation_y)
+
+    # Set axis labels if given
+    if x_label is not None:
+        ax.set_xlabel(x_label)
+    if y_label is not None:
+        ax.set_ylabel(y_label)
+
+    return ax

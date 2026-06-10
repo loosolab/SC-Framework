@@ -824,9 +824,10 @@ def analyze_top_genes_communities(  # noqa: C901
         Which gene set to use for clustering.
     marker_table : str | dict[str, pd.DataFrame] | None, default=None
         Marker definitions used when ``gene_source="markers"``.
-        - If ``str``, interpreted as a key in ``adata.uns`` and resolved via
-          ``marker_genes.get_rank_genes_tables``.
+
+        - If ``str``, interpreted as a key in ``adata.uns`` and resolved via ``marker_genes.get_rank_genes_tables``.
         - If ``dict``, expected format is ``group -> DataFrame``.
+
     gene_trend_base_key : str, default="gene_trends"
         Base key for branch trend matrices in ``adata.varm``. Expected format:
         ``{gene_trend_base_key}_{branch}``.
@@ -2235,9 +2236,7 @@ def plot_branch_early_late_genes(  # noqa: C901
     2) defines early/late windows via `quantile_cutoff`,
     3) ranks genes by `delta = mean(early) - mean(late)`,
     4) plots two trend panels (top early genes vs top late genes),
-    5) optionally plots a UMAP panel colored by pseudotime, entropy, and the top
-       early/late gene.
-
+    5) optionally plots a UMAP panel colored by pseudotime, entropy, and the top early/late gene.
 
     Parameters
     ----------

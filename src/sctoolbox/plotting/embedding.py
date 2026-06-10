@@ -1853,6 +1853,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],  # noqa: C901
 
                     # Plot LISI scores
                     boxplot(adata.obs[lisi_columns], ax=ax)
+                    # rotate the x-axis labels by 45 degree
+                    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
                     LISI_axes.append(ax)
 
                 else:

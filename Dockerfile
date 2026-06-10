@@ -36,8 +36,20 @@ RUN mamba update -n base mamba && \
 # install environment
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
+# Install Jupyter extensions
+RUN jupyter contrib nbextension install --sys-prefix && \
+    jupyter nbextension enable scratchpad/main --sys-prefix && \
+    jupyter nbextension enable runtools/main --sys-prefix && \
+    jupyter nbextension enable init_cell/main --sys-prefix && \
+    jupyter nbextension enable execute_time/ExecuteTime --sys-prefix && \
+    jupyter nbextension enable scroll_down/main --sys-prefix
+
 # install sctoolbox
 RUN pip install "/home/sc_framework/[all]" --group "/home/sc_framework/pyproject.toml:test"
+
+# clean cache files
+RUN mamba clean --all -y && \
+    pip cache purge
 
 # Generate an ssh key
 RUN apt-get install -y openssh-client && \
