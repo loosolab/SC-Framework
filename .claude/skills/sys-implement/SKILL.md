@@ -25,7 +25,7 @@ Before touching any code:
 2. Extract the **binding test command** (the line beginning
    `**Test command for this plan:**`). If absent, return a note that the
    plan is missing its gate — the user should re-run `/plan`.
-3. Confirm the command is invokable (conda env present, ruff and pytest or
+3. Confirm the command is invocable (conda env present, ruff and pytest or
    jupyter reachable, target files exist or are part of T1). If not, return
    the gap; do not start.
 

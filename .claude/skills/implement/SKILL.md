@@ -21,7 +21,7 @@ without a path, ask for one.
 1. Read `plan.md`. Extract the **binding test command** (the line beginning
    `**Test command for this plan:**`). If absent, stop — tell the user the
    plan is missing its gate and to re-run `/plan`.
-2. Confirm the command is invokable (conda env present, ruff and pytest
+2. Confirm the command is invocable (conda env present, ruff and pytest
    reachable). If not, stop and surface the gap.
 
 ## Process
