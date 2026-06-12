@@ -24,8 +24,8 @@ invoked without a path, ask for one.
 2. **Soft code-protection backstop.** Run `git status --porcelain`. The
    planner's `.work/` artifacts are gitignored and will **not** appear, so a
    clean output is the expected, healthy result. If anything under `src/`,
-   `tests/`, or the notebook directories shows up, the planner overstepped —
-   stop and surface it to the user.
+   `tests/`, `docs/`, or the notebook directories shows up, the planner
+   overstepped — stop and surface it to the user.
 3. **Spawn the `plan-reviewer`.** Use the Agent tool with
    `subagent_type: plan-reviewer`, passing the `design.md` and `plan.md`
    paths. It follows `sys-plan-review` and returns a structured verdict +

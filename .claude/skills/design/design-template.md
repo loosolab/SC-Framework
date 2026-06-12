@@ -11,7 +11,7 @@ touches, the angle, and what we deliberately will NOT do.>
 
 ## Scope
 
-- Type: package | notebooks | both
+- Type: one or more of package | notebooks | docs  (combine with "+", e.g. package + docs)
 - Conda environment: <name>
 
 ## Success criteria

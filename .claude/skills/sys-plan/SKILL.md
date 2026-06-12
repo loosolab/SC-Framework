@@ -1,6 +1,6 @@
 ---
 name: sys-plan
-description: Agent-facing procedure followed by the planner sub-agent. Turns a design.md into a concrete plan.md using plan-template.md, selects the binding test command based on scope (package/notebooks/both), and keeps the diff minimal. Writes only inside .work/<date>-<slug>/; does not run tests or commit. Not meant to be invoked directly by the user — use /plan.
+description: Agent-facing procedure followed by the planner sub-agent. Turns a design.md into a concrete plan.md using plan-template.md, selects the binding test command based on scope (package/notebooks/docs, combinable), and keeps the diff minimal. Writes only inside .work/<date>-<slug>/; does not run tests or commit. Not meant to be invoked directly by the user — use /plan.
 ---
 
 # sys-plan
@@ -21,12 +21,19 @@ calling skill passes it. If absent, return a note that the path is required.
    directory if present. Read `CLAUDE.md` for the module map, stack, and
    conventions.
 2. **Extract scope and environment** from the `design.md` `## Scope` section:
-   - `Type`: package | notebooks | both
+   - `Type`: one or more of package | notebooks | docs (combinable)
    - `Conda environment`: the env name to use in all commands
-3. **Select the binding test command** based on scope:
-   - **package:** `conda run -n <env> ruff check --preview . && conda run -n <env> python -m pytest tests/<target>.py -v`
-   - **notebooks:** `conda run -n <env> ruff check --preview . && conda run -n <env> jupyter nbconvert --to notebook --execute <notebook_path>`
-   - **both:** chain all three — ruff, pytest, nbconvert
+3. **Select the binding test command** based on scope. Every command opens
+   with the single shared ruff step; append the gate(s) for each scope the
+   change touches, chained with `&&`:
+   - **ruff (always, leads the command):** `conda run -n <env> ruff check --preview .`
+   - **package → pytest:** `conda run -n <env> python -m pytest tests/<target>.py -v`
+   - **notebooks → nbconvert:** `conda run -n <env> jupyter nbconvert --to notebook --execute <notebook_path>`
+   - **docs → Sphinx build:** `conda run -n <env> make -C docs html`
+
+   A multi-area change chains the relevant gates after the shared ruff step —
+   e.g. package + notebooks is `ruff … && pytest … && nbconvert …`, and
+   package + docs is `ruff … && pytest … && make -C docs html`.
 
    The ruff step is `ruff check --preview .` **verbatim** — identical to the CI
    `lint` job (`.gitlab-ci.yml`). It relies on the `[tool.ruff].include` list in
@@ -83,6 +90,21 @@ When scope includes notebooks:
   but flag if it appears not active).
 - The nbconvert execute command is the gate — a notebook that errors on
   execution is a failing test.
+
+## Docs scope
+
+When scope includes docs (changes under `docs/`):
+- The Sphinx build (`make -C docs html`) is the gate — a malformed `.rst`,
+  broken cross-reference, or failing directive makes the build error and is a
+  failing test. This mirrors CI's `build-pages` job.
+- The build needs the `docs` dependency-group and a system `pandoc`
+  installed in the conda env (see `development.rst`). Flag in the plan if the
+  env may lack them so the user can install before `/implement`.
+- Docs-only changes usually have **no `TC<N>` cases** — the build is the
+  whole gate. Tasks are the concrete `.rst`/doc edits, in order.
+- Plain `.rst` edits are not linted by ruff, but the `ruff check --preview .`
+  step still runs first as the universal gate (and catches any `.py` docs
+  helpers such as `docs/source/*.py`).
 
 ## Constraints
 

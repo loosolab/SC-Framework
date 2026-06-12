@@ -26,7 +26,7 @@ If neither is given, ask the user what they want to design.
 3. **Ask clarifying questions.** Before any file is written, surface 1–4
    sharp questions. Always include:
    - **Conda environment** — which env should the binding test command use?
-   - **Change scope** — package (`src/sctoolbox/` + `tests/`), notebooks, or both?
+   - **Change scope** — any combination of package (`src/sctoolbox/` + `tests/`), notebooks, and docs (`docs/`)?
    Use `AskUserQuestion` when choices enumerate cleanly; free-text otherwise.
 4. **Propose slug + date, then confirm.** Short kebab-case, descriptive
    (e.g. `qc-filter-fix`, `embedding-plot`). Present the full directory
@@ -37,8 +37,9 @@ If neither is given, ask the user what they want to design.
    section; do not add or remove sections. Guidance per section:
    - **Problem** — what and why now; link related prior work if relevant.
    - **Approach** — high-level idea, modules touched, what will NOT be done.
-   - **Scope** — `Type` is exactly one of `package`, `notebooks`, or `both`;
-     `Conda environment` is the name confirmed in the questions above.
+   - **Scope** — `Type` is one or more of `package`, `notebooks`, `docs`
+     (combine with `+`, e.g. `package + docs`); `Conda environment` is the
+     name confirmed in the questions above.
    - **Success criteria** — concrete, observable signals, numeric where possible.
    - **Open questions** — decisions the user must make before planning; empty if
      all resolved during the conversation.

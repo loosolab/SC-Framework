@@ -45,12 +45,13 @@ without a path, ask for one.
 
    **Then run the full test suite once** to catch cross-file regressions the
    per-file binding command cannot see. When the binding command contains
-   `pytest` (package or both scope), run the whole suite with the same conda
+   `pytest` (any scope that includes package), run the whole suite with the same conda
    env prefix the binding command uses — i.e. replace its
    `python -m pytest tests/<target>.py -v` segment with
    `conda run -n <env> python -m pytest tests`. It MUST exit 0; if it fails, a
    change regressed another module — hand the failure back to the implementer
-   before proceeding. (Notebook-only scope has no pytest segment; skip this.)
+   before proceeding. (Notebook-only and docs-only scope have no pytest
+   segment; skip this.)
 4. **Spawn the `code-reviewer`.** Use the Agent tool with
    `subagent_type: code-reviewer`, passing `plan.md` and the changed files /
    work-item directory. It follows `sys-code-review` and **always runs**.
@@ -92,10 +93,10 @@ without a path, ask for one.
       (first line: `__version__ = "X.Y.Z"`).
    b. Open `CHANGES.md` and search for a line starting with `## X.Y.Z`
       (the version string, no surrounding text required to match):
-      - **Section exists** — append new bullet(s) to it.  For package-scope
-        changes add under the main section header; for notebook-scope changes
-        add under the `### Changes to notebooks` subsection (create it if
-        absent).
+      - **Section exists** — append new bullet(s) to it.  For package- and
+        docs-scope changes add under the main section header; for
+        notebook-scope changes add under the `### Changes to notebooks`
+        subsection (create it if absent).
       - **Section absent** — prepend a new section immediately before the
         first existing `## ` line:
         ```markdown

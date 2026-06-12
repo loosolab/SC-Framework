@@ -37,6 +37,11 @@ Before touching any code:
 2. Run the test command. Expect non-zero exit — the TDD red state. If it is
    already green before any implementation, investigate before continuing.
 
+Docs-only and notebook-only plans usually declare **no `TC<N>` cases** — the
+Sphinx build (`make -C docs html`) or notebook execution is the whole gate, so
+there is no red state to author. Skip the tests-first run and go straight to
+the task loop; the binding command still runs after every task.
+
 ## Task loop (one at a time, with retry cap)
 
 For each unchecked `- [ ] T<N>. ...` in order:

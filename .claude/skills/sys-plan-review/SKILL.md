@@ -28,12 +28,13 @@ directory. The calling skill passes both.
    command on a `**Test command for this plan:**` line. Flag missing,
    ambiguous, or multiple commands. Verify the command matches the scope
    declared in `design.md` (package → pytest present; notebooks → nbconvert
-   present; both → both). Verify ruff leads the command, and that the ruff step
+   present; docs → `make -C docs html` present; a multi-area scope must chain
+   each corresponding gate). Verify ruff leads the command, and that the ruff step
    is `ruff check --preview .` verbatim — matching the CI `lint` job. A narrowed
    ruff path (e.g. `ruff check src/sctoolbox tests`) is a **blocker**: it skips
    notebooks/scripts that CI lints, so the gate can pass while CI fails.
 4. **Scope and environment drift.** Extract from `design.md`:
-   - `Type` field under `## Scope` (`package` | `notebooks` | `both`)
+   - `Type` field under `## Scope` (one or more of `package` | `notebooks` | `docs`)
    - `Conda environment` field under `## Scope`
 
    Verify both are preserved in the plan:

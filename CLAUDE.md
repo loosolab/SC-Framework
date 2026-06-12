@@ -136,7 +136,7 @@ Mark deprecated functions with the `deprecation` package, targeting removal in 2
 
 ### CHANGES.md
 
-Every change to the package or notebooks requires an entry in `CHANGES.md` (enforced by CI). Format:
+Every change to the package, notebooks, or documentation requires an entry in `CHANGES.md`. Package- and notebook-scope changes are enforced by CI; docs-only changes are not gated by CI, but the dev workflow still requires an entry. Docs entries go under the main section header (like package changes). Format:
 
 ```markdown
 ## 0.xy.z (in progress)
@@ -154,6 +154,6 @@ Skills live in `.claude/skills/`. The development loop is:
 /design  →  /plan  →  /implement
 ```
 
-Design artifacts (`design.md`, `plan.md`, `review-plan.md`, `review-code.md`) are stored in `.work/<YYYY-MM-DD>-<slug>/`. Each `design.md` records the change **scope** (package / notebooks / both) and the **conda environment** name; `plan.md` uses these to declare the binding test command, which always starts with `ruff check`.
+Design artifacts (`design.md`, `plan.md`, `review-plan.md`, `review-code.md`) are stored in `.work/<YYYY-MM-DD>-<slug>/`. Each `design.md` records the change **scope** (one or more of `package` / `notebooks` / `docs`) and the **conda environment** name; `plan.md` uses these to declare the binding test command, which always starts with `ruff check`. A `docs` scope gates on the Sphinx build (`make -C docs html`) instead of pytest; when a change spans several areas the relevant gates are chained.
 
 `.work/` is **gitignored — a local-only audit trail**. The `/design` and `/plan` stages therefore make no commit; the first commit of a work item is its first `impl(<slug>): T1 …`. Only code, tests, and `CHANGES.md` are committed. Every code commit carries the `<slug>`, so `git log --grep=<slug>` still recovers a work item's complete *code* history (the design/plan/review prose stays on disk under `.work/`).
