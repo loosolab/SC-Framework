@@ -1,6 +1,6 @@
 ---
 name: sys-code-review
-description: Agent-facing procedure followed by the code-reviewer sub-agent. Read-only audit after the binding test command exits 0 — correctness against the plan, sctoolbox conventions (decorator order, AnnData mutations, docstrings, __init__.py registration), TDD (test-driven development) gate integrity (reruns the command, confirms each TC<N> (test case N) is implemented), and scope discipline. Returns findings; writes nothing. Not user-facing — driven by /implement.
+description: Agent-facing procedure followed by the code-reviewer sub-agent. Read-only audit after the binding test command exits 0 — correctness against the plan, sctoolbox conventions (decorator order, AnnData mutations, docstrings, __init__.py registration), TDD (test-driven development) gate integrity (reruns the command, confirms each TC<N> (test case N) is implemented), scope discipline, and docs-build import safety (lazy optional-dep imports so unmocked autodoc doesn't break make html). Returns findings; writes nothing. Not user-facing — driven by /implement.
 ---
 
 # sys-code-review
@@ -46,6 +46,26 @@ The calling skill passes:
    - Input cells use `bgcolor()` and are marked blue.
 5. **Scope discipline.** Flag changes outside the plan: edits to modules not
    listed as tasks, missing `__init__.py` registrations.
+6. **Docs build safety.** The docs build (`make html`, run on the `dev`
+   pipeline with `allow_failure: false`) regenerates the API reference via
+   `docs/source/build_api.py`, which auto-discovers modules and emits an
+   `.. automodule::` for each. So Sphinx **imports every module** — and
+   `autodoc_mock_imports = []` means **nothing is mocked**. Module wiring is
+   automatic (no manual API edit needed for a new submodule under
+   `tools/`/`plotting/`/`utils/`), but **import-time failures break the docs
+   build** even when tests pass. For any new or modified module, check:
+   - **Optional/heavy deps must be imported lazily** (inside the function
+     that uses them), not at module top level — matching existing sctoolbox
+     practice. A top-level `import` of a dependency from an optional dep group
+     (`atac`, `receptor_ligand`, `pseudotime`, etc.) or any package not
+     guaranteed by `pip install .[all]` is a **blocker**: it will raise at
+     autodoc import and fail `make html` on `dev`. (Alternatively the dep is
+     added to `autodoc_mock_imports` in `conf.py`, but lazy import is
+     preferred.)
+   - **A genuinely new top-level module** directly under `src/sctoolbox/`
+     (not a submodule of `tools`/`plotting`/`utils`) must be added to the
+     `docs/source/API/index.rst` toctree, or its generated page is orphaned
+     from the API nav. Submodules of the existing parents need no toctree edit.
 
 ## Self-judgement (trivial vs substantive)
 
