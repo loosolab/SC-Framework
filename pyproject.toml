@@ -194,6 +194,12 @@ test = [
     "pytest-html",
     "openpyxl"
 ]
+lint = [
+    "ruff"  # lint gate (CI lint job + local binding test command)
+]
+spellcheck = [
+    "codespell[toml]"  # spellcheck gate; [toml] enables --toml pyproject.toml (CI spellcheck job + local gate)
+]
 docs = [
     "sphinx",
     "sphinx-rtd-theme",

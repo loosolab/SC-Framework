@@ -236,7 +236,7 @@ lint:
   stage: test
   script:
     - python --version
-    - pip install ruff
+    - pip install --group lint  # ruff, from [dependency-groups] in pyproject.toml
     - ruff check --preview .
   allow_failure: false
   rules:
@@ -257,7 +257,7 @@ spellcheck:
   stage: test
   image: python:latest
   before_script:
-    - pip install codespell[toml]
+    - pip install --group spellcheck  # codespell[toml], from [dependency-groups] in pyproject.toml
   script:
     - python --version
     - codespell --version
