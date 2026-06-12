@@ -31,14 +31,19 @@ tagged-message convention and safe staging. Invoked by `/design`, `/plan`,
 
 | Step | Commit message |
 |---|---|
-| design done | `design: <slug>` |
-| plan + review done | `plan: <slug>` |
 | each implement task | `impl(<slug>): T<N> <desc>` |
 | code review addressed | `review: <slug>` |
 | CHANGES.md updated | `changes: <slug>` |
 
 Keep the subject line short. The `<slug>` must appear in every message so
 `git log --grep=<slug>` recovers the full work-item history.
+
+**The `.work/` artifacts are never committed.** `design.md`, `plan.md`, and
+`review-*.md` live under the gitignored `.work/` directory (local-only audit
+trail) — the `/design` and `/plan` stages therefore make **no commit**, and
+implement-stage commits stage only code, tests, and `CHANGES.md`. Never
+`git add` a path under `.work/` (it would require `-f` to override the ignore;
+do not do this).
 
 ## Hard constraints
 

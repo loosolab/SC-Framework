@@ -154,4 +154,6 @@ Skills live in `.claude/skills/`. The development loop is:
 /design  →  /plan  →  /implement
 ```
 
-Design artifacts are stored in `.work/<YYYY-MM-DD>-<slug>/`. Each `design.md` records the change **scope** (package / notebooks / both) and the **conda environment** name; `plan.md` uses these to declare the binding test command, which always starts with `ruff check`.
+Design artifacts (`design.md`, `plan.md`, `review-plan.md`, `review-code.md`) are stored in `.work/<YYYY-MM-DD>-<slug>/`. Each `design.md` records the change **scope** (package / notebooks / both) and the **conda environment** name; `plan.md` uses these to declare the binding test command, which always starts with `ruff check`.
+
+`.work/` is **gitignored — a local-only audit trail**. The `/design` and `/plan` stages therefore make no commit; the first commit of a work item is its first `impl(<slug>): T1 …`. Only code, tests, and `CHANGES.md` are committed. Every code commit carries the `<slug>`, so `git log --grep=<slug>` still recovers a work item's complete *code* history (the design/plan/review prose stays on disk under `.work/`).

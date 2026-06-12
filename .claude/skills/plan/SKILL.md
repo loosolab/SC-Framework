@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Second stage of the sc-framework dev workflow (design → plan → implement). Main-loop orchestrator. Spawns the planner sub-agent (sys-plan) to draft plan.md, spawns the plan-reviewer sub-agent (sys-plan-review), writes review-plan.md from the reviewer's findings, addresses blockers, commits via sys-commit, then offers to advance to /implement.
+description: Second stage of the sc-framework dev workflow (design → plan → implement). Main-loop orchestrator. Spawns the planner sub-agent (sys-plan) to draft plan.md, spawns the plan-reviewer sub-agent (sys-plan-review), writes review-plan.md from the reviewer's findings, addresses blockers, marks the plan ready (no commit — .work/ is gitignored), then offers to advance to /implement.
 ---
 
 # plan
@@ -21,10 +21,11 @@ invoked without a path, ask for one.
    follows `sys-plan`, drafts `plan.md` in the work-item directory, and
    returns its path + summary. It writes only inside `.work/`; it does not
    run tests or commit.
-2. **Soft code-protection backstop.** Run `git status --porcelain` and
-   confirm the planner touched **only** files under
-   `.work/<date>-<slug>/`. If it wrote anything under `src/`, `tests/`,
-   or notebooks directories, stop and surface it to the user.
+2. **Soft code-protection backstop.** Run `git status --porcelain`. The
+   planner's `.work/` artifacts are gitignored and will **not** appear, so a
+   clean output is the expected, healthy result. If anything under `src/`,
+   `tests/`, or the notebook directories shows up, the planner overstepped —
+   stop and surface it to the user.
 3. **Spawn the `plan-reviewer`.** Use the Agent tool with
    `subagent_type: plan-reviewer`, passing the `design.md` and `plan.md`
    paths. It follows `sys-plan-review` and returns a structured verdict +
@@ -36,10 +37,11 @@ invoked without a path, ask for one.
    Scaffolding suggestions are the user's call, not auto-blockers. If the
    reviewer reports a design-vs-plan divergence you cannot resolve without
    user input, **stop and ask the user**.
-6. **Commit.** Once the verdict is `ready` (no open blockers), set
-   `Status: ready` in the plan frontmatter and invoke `sys-commit` (step:
-   plan, slug: `<slug>`, intended files: `plan.md` and `review-plan.md`)
-   → message `plan: <slug>`.
+6. **Mark ready.** Once the verdict is `ready` (no open blockers), set
+   `Status: ready` in the plan frontmatter. **No commit** — `plan.md` and
+   `review-plan.md` live under `.work/`, which is gitignored (local-only audit
+   trail). Nothing is staged at this stage; code commits begin in
+   `/implement`.
 7. **Offer to advance.** Ask the user whether to proceed to implementation now.
    - If yes: invoke the `implement` skill via the Skill tool, passing
      `.work/<date>-<slug>/plan.md` as args.

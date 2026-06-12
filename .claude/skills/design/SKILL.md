@@ -1,6 +1,6 @@
 ---
 name: design
-description: First stage of the sc-framework dev workflow (design → plan → implement). Interactive, runs in the main loop with no subagent. Reads context, asks 1-4 clarifying questions (always including conda environment and change scope), proposes a .work/<YYYY-MM-DD>-<slug>/ directory and waits for confirmation, writes design.md, commits via sys-commit, then offers to advance to /plan.
+description: First stage of the sc-framework dev workflow (design → plan → implement). Interactive, runs in the main loop with no subagent. Reads context, asks 1-4 clarifying questions (always including conda environment and change scope), proposes a .work/<YYYY-MM-DD>-<slug>/ directory and waits for confirmation, writes design.md (gitignored, local-only), then offers to advance to /plan.
 ---
 
 # design
@@ -43,8 +43,8 @@ If neither is given, ask the user what they want to design.
    - **Open questions** — decisions the user must make before planning; empty if
      all resolved during the conversation.
 
-6. **Commit.** Invoke `sys-commit` (step: design, slug: `<slug>`, intended
-   files: the new `design.md`) → message `design: <slug>`.
+6. **No commit.** `design.md` lives under `.work/`, which is gitignored
+   (local-only audit trail) — there is nothing to commit at this stage.
 7. **Offer to advance.** Ask the user whether to proceed to planning now.
    - If yes: invoke the `plan` skill via the Skill tool, passing
      `.work/<YYYY-MM-DD>-<slug>/design.md` as args.

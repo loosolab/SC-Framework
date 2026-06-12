@@ -78,9 +78,12 @@ without a path, ask for one.
      `ignore-words-list` in `pyproject.toml [tool.codespell]`. Do NOT guess a
      correction.
 
-   Then invoke `sys-commit` (step: review, slug: `<slug>`, intended files: the
-   fixes + any codespell auto-fixes + `review-code.md`) → message
-   `review: <slug>`. If there were no findings, still commit `review-code.md`.
+   If addressing findings or the spellcheck changed any code, invoke
+   `sys-commit` (step: review, slug: `<slug>`, intended files: the fixes + any
+   codespell auto-fixes — **never** `review-code.md`, which lives under the
+   gitignored `.work/`) → message `review: <slug>`. If no code changed (no
+   blockers, no typo fixes), there is nothing to commit at this step —
+   `review-code.md` stays local-only.
 7. **Update `CHANGES.md`.**
    a. Read the current version from `src/sctoolbox/_version.py`
       (first line: `__version__ = "X.Y.Z"`).

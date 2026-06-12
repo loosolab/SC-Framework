@@ -53,8 +53,10 @@ For each unchecked `- [ ] T<N>. ...` in order:
 2. **Run the test command.**
 3. **Decide:**
    - This task's target checks pass AND nothing previously-passing regressed
-     → mark `- [x] T<N>` in `plan.md`; **commit via `sys-commit`** with
-     message `impl(<slug>): T<N> <short desc>`; continue.
+     → mark `- [x] T<N>` in `plan.md` (a local-only edit — `plan.md` is under
+     the gitignored `.work/` and is **never staged**); **commit via
+     `sys-commit`** with message `impl(<slug>): T<N> <short desc>`, staging only
+     this task's code/test files; continue.
    - Target checks still failing → diagnose, fix, retry. **Up to 3 attempts
      total per task.** The counter resets when a task is marked done.
    - A previously-passing check regressed → revert the regression first; a
