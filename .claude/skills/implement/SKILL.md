@@ -22,7 +22,13 @@ without a path, ask for one.
    `**Test command for this plan:**`). If absent, stop — tell the user the
    plan is missing its gate and to re-run `/plan`.
 2. Confirm the command is invocable (conda env present, ruff and pytest
-   reachable). If not, stop and surface the gap.
+   reachable). `/design` already verifies this up front, but re-check here in
+   case the env changed since. If the env is missing dependencies, offer to
+   install them with the dev-setup commands from `docs/source/development.rst`
+   (`conda run -n <env> pip install -e '.[all]' --group test --group lint
+   --group spellcheck`; add `--group docs` for docs scope) — run only after
+   the user confirms — rather than just stopping. If the env itself is absent
+   and the user does not want it created, stop and surface the gap.
 
 ## Process
 
