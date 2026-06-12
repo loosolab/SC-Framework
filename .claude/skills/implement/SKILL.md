@@ -42,6 +42,15 @@ without a path, ask for one.
 3. **Confirm the gate.** When the implementer reports done, run the binding
    test command once yourself and confirm exit 0. If not, hand the
    still-failing task back to the implementer.
+
+   **Then run the full test suite once** to catch cross-file regressions the
+   per-file binding command cannot see. When the binding command contains
+   `pytest` (package or both scope), run the whole suite with the same conda
+   env prefix the binding command uses — i.e. replace its
+   `python -m pytest tests/<target>.py -v` segment with
+   `conda run -n <env> python -m pytest tests`. It MUST exit 0; if it fails, a
+   change regressed another module — hand the failure back to the implementer
+   before proceeding. (Notebook-only scope has no pytest segment; skip this.)
 4. **Spawn the `code-reviewer`.** Use the Agent tool with
    `subagent_type: code-reviewer`, passing `plan.md` and the changed files /
    work-item directory. It follows `sys-code-review` and **always runs**.
@@ -52,23 +61,31 @@ without a path, ask for one.
    `sys-commit` (step: review, slug: `<slug>`, intended files: the fixes +
    `review-code.md`) → message `review: <slug>`. If there were no findings,
    still commit `review-code.md`.
-7. **Update `CHANGES.md`.** Gather the work item's commits with
-   `git log --grep=<slug> --oneline` and prepend a new entry at the top of
-   `CHANGES.md` (newest first):
-
-   ```markdown
-   ## <slug> — <YYYY-MM-DD>
-   <one-line summary of what shipped>
-
-   Commits:
-   - <sha> design: <slug>
-   - <sha> plan: <slug>
-   - <sha> impl(<slug>): T1 <desc>
-   - <sha> review: <slug>
-   ```
-
-   Then invoke `sys-commit` (step: changes, slug: `<slug>`, intended files:
-   `CHANGES.md`) → message `changes: <slug>`.
+7. **Update `CHANGES.md`.**
+   a. Read the current version from `src/sctoolbox/_version.py`
+      (first line: `__version__ = "X.Y.Z"`).
+   b. Open `CHANGES.md` and search for a line starting with `## X.Y.Z`
+      (the version string, no surrounding text required to match):
+      - **Section exists** — append new bullet(s) to it.  For package-scope
+        changes add under the main section header; for notebook-scope changes
+        add under the `### Changes to notebooks` subsection (create it if
+        absent).
+      - **Section absent** — prepend a new section immediately before the
+        first existing `## ` line:
+        ```markdown
+        ## X.Y.Z (in progress)
+        - <one-line description of what shipped>
+        ```
+        If the design scope includes notebooks also append:
+        ```markdown
+        ### Changes to notebooks
+        - <one-line description>
+        ```
+   c. Bullet text: a short imperative phrase describing the user-visible
+      change. Omit the issue number if there is no associated GitLab issue;
+      append ` (#<N>)` if the design or plan references one.
+   d. Invoke `sys-commit` (step: changes, slug: `<slug>`, intended files:
+      `CHANGES.md`) → message `changes: <slug>`.
 8. **Done.** Report what shipped and the final test result.
 
 ## Constraints

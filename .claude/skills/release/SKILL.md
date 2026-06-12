@@ -1,0 +1,93 @@
+---
+name: release
+description: Standalone pre-MR release preparation skill. Bumps _version.py, finalises the CHANGES.md (in progress) entry with a real date, and updates all notebook metadata versions. Run manually on dev before opening an MR to main. Never invoked automatically by the design/plan/implement workflow.
+---
+
+# release
+
+Standalone skill for preparing a release on the `dev` branch before opening
+a merge request to `main`. Performs the three steps from the project's MR
+release template, then prints the post-merge checklist.
+
+**Never invoked automatically** — the developer runs this when the branch is
+ready to ship.
+
+## Preflight
+
+1. Confirm the current branch is `dev` (`git branch --show-current`). If not,
+   warn the user and ask whether to proceed anyway — do not abort silently.
+2. Confirm there are no uncommitted changes (`git status --porcelain`). If
+   there are, stop and ask the user to commit or stash them first.
+3. Read the current version from `src/sctoolbox/_version.py`
+   (first line: `__version__ = "X.Y.Z"`).
+
+## Process
+
+### Step 1 — Choose the new version
+
+Ask the user for the new version number. Show the current version as context.
+Accept any valid semver `X.Y.Z`. Do not infer or auto-increment — the user
+decides.
+
+### Step 2 — Update `_version.py`
+
+Replace the `__version__` value in `src/sctoolbox/_version.py` with the new
+version string.
+
+### Step 3 — Finalise `CHANGES.md`
+
+Find the line starting with `## <new_version>` or `## <old_version>` followed
+by `(in progress)`. Replace `(in progress)` with today's date in
+`(DD-MM-YYYY)` format. If no `(in progress)` entry exists for this version,
+warn the user — the CHANGES.md may need a manual entry.
+
+### Step 4 — Update notebook versions
+
+Run the version update script for each notebook directory:
+
+```bash
+python scripts/change_notebook_version.py rna_analysis/notebooks/ <new_version>
+python scripts/change_notebook_version.py atac_analysis/notebooks/ <new_version>
+python scripts/change_notebook_version.py general_notebooks/ <new_version>
+```
+
+### Step 5 — Commit
+
+Stage and commit all modified files:
+- `src/sctoolbox/_version.py`
+- `CHANGES.md`
+- All `.ipynb` files touched by the version script
+
+Commit message: `release: <new_version>`
+
+Do not use `sys-commit` — this release commit has its own convention and no
+slug. Stage the files explicitly; never blind `git add -A`.
+
+## Post-merge checklist
+
+After the commit, print the following reminder to the user:
+
+```
+Release commit ready. Open an MR from dev → main, then work through this
+checklist:
+
+Before merge:
+  [ ] MR description: use the "new_release_template" from .gitlab/merge_request_templates/
+
+After merge (~1.5 hrs for the full pipeline):
+  GitLab (automated)
+    [ ] New release created
+    [ ] Version tag added
+    [ ] Add milestone to release and close it (if one exists)
+
+  GitHub  (https://github.com/loosolab/SC-Framework — mirrored automatically)
+    [ ] Confirm repository updated
+    [ ] Create a new GitHub release (copy description from GitLab)
+
+  Zenodo  (https://zenodo.org/records/14056105 — triggered by GitHub release)
+    [ ] Confirm Zenodo release was triggered
+    [ ] Adjust authors (see prior release for reference)
+
+  PyPI  (final CI stage, ~1.5 hrs)
+    [ ] Confirm release published successfully
+```

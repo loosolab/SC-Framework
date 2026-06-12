@@ -1,6 +1,6 @@
 ---
 name: design
-description: First stage of the sc-framework dev workflow (design → plan → implement). Interactive, runs in the main loop with no subagent. Reads context, asks 1-4 clarifying questions (always including conda environment and change scope), proposes a .work/<YYYY-MM-DD>-<slug>/ directory and waits for confirmation, writes design.md, commits via sys-commit, and hands off to /plan.
+description: First stage of the sc-framework dev workflow (design → plan → implement). Interactive, runs in the main loop with no subagent. Reads context, asks 1-4 clarifying questions (always including conda environment and change scope), proposes a .work/<YYYY-MM-DD>-<slug>/ directory and waits for confirmation, writes design.md, commits via sys-commit, then offers to advance to /plan.
 ---
 
 # design
@@ -32,35 +32,24 @@ If neither is given, ask the user what they want to design.
    (e.g. `qc-filter-fix`, `embedding-plot`). Present the full directory
    `.work/<YYYY-MM-DD>-<slug>/` and **wait for confirmation** before creating
    anything. Use today's date from the environment.
-5. **Write `.work/<YYYY-MM-DD>-<slug>/design.md`** with exactly these
-   sections in order:
-
-   ```markdown
-   # <Title>
-
-   ## Problem
-   What are we trying to do, and why now? Reference related prior work if
-   relevant.
-
-   ## Approach
-   High-level idea, not implementation. Which sctoolbox modules / data flow
-   it touches, the angle, and what we deliberately will NOT do.
-
-   ## Scope
-   - Type: package | notebooks | both
-   - Conda environment: <name>
-
-   ## Success criteria
-   Concrete, observable signals — numeric where possible.
-
-   ## Open questions
-   What the user must decide before planning. Empty if all resolved.
-   ```
+5. **Write `.work/<YYYY-MM-DD>-<slug>/design.md`** using
+   `.claude/skills/design/design-template.md` as the skeleton. Fill every
+   section; do not add or remove sections. Guidance per section:
+   - **Problem** — what and why now; link related prior work if relevant.
+   - **Approach** — high-level idea, modules touched, what will NOT be done.
+   - **Scope** — `Type` is exactly one of `package`, `notebooks`, or `both`;
+     `Conda environment` is the name confirmed in the questions above.
+   - **Success criteria** — concrete, observable signals, numeric where possible.
+   - **Open questions** — decisions the user must make before planning; empty if
+     all resolved during the conversation.
 
 6. **Commit.** Invoke `sys-commit` (step: design, slug: `<slug>`, intended
    files: the new `design.md`) → message `design: <slug>`.
-7. **Hand off and stop.** Tell the user the next step is
-   `/plan .work/<YYYY-MM-DD>-<slug>/design.md`. Do not continue into planning.
+7. **Offer to advance.** Ask the user whether to proceed to planning now.
+   - If yes: invoke the `plan` skill via the Skill tool, passing
+     `.work/<YYYY-MM-DD>-<slug>/design.md` as args.
+   - If no: tell the user to run
+     `/plan .work/<YYYY-MM-DD>-<slug>/design.md` when ready.
 
 ## Out of scope
 

@@ -1,6 +1,6 @@
 ---
 name: sys-plan-review
-description: Agent-facing procedure followed by the plan-reviewer sub-agent. Read-only audit of a plan.md against its design.md — success-criterion coverage, task traceability, a single valid binding test command, verifiable TC<N> (test case N) definitions, no dropped open questions, and scaffolding as a suggestion (not a block). Returns a structured verdict; writes nothing. Not user-facing — driven by /plan.
+description: Agent-facing procedure followed by the plan-reviewer sub-agent. Read-only audit of a plan.md against its design.md — success-criterion coverage, task traceability, scope/environment drift, a single valid binding test command, verifiable TC<N> (test case N) definitions, no dropped open questions, and scaffolding as a suggestion (not a block). Returns a structured verdict; writes nothing. Not user-facing — driven by /plan.
 ---
 
 # sys-plan-review
@@ -28,19 +28,31 @@ directory. The calling skill passes both.
    command on a `**Test command for this plan:**` line. Flag missing,
    ambiguous, or multiple commands. Verify the command matches the scope
    declared in `design.md` (package → pytest present; notebooks → nbconvert
-   present; both → both). Verify ruff leads the command.
-4. **Test-case definition.** Each `TC<N>` (test case N) must describe a
+   present; both → both). Verify ruff leads the command, and that the ruff step
+   is `ruff check --preview .` verbatim — matching the CI `lint` job. A narrowed
+   ruff path (e.g. `ruff check src/sctoolbox tests`) is a **blocker**: it skips
+   notebooks/scripts that CI lints, so the gate can pass while CI fails.
+4. **Scope and environment drift.** Extract from `design.md`:
+   - `Type` field under `## Scope` (`package` | `notebooks` | `both`)
+   - `Conda environment` field under `## Scope`
+
+   Verify both are preserved in the plan:
+   - The binding command's test tools must match `Type` (same rule as check 3,
+     but flagged here as a **design drift blocker** rather than a command error).
+   - The `conda run -n <env>` name in the binding command must exactly match the
+     `Conda environment` from the design. A mismatch is a **blocker**.
+5. **Test-case definition.** Each `TC<N>` (test case N) must describe a
    verifiable check, not aspirational language. "The function works" is not
    a check; "TC1 — output AnnData contains column `leiden` in `.obs` after
    calling `run_clustering()`" is.
-5. **Open questions vs tasks.** Items in the design's `## Open questions`
+6. **Open questions vs tasks.** Items in the design's `## Open questions`
    must either reappear in the plan's `## Open questions`, or be closed by a
    `## Design decisions` bullet. Silent drops are a finding.
-6. **Scope discipline.** Flag plan tasks that edit modules unrelated to the
+7. **Scope discipline.** Flag plan tasks that edit modules unrelated to the
    design, unless the design explicitly calls for them. Flag tasks that would
    require registering a new submodule in `__init__.py` but don't list that
    as an explicit step.
-7. **Scaffolding lens (suggestion, not a block).** If helper/test scaffolding
+8. **Scaffolding lens (suggestion, not a block).** If helper/test scaffolding
    looks disproportionate to the actual change, raise it as a
    **suggestion-severity** finding. Do NOT block the plan on scaffolding
    alone.

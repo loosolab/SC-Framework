@@ -24,9 +24,21 @@ calling skill passes it. If absent, return a note that the path is required.
    - `Type`: package | notebooks | both
    - `Conda environment`: the env name to use in all commands
 3. **Select the binding test command** based on scope:
-   - **package:** `conda run -n <env> ruff check src/sctoolbox tests && conda run -n <env> python -m pytest tests/<target>.py -v`
-   - **notebooks:** `conda run -n <env> ruff check src/sctoolbox tests && conda run -n <env> jupyter nbconvert --to notebook --execute <notebook_path>`
+   - **package:** `conda run -n <env> ruff check --preview . && conda run -n <env> python -m pytest tests/<target>.py -v`
+   - **notebooks:** `conda run -n <env> ruff check --preview . && conda run -n <env> jupyter nbconvert --to notebook --execute <notebook_path>`
    - **both:** chain all three — ruff, pytest, nbconvert
+
+   The ruff step is `ruff check --preview .` **verbatim** — identical to the CI
+   `lint` job (`.gitlab-ci.yml`). It relies on the `[tool.ruff].include` list in
+   `pyproject.toml` (which already covers `src/`, `scripts/`, `tests/`, and the
+   notebooks), so a notebook- or script-scope change is actually linted. Do NOT
+   substitute a narrower path such as `ruff check src/sctoolbox tests` — that
+   skips the very files a notebook plan changes and lets CI fail on a
+   green-locally gate.
+
+   The per-file `pytest tests/<target>.py` keeps the TDD loop fast; `/implement`
+   runs the full `pytest tests` once at final confirmation to catch cross-file
+   regressions (see `implement/SKILL.md`).
 4. **Draft `plan.md`** in the same directory as `design.md`, using the
    template at `.claude/skills/sys-plan/plan-template.md`. The plan MUST
    include:

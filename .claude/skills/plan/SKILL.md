@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Second stage of the sc-framework dev workflow (design → plan → implement). Main-loop orchestrator. Spawns the planner sub-agent (sys-plan) to draft plan.md, spawns the plan-reviewer sub-agent (sys-plan-review), writes review-plan.md from the reviewer's findings, addresses blockers, commits via sys-commit, and hands off to /implement.
+description: Second stage of the sc-framework dev workflow (design → plan → implement). Main-loop orchestrator. Spawns the planner sub-agent (sys-plan) to draft plan.md, spawns the plan-reviewer sub-agent (sys-plan-review), writes review-plan.md from the reviewer's findings, addresses blockers, commits via sys-commit, then offers to advance to /implement.
 ---
 
 # plan
@@ -40,8 +40,11 @@ invoked without a path, ask for one.
    `Status: ready` in the plan frontmatter and invoke `sys-commit` (step:
    plan, slug: `<slug>`, intended files: `plan.md` and `review-plan.md`)
    → message `plan: <slug>`.
-7. **Hand off and stop.** Tell the user the next step is
-   `/implement .work/<date>-<slug>/plan.md`. Do not start implementing.
+7. **Offer to advance.** Ask the user whether to proceed to implementation now.
+   - If yes: invoke the `implement` skill via the Skill tool, passing
+     `.work/<date>-<slug>/plan.md` as args.
+   - If no: tell the user to run
+     `/implement .work/<date>-<slug>/plan.md` when ready.
 
 ## Constraints
 
