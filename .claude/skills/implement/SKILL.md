@@ -84,7 +84,10 @@ without a path, ask for one.
    gitignored `.work/`) → message `review: <slug>`. If no code changed (no
    blockers, no typo fixes), there is nothing to commit at this step —
    `review-code.md` stays local-only.
-7. **Update `CHANGES.md`.**
+7. **Update `CHANGES.md`.** The canonical changelog format is specified in
+   `docs/source/development.rst` (Changelog section) — follow it; the steps
+   below restate it, and CI's `check_changes.py` only verifies the file was
+   updated, not its structure.
    a. Read the current version from `src/sctoolbox/_version.py`
       (first line: `__version__ = "X.Y.Z"`).
    b. Open `CHANGES.md` and search for a line starting with `## X.Y.Z`
