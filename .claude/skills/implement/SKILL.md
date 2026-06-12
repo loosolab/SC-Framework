@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Third stage of the sc-framework dev workflow (design → plan → implement). Main-loop orchestrator. Preflight-checks the binding test command, spawns the implementer sub-agent (sys-implement, TDD (test-driven development), per-task commits), spawns the code-reviewer sub-agent (sys-code-review), writes review-code.md, addresses findings, updates CHANGES.md, and commits.
+description: Third stage of the sc-framework dev workflow (design → plan → implement). Main-loop orchestrator. Preflight-checks the binding test command, spawns the implementer sub-agent (sys-implement, TDD (test-driven development), per-task commits), spawns the code-reviewer sub-agent (sys-code-review), writes review-code.md, addresses findings, runs codespell (auto-fixing unambiguous typos and blocking on unclear ones), updates CHANGES.md, and commits.
 ---
 
 # implement
@@ -57,10 +57,30 @@ without a path, ask for one.
 5. **Write the review** verbatim to `.work/<date>-<slug>/review-code.md`.
 6. **Address findings.** Fix every **blocker**, re-running the binding test
    command after each fix. If the reviewer flags a structural mismatch you
-   cannot resolve without user input, stop and hand off. Then invoke
-   `sys-commit` (step: review, slug: `<slug>`, intended files: the fixes +
-   `review-code.md`) → message `review: <slug>`. If there were no findings,
-   still commit `review-code.md`.
+   cannot resolve without user input, stop and hand off.
+
+   **Spellcheck (codespell).** CI runs `codespell --toml pyproject.toml`
+   (`.gitlab-ci.yml` `spellcheck` job). Run it here over the files this work
+   item changed (the same set `git diff --name-only` reports for the work —
+   never the whole repo, to honour minimal-diff):
+   `conda run -n <env> codespell --toml pyproject.toml <changed files>`.
+   - **Auto-fix the unambiguous cases.** Run
+     `conda run -n <env> codespell -w --toml pyproject.toml <changed files>`.
+     With `-w`, codespell rewrites only single-candidate corrections (a clear
+     typo → one obvious fix) and leaves multi-candidate ones untouched. Verify
+     each rewrite landed in a comment/docstring/string, not in code that would
+     change behaviour; re-run the binding test command after fixing.
+   - **Block on the unclear cases.** Re-run
+     `codespell --toml pyproject.toml <changed files>`. Anything it still
+     reports is ambiguous (multiple candidate fixes) or a domain term codespell
+     doesn't know. **Stop and ask the user** how to resolve each — apply a
+     specific fix, or add the term to `uri-ignore-words-list` /
+     `ignore-words-list` in `pyproject.toml [tool.codespell]`. Do NOT guess a
+     correction.
+
+   Then invoke `sys-commit` (step: review, slug: `<slug>`, intended files: the
+   fixes + any codespell auto-fixes + `review-code.md`) → message
+   `review: <slug>`. If there were no findings, still commit `review-code.md`.
 7. **Update `CHANGES.md`.**
    a. Read the current version from `src/sctoolbox/_version.py`
       (first line: `__version__ = "X.Y.Z"`).
