@@ -7,6 +7,74 @@ This section is intended for developers. It contains information about the recom
 
 **Want to implement something new?** Always check existing functions. The SC-Frameworks package (sctoolbox) contains a lot of functions maybe you are lucky and someone already implemented your desired functionality.
 
+Setup
+-----
+
+The recommended development setup is the same conda environment used to run the analysis notebooks, extended with the optional dependencies required for testing, linting, spellchecking and building the documentation.
+
+Environment and package
+~~~~~~~~~~~~~~~~~~~~~~~
+
+First clone the repository, create the ``sctoolbox`` conda environment and install the package into it. Using `mamba <https://mamba.readthedocs.io/>`_ is faster than ``conda`` but requires mamba to be installed.
+
+.. code-block:: bash
+
+  # clone and enter the repository
+  git clone https://gitlab.gwdg.de/loosolab/software/sc_framework.git
+  cd sc_framework
+
+  # create and activate the environment
+  mamba env create -f sctoolbox_env.yml
+  conda activate sctoolbox
+
+  # install sctoolbox with all optional dependencies in editable mode
+  pip install -e .[all]
+
+The ``[all]`` extra pulls in every optional dependency group (see the ``[project.optional-dependencies]`` section of ``pyproject.toml``). Install only a subset, e.g. ``pip install -e .[atac]``, if you do not need everything. The ``-e``/``--editable`` flag installs the package in *editable* mode so your changes to ``src/sctoolbox`` take effect without reinstalling.
+
+Development dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The tooling required to test and lint the project is declared as `dependency groups <https://packaging.python.org/en/latest/specifications/dependency-groups/>`_ in the ``[dependency-groups]`` section of ``pyproject.toml``. Unlike the optional dependencies above, these groups are **not** part of the distributed package and are installed separately with pip's ``--group`` flag (requires ``pip >= 25.1``):
+
+.. list-table::
+  :header-rows: 1
+  :widths: 20 30 50
+
+  * - Group
+    - Packages
+    - Purpose
+  * - ``test``
+    - pytest, pytest-mock, pytest-cov, pytest-html, openpyxl
+    - Run the unit tests and produce coverage/HTML reports.
+  * - ``lint``
+    - ruff
+    - Lint and check docstrings (the binding test command starts with ``ruff check``).
+  * - ``spellcheck``
+    - codespell[toml]
+    - Spellcheck the code and documentation.
+  * - ``docs``
+    - sphinx, sphinx-rtd-theme, sphinx-exec-code, nbsphinx, ...
+    - Build this documentation locally.
+
+Install the groups you need into the activated ``sctoolbox`` environment:
+
+.. code-block:: bash
+
+  # everything needed to develop, test and lint
+  pip install -e .[all] --group test --group lint --group spellcheck
+
+  # add the docs toolchain if you want to build the documentation
+  pip install --group docs
+
+The ``--group`` flag can be combined with a normal install target, so the package and its development dependencies can be installed in a single command. After installation you can run the test suite, the linter and the spellchecker:
+
+.. code-block:: bash
+
+  ruff check         # lint + docstring checks
+  pytest             # unit tests with coverage
+  codespell          # spellcheck (uses the config in pyproject.toml)
+
 Git
 ---
 
