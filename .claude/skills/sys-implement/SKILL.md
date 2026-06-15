@@ -1,6 +1,6 @@
 ---
 name: sys-implement
-description: Agent-facing procedure followed by the implementer sub-agent. Writes tests first (red), implements plan tasks one at a time under the binding test command, marks - [x] T<N> only on green with no regression, retries up to a 3-attempt cap per task, commits each completed task via sys-commit, and refuses to invent tasks. On cap-hit, returns a structured failure summary. Not user-facing — driven by /implement.
+description: Procedure for the implementer sub-agent: TDD task loop under the binding test command, per-task commits, 3-attempt cap. Driven by /implement.
 ---
 
 # sys-implement

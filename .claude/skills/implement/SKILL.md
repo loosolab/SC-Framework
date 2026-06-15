@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Third stage of the sc-framework dev workflow (design → plan → implement). Main-loop orchestrator. Preflight-checks the binding test command, spawns the implementer sub-agent (sys-implement, TDD (test-driven development), per-task commits), spawns the code-reviewer sub-agent (sys-code-review), writes review-code.md, addresses findings, runs codespell (auto-fixing unambiguous typos and blocking on unclear ones), updates CHANGES.md, and commits.
+description: Stage 3 of the dev workflow. Main-loop orchestrator: spawns the implementer (TDD, per-task commits) and code-reviewer sub-agents, runs the regression + codespell gates, updates CHANGES.md.
 ---
 
 # implement

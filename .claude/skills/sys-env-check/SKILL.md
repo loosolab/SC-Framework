@@ -1,6 +1,6 @@
 ---
 name: sys-env-check
-description: Agent-facing shared procedure for verifying a conda environment carries the tooling a change's scope needs, and offering to install what is missing per docs/source/development.rst. Invoked by /design (before writing design.md) and /implement (preflight). Not user-facing.
+description: Shared conda-env verification: probes per-scope tooling and offers to install what's missing. Invoked by /design and /implement.
 ---
 
 # sys-env-check

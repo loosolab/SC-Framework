@@ -1,6 +1,6 @@
 ---
 name: sys-plan-review
-description: Agent-facing procedure followed by the plan-reviewer sub-agent. Read-only audit of a plan.md against its design.md — success-criterion coverage, task traceability, scope/environment drift, a single valid binding test command, verifiable TC<N> (test case N) definitions, no dropped open questions, and scaffolding as a suggestion (not a block). Returns a structured verdict; writes nothing. Not user-facing — driven by /plan.
+description: Procedure for the plan-reviewer sub-agent: read-only audit of plan.md against design.md. Driven by /plan.
 ---
 
 # sys-plan-review

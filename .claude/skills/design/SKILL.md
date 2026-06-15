@@ -1,6 +1,6 @@
 ---
 name: design
-description: First stage of the sc-framework dev workflow (design → plan → implement). Interactive, runs in the main loop with no subagent. Reads context, asks 1-4 clarifying questions (always including conda environment and change scope), verifies the chosen conda env has the dependencies the scope needs (offering to install them per docs/source/development.rst), proposes a .work/<YYYY-MM-DD>-<slug>/ directory and waits for confirmation, writes design.md (gitignored, local-only), then offers to advance to /plan.
+description: Stage 1 of the dev workflow (design → plan → implement). Interactive main-loop skill: clarifies change scope + conda env, verifies the env, writes design.md under .work/, offers to advance to /plan.
 ---
 
 # design

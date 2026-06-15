@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Second stage of the sc-framework dev workflow (design → plan → implement). Main-loop orchestrator. Spawns the planner sub-agent (sys-plan) to draft plan.md, spawns the plan-reviewer sub-agent (sys-plan-review), writes review-plan.md from the reviewer's findings, addresses blockers, marks the plan ready (no commit — .work/ is gitignored), then offers to advance to /implement.
+description: Stage 2 of the dev workflow. Main-loop orchestrator: spawns the planner and plan-reviewer sub-agents to turn a design.md into a reviewed, executable plan.md.
 ---
 
 # plan

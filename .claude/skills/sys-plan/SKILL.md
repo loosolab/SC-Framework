@@ -1,6 +1,6 @@
 ---
 name: sys-plan
-description: Agent-facing procedure followed by the planner sub-agent. Turns a design.md into a concrete plan.md using plan-template.md, selects the binding test command based on scope (package/notebooks/docs, combinable), and keeps the diff minimal. Writes only inside .work/<date>-<slug>/; does not run tests or commit. Not meant to be invoked directly by the user — use /plan.
+description: Procedure for the planner sub-agent: turns a design.md into a plan.md and selects the binding test command from scope. Driven by /plan.
 ---
 
 # sys-plan

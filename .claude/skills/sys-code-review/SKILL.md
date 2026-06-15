@@ -1,6 +1,6 @@
 ---
 name: sys-code-review
-description: Agent-facing procedure followed by the code-reviewer sub-agent. Read-only audit after the binding test command exits 0 — correctness against the plan, sctoolbox conventions (decorator order, AnnData mutations, docstrings, __init__.py registration), TDD (test-driven development) gate integrity (reruns the command, confirms each TC<N> (test case N) is implemented), scope discipline, and docs-build import safety (lazy optional-dep imports so unmocked autodoc doesn't break make html). Returns findings; writes nothing. Not user-facing — driven by /implement.
+description: Procedure for the code-reviewer sub-agent: read-only audit of the implementation against the plan and sctoolbox conventions. Driven by /implement.
 ---
 
 # sys-code-review

@@ -1,6 +1,6 @@
 ---
 name: sys-commit
-description: Agent-facing shared commit procedure. Stages only the intended files (never blind git add -A), writes a tagged commit message following the workflow convention, and never runs a git op denied by .claude/settings.json. Invoked by the main-loop skills at checkpoints and by the implementer per completed task. Not user-facing.
+description: Shared commit procedure: stages only intended files, tagged-message convention. Invoked by the workflow skills and the implementer.
 ---
 
 # sys-commit
