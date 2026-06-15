@@ -58,23 +58,19 @@ without a path, ask for one.
    before proceeding. (Notebook-only and docs-only scope have no pytest
    segment; skip this.)
 
-   **Render-check changed `.. exec_code::` examples (smoke-check).** If this
-   work added or modified a doc-string `.. exec_code::` example (check
-   `git diff`), the binding command did not execute it. Build that module's API
-   page `<m>` (`tools`, `utils`, …) with the **`dummy`** builder, which executes
-   `.. exec_code::` blocks but skips HTML finalisation — a single-page `-b html`
-   build fails here on nbsphinx's notebook collection, so do not use it:
-   `conda run -n <env> sphinx-build -b dummy docs/source /tmp/scdocs docs/source/API/<m>.rst`.
-   A **non-zero exit** means an example raised (a traceback, a `NameError` from
-   a missing pre-code variable) — hand it back to the implementer to fix the
-   example or extend `utils_pre_code.py`. The `toctree` / cross-reference
-   warnings it prints about the unbuilt rest of the docs are expected and do
-   **not** fail the build.
-
-   `.. plot::` examples are **not** executed by this check — the `dummy` builder
-   only parses them, and the plotting pre-code needs network/data. Their
-   execution is verified by the full `make -C docs html` on CI, not locally.
-   Skip this step entirely when no `.. exec_code::` example changed.
+   **Render-check changed `.. exec_code::` examples.** If `git diff` shows an
+   added/modified doc-string `.. exec_code::` example, the binding command did
+   not execute it. Build that module's API page with the **`dummy`** builder
+   (executes `.. exec_code::`, skips HTML finalisation — a single-page `-b html`
+   fails on nbsphinx's notebook collection, so do **not** use it):
+   `conda run -n <env> sphinx-build -b dummy docs/source /tmp/scdocs docs/source/API/<m>.rst`
+   (`<m>` = `tools`, `utils`, …). A **non-zero exit** means an example raised (a
+   traceback, a `NameError` from a missing pre-code variable) — hand it back to
+   the implementer to fix the example or extend `utils_pre_code.py`. The
+   `toctree`/cross-reference warnings about the unbuilt rest of the docs are
+   expected and do **not** fail it. `.. plot::` examples are only parsed here,
+   not executed (the full `make -C docs html` on CI verifies those); skip this
+   step entirely when no `.. exec_code::` example changed.
 4. **Spawn the `code-reviewer`.** Use the Agent tool with
    `subagent_type: code-reviewer`, passing `plan.md` and the changed files /
    work-item directory. It follows `sys-code-review` and **always runs**.
@@ -108,32 +104,19 @@ without a path, ask for one.
    gitignored `.work/`) → message `review: <slug>`. If no code changed (no
    blockers, no typo fixes), there is nothing to commit at this step —
    `review-code.md` stays local-only.
-7. **Update `CHANGES.md`.** The canonical changelog format is specified in
-   `docs/source/development.rst` (Changelog section) — follow it; the steps
-   below restate it, and CI's `check_changes.py` only verifies the file was
-   updated, not its structure.
-   a. Read the current version from `src/sctoolbox/_version.py`
-      (first line: `__version__ = "X.Y.Z"`).
-   b. Open `CHANGES.md` and search for a line starting with `## X.Y.Z`
-      (the version string, no surrounding text required to match):
-      - **Section exists** — append new bullet(s) to it.  For package- and
-        docs-scope changes add under the main section header; for
-        notebook-scope changes add under the `### Changes to notebooks`
-        subsection (create it if absent).
-      - **Section absent** — prepend a new section immediately before the
-        first existing `## ` line:
-        ```markdown
-        ## X.Y.Z (in progress)
-        - <one-line description of what shipped>
-        ```
-        If the design scope includes notebooks also append:
-        ```markdown
-        ### Changes to notebooks
-        - <one-line description>
-        ```
-   c. Bullet text: a short imperative phrase describing the user-visible
-      change. Omit the issue number if there is no associated GitLab issue;
-      append ` (#<N>)` if the design or plan references one.
+7. **Update `CHANGES.md`.** Use the format in `CLAUDE.md` (canonical spec:
+   `development.rst`, Changelog section); CI's `check_changes.py` only verifies
+   the file changed, not its structure.
+   a. Read the current version `X.Y.Z` from `src/sctoolbox/_version.py`.
+   b. Find the `## X.Y.Z` section in `CHANGES.md`:
+      - **Exists** — append bullet(s): package/docs changes under the main
+        header, notebook changes under `### Changes to notebooks` (create it if
+        absent).
+      - **Absent** — prepend a new `## X.Y.Z (in progress)` section (plus a
+        `### Changes to notebooks` subsection if scope includes notebooks)
+        before the first existing `## ` line.
+   c. Bullet = short imperative phrase for the user-visible change; append
+      ` (#<N>)` only if the design or plan cites a GitLab issue.
    d. Invoke `sys-commit` (step: changes, slug: `<slug>`, intended files:
       `CHANGES.md`) → message `changes: <slug>`.
 8. **Done.** Report what shipped and the final test result.
