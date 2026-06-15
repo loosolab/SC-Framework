@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Read-only auditor invoked by /implement after the task loop completes and the binding test command exits 0. Checks algorithm correctness against the plan, sctoolbox conventions (decorators, AnnData mutations, docstrings), TDD (test-driven development) gate integrity (reruns the command, confirms each TC<N> (test case N) is implemented), scope discipline, and docs-build import safety (lazy optional-dep imports so unmocked autodoc doesn't break make html). Returns findings as structured text; writes nothing.
+description: Read-only auditor spawned by /implement after the gate passes: checks correctness against the plan, sctoolbox conventions, TDD gate integrity, scope discipline, and docs-build import safety. Returns findings; writes nothing.
 tools: Read, Grep, Glob, Bash
 ---
 

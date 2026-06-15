@@ -1,6 +1,6 @@
 ---
 name: planner
-description: Drafts plan.md from a design.md, following the procedure in .claude/skills/sys-plan/SKILL.md. Writes only inside .work/<date>-<slug>/. Does not run tests or commit.
+description: Drafts plan.md from a design.md, writing only inside .work/<date>-<slug>/. Does not run tests or commit. Spawned by /plan.
 tools: Read, Grep, Glob, Bash, Write
 ---
 

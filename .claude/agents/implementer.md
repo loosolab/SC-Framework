@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: Executes a plan.md against its declared binding test command using TDD (test-driven development: tests first, one task at a time, 3-attempt retry cap per task), following the procedure in .claude/skills/sys-implement/SKILL.md. Commits per completed task via sys-commit. Refuses to invent tasks beyond the plan. Invoked by the /implement skill.
+description: Executes a plan.md under its binding test command using TDD (tests first, one task at a time, 3-attempt cap), committing per task. Refuses to invent tasks. Spawned by /implement.
 tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 

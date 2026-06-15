@@ -1,6 +1,6 @@
 ---
 name: plan-reviewer
-description: Read-only auditor of plan.md against design.md, following the procedure in .claude/skills/sys-plan-review/SKILL.md. Checks success-criterion coverage, task traceability, binding test command validity, and TC<N> (test case N) definitions. Returns findings as structured text; writes nothing.
+description: Read-only auditor of plan.md against design.md, spawned by /plan: checks success-criterion coverage, task traceability, and the binding test command. Returns findings; writes nothing.
 tools: Read, Grep, Glob
 ---
 

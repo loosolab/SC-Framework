@@ -77,7 +77,7 @@ concern the `plan-reviewer` may flag, not a hard block.
 ## Algorithmic-core vs orchestration
 
 Separate **algorithmic-core** tasks (data transformations, scoring, filtering
-logic — these **get a TC<N> (test case N)**) from **orchestration** tasks
+logic — these **get a TC<N>**) from **orchestration** tasks
 (CLI wiring, plot generation, file writers driven by tested cores — these may
 not need a dedicated test case). The binding test command targets the
 algorithmic delta.
@@ -125,7 +125,7 @@ an example task:
   extend that script minimally so the variable exists.
 
 These example tasks are **orchestration**, not algorithmic-core — they get no
-`TC<N>` (test case N), and they never go in the binding test command. Their
+`TC<N>`, and they never go in the binding test command. Their
 verification differs by directive: `.. exec_code::` examples are smoke-checked
 locally by the single-page `dummy` build `/implement` runs; `.. plot::` example
 *execution* is only verified by the full `make -C docs html` on CI. Do **not**
