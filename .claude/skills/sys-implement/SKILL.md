@@ -47,13 +47,8 @@ the task loop; the binding command still runs after every task.
 For each unchecked `- [ ] T<N>. ...` in order:
 
 1. **Implement only what this task describes.** No scope creep into the next
-   task. Follow all conventions in `CLAUDE.md`:
-   - `@beartype` on all new public functions
-   - `@log_anndata` on top-level functions that receive AnnData/MuData
-     (decorator order: `@log_anndata` outermost, `@beartype` directly above
-     function)
-   - New submodules registered in parent `__init__.py`
-   - Numpy-style docstrings on all functions
+   task. Follow all conventions in `CLAUDE.md` (already in your context).
+   Task-specific items the plan may invoke:
    - **Renderable examples** when the plan has an example task: add a
      `.. plot:: :context: close-figs` example to plotting functions, an
      `.. exec_code::` example to other public functions. Reuse variables from
@@ -91,6 +86,5 @@ For each unchecked `- [ ] T<N>. ...` in order:
 - **Only edit `plan.md`'s checkbox state and `Status` field.**
 - **Commit only the intended files** via `sys-commit` — never blind
   `git add -A`, never a denied git op (see `.claude/settings.json`).
-- **Deprecations:** if removing or replacing existing functionality, use the
-  `deprecation` package targeting removal in 2 minor versions, and add
-  `@deprecation.fail_if_not_removed` to the function's test.
+- **Deprecations:** per `CLAUDE.md`'s rule — `deprecation` package, removal in
+  2 minor versions, `@deprecation.fail_if_not_removed` on the function's test.

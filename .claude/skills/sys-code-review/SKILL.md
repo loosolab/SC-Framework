@@ -26,13 +26,10 @@ The calling skill passes:
    - Functions that accept AnnData but also return a modified copy — never
      both.
    - Filter or threshold values contradicting plan numbers.
-2. **sctoolbox conventions.** Check against `CLAUDE.md`:
-   - Decorator order: `@log_anndata` (if present) outermost, `@beartype`
-     directly above function. `@beartype` missing on a public function is a
-     blocker.
-   - New submodules registered in the parent `__init__.py` `__all__`.
-   - Numpy-style docstrings present on all new/modified public functions.
-   - Plotting functions accept `ax` and return it.
+2. **sctoolbox conventions.** Audit against the `CLAUDE.md` conventions
+   (already in your context): decorators, `__init__.py` registration, numpy
+   docstrings, plotting `ax`, deprecation. A missing `@beartype` on a public
+   function is a **blocker**.
    - **Renderable examples (suggestion-level, never a blocker).** Examples are
      encouraged, not required. For a new/modified public **plotting** function
      with no `.. plot::` example, suggest adding one (highly encouraged). For

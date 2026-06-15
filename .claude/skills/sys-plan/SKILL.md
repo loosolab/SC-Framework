@@ -18,8 +18,8 @@ calling skill passes it. If absent, return a note that the path is required.
 ## Process
 
 1. **Read the design.** Open `design.md`. Read sibling artifacts in the same
-   directory if present. Read `CLAUDE.md` for the module map, stack, and
-   conventions.
+   directory if present. `CLAUDE.md` (module map, stack, conventions) is already
+   in your context — no need to re-read it.
 2. **Extract scope and environment** from the `design.md` `## Scope` section:
    - `Type`: one or more of package | notebooks | docs (combinable)
    - `Conda environment`: the env name to use in all commands
