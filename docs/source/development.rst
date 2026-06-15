@@ -510,7 +510,15 @@ Documentation is important for usability, that is why the SC-Framework requires 
 Example code and results
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-It is possible to add examples on how a function should be executed and show the expected output. This is shown in the :doc:`API-reference </API/index>`. Especially, plotting functions benefit from showing the output.
+Functions may carry an ``Examples`` section that shows how they are called and renders the expected output in the :doc:`API-reference </API/index>`. Two Sphinx directives are available:
+
+- ``.. plot::`` runs the example and embeds the resulting figure. Use it for **plotting functions**.
+- ``.. exec_code::`` runs the example and embeds its textual output. Use it for **non-plotting code**.
+
+Examples are best practice but never mandatory:
+
+- **Plotting functions** are **highly encouraged** to add a ``.. plot::`` example. Showing the produced figure is what makes the API reference useful for these functions.
+- **All other public functions** are **encouraged** to add an ``.. exec_code::`` example where running the function produces a result worth showing (a table, a printed summary). Skip it for functions whose output is not illustrative.
 
 To do so, add an example section to the doc-string of the respective function:
 
@@ -540,17 +548,43 @@ To do so, add an example section to the doc-string of the respective function:
           some_code()
       """
 
+Always pass ``:context: close-figs`` to a ``.. plot::`` directive. The ``:context:`` keeps the shared namespace (see below) alive across examples, and ``close-figs`` closes the previous figure so each example renders only its own plot.
+
 Where does the data come from?
 """"""""""""""""""""""""""""""
 
-For the plotting functions, we have a short script that is run before all examples. This script can be found in the repository (``/docs/source/plot_pre_code.py``). This script can be used to add any imports and input data preparation that should not be shown in the example.
+Each module page runs a short setup script **once at the top**, before any of that page's examples. These scripts live in the repository and provide the imports and input data the examples rely on (so the setup itself is not repeated in every example):
+
+- ``docs/source/plot_pre_code.py`` — runs before the examples on the ``plotting`` page.
+- ``docs/source/utils_pre_code.py`` — runs before the examples on the ``utils`` page.
+
+If your new example needs input data that the relevant pre-code script does not yet prepare (e.g. a new fixture, a different ``.obs`` column), **extend that script** so the variable exists for everyone. Keep additions minimal and reuse the existing ``adata`` where possible.
 
 What not to do!
 """""""""""""""
 
-Please do not overwrite any variables in your example code! All examples run after each other as they are in one script.
+Please do not overwrite any variables in your example code! All examples on a module page share a single namespace and run after each other in order — the pre-code script first, then every function's example.
 
 For example, the main example input is stored in the variable ``adata``. If you would overwrite it with something else all the following code that uses the input variable is likely to fail.
+
+Checking that an example renders
+""""""""""""""""""""""""""""""""
+
+The example directives only execute when the documentation is built; ``ruff`` and ``pytest`` do not run them. The authoritative check is the full Sphinx build (``make -C docs html``), which CI runs on the ``dev`` pipeline — this is what executes ``.. plot::`` examples and renders their figures.
+
+For a quick local check while iterating, build a single page with the ``dummy`` builder. It reads and validates the page without producing HTML, which avoids the notebook-finalisation step that makes a single-page ``html`` build fail:
+
+.. code-block:: bash
+
+  # validate the utils page and run its .. exec_code:: examples
+  sphinx-build -b dummy docs/source /tmp/scdocs docs/source/API/utils.rst
+
+What this does and does not catch:
+
+- ``.. exec_code::`` examples **are executed** — the build exits non-zero if one raises. This is a fast, offline smoke-test for examples on non-plotting pages.
+- ``.. plot::`` examples are **only parsed, not executed**, by the ``dummy`` builder (and the plotting pre-code even downloads data over the network). Their execution is verified by the full ``make -C docs html`` build on CI, not by this local check.
+
+The build also prints ``toctree`` / cross-reference warnings about the rest of the documentation that was not built — those are expected for a single-page build and do not fail it.
 
 Deprecation
 ~~~~~~~~~~~

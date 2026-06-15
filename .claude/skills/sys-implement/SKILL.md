@@ -54,6 +54,14 @@ For each unchecked `- [ ] T<N>. ...` in order:
      function)
    - New submodules registered in parent `__init__.py`
    - Numpy-style docstrings on all functions
+   - **Renderable examples** when the plan has an example task: add a
+     `.. plot:: :context: close-figs` example to plotting functions, an
+     `.. exec_code::` example to other public functions. Reuse variables from
+     the page's pre-code script (`docs/source/plot_pre_code.py` /
+     `utils_pre_code.py`) and **never reassign shared ones** such as `adata`. If
+     the example needs new input data, extend the relevant pre-code script
+     minimally (the plan should pair such a task). See the "Example code and
+     results" section of `docs/source/development.rst`.
    - Notebook outputs cleared if scope includes notebooks
 2. **Run the test command.**
 3. **Decide:**

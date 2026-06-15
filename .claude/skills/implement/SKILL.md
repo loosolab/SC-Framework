@@ -58,6 +58,24 @@ without a path, ask for one.
    change regressed another module — hand the failure back to the implementer
    before proceeding. (Notebook-only and docs-only scope have no pytest
    segment; skip this.)
+
+   **Render-check changed `.. exec_code::` examples (smoke-check).** If this
+   work added or modified a doc-string `.. exec_code::` example (check
+   `git diff`), the binding command did not execute it. Build that module's API
+   page `<m>` (`tools`, `utils`, …) with the **`dummy`** builder, which executes
+   `.. exec_code::` blocks but skips HTML finalisation — a single-page `-b html`
+   build fails here on nbsphinx's notebook collection, so do not use it:
+   `conda run -n <env> sphinx-build -b dummy docs/source /tmp/scdocs docs/source/API/<m>.rst`.
+   A **non-zero exit** means an example raised (a traceback, a `NameError` from
+   a missing pre-code variable) — hand it back to the implementer to fix the
+   example or extend `utils_pre_code.py`. The `toctree` / cross-reference
+   warnings it prints about the unbuilt rest of the docs are expected and do
+   **not** fail the build.
+
+   `.. plot::` examples are **not** executed by this check — the `dummy` builder
+   only parses them, and the plotting pre-code needs network/data. Their
+   execution is verified by the full `make -C docs html` on CI, not locally.
+   Skip this step entirely when no `.. exec_code::` example changed.
 4. **Spawn the `code-reviewer`.** Use the Agent tool with
    `subagent_type: code-reviewer`, passing `plan.md` and the changed files /
    work-item directory. It follows `sys-code-review` and **always runs**.

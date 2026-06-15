@@ -33,6 +33,17 @@ The calling skill passes:
    - New submodules registered in the parent `__init__.py` `__all__`.
    - Numpy-style docstrings present on all new/modified public functions.
    - Plotting functions accept `ax` and return it.
+   - **Renderable examples (suggestion-level, never a blocker).** Examples are
+     encouraged, not required. For a new/modified public **plotting** function
+     with no `.. plot::` example, suggest adding one (highly encouraged). For
+     other public functions with illustrative output and no `.. exec_code::`
+     example, suggest one where it adds value. Where an example **is** present,
+     check it for correctness — uses variables from the page's pre-code script
+     (`docs/source/plot_pre_code.py` / `utils_pre_code.py`), does not reassign
+     shared ones such as `adata`, `.. plot::` carries `:context: close-figs`,
+     and any new fixture it relies on was added to the pre-code script. A
+     present-but-broken example is a real finding (it fails the docs build);
+     a *missing* example is only ever a suggestion.
    - Deprecated code uses the `deprecation` package with `fail_if_not_removed`
      in tests.
 3. **TDD (test-driven development) gate integrity.**

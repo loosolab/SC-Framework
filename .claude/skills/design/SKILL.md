@@ -34,7 +34,7 @@ If neither is given, ask the user what they want to design.
    exact install commands) is specified in `docs/source/development.rst`
    (Setup section); this step just applies it.
    - **Env missing.** If `conda env list` shows no such env, offer to create it
-     from `sctoolbox_env.yml` (`mamba env create -f sctoolbox_env.yml` — note
+     from `sctoolbox_env.yml` (`conda env create -f sctoolbox_env.yml` — note
      this creates an env named `sctoolbox`). If the user meant a different
      name, ask which existing env to use instead.
    - **Check dependencies by scope** (run each with `conda run -n <env> …`):

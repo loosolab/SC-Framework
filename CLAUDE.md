@@ -112,7 +112,7 @@ Accept an optional `ax` parameter (matplotlib `Axes`); create one internally if 
 
 ### Docstrings
 
-Numpy-style docstrings are required on all functions and enforced by ruff. Add an `Examples` section to plotting functions.
+Numpy-style docstrings are required on all functions and enforced by ruff. Renderable `Examples` sections are best practice but never mandatory: plotting functions are **highly encouraged** to add a `.. plot::` example, and all other public functions are **encouraged** to add an `.. exec_code::` example where the output is illustrative. See the "Example code and results" section of `docs/source/development.rst` for the directives, the per-module pre-code fixtures (`plot_pre_code.py` / `utils_pre_code.py`), and how to render-check a single module page.
 
 ### New submodules
 
