@@ -12,7 +12,7 @@ Python package (`sctoolbox`) for single-cell analysis workflows covering scRNA-s
 - **Core deps:** AnnData, Scanpy (+ leiden community detection)
 - **Optional dep groups:** declared in `pyproject.toml` under `[project.optional-dependencies]` (the authoritative list — read it rather than relying on a copy here)
 - **Test framework:** pytest + pytest-cov + pytest-html (target coverage >90%)
-- **Linter:** ruff (config in `pyproject.toml`; targets `src/**/*.py`, `scripts/*.py`, `tests/**/*.py`)
+- **Linter:** ruff (config in `pyproject.toml`)
 - **Notebooks:** Jupyter (rna_analysis/notebooks/, atac_analysis/notebooks/, general_notebooks/)
 - **Build:** setuptools + setuptools_scm
 - **Runtime type checking:** beartype (>=0.18.2)
@@ -74,7 +74,7 @@ Accept an optional `ax` parameter (matplotlib `Axes`); create one internally if 
 
 ### Docstrings
 
-Numpy-style docstrings are required on all functions and enforced by ruff. Renderable `Examples` sections are best practice but never mandatory: plotting functions are **highly encouraged** to add a `.. plot::` example, and all other public functions are **encouraged** to add an `.. exec_code::` example where the output is illustrative. See the "Example code and results" section of `docs/source/development.rst` for the directives, the per-module pre-code fixtures (`plot_pre_code.py` / `utils_pre_code.py`), and how to render-check a single module page.
+Numpy-style docstrings are required on all functions and enforced by ruff. Renderable `Examples` sections are best practice but never mandatory: plotting functions are **highly encouraged** to add a `.. plot::` example, other public functions **encouraged** to add an `.. exec_code::` example where the output is illustrative. See the "Example code and results" section of `docs/source/development.rst` for the directives, pre-code fixtures, and render-checking.
 
 ### New submodules
 
