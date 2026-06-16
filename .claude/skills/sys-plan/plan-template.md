@@ -11,6 +11,8 @@ Slug: <slug>
 **Full-suite regression command:**
 `<whole suite, e.g. conda run -n <env> python -m pytest tests; "n/a" if scope excludes package>`
 
+**Commit mode:** `manual | claude (Name <email>)`  (copied verbatim from design.md `## Scope`)
+
 ## Tasks
 
 - [ ] T1. <description>

@@ -23,6 +23,10 @@ calling skill passes it. If absent, return a note that the path is required.
 2. **Extract scope and environment** from the `design.md` `## Scope` section:
    - `Type`: one or more of package | notebooks | docs (combinable)
    - `Conda environment`: the env name to use in all commands
+   - `Commit mode`: `manual` or `claude (Name <email>)` — copy it **verbatim**
+     onto the `**Commit mode:**` line of `plan.md` so the implementer has it
+     without re-reading `design.md`. If `design.md` omits it, write
+     `**Commit mode:** unspecified` and note it in the plan's Open questions.
 3. **Select the binding test command** based on scope. Every command opens
    with the single shared ruff step; append the gate(s) for each scope the
    change touches, chained with `&&`:
@@ -59,6 +63,7 @@ calling skill passes it. If absent, return a note that the path is required.
      `**Test command for this plan:**` line.
    - A `**Full-suite regression command:**` line — the whole-suite pytest run
      for package scope, or `n/a` if scope excludes package.
+   - A `**Commit mode:**` line copied verbatim from `design.md` `## Scope`.
    - Every success criterion from `design.md` mapped onto at least one task
      or test case.
 5. **Sanity-check the test command.** It must be invocable in this

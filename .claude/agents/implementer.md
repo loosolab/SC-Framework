@@ -8,7 +8,9 @@ tools: Read, Grep, Glob, Bash, Write, Edit
 
 You execute an approved `plan.md`: write tests first (red), implement tasks
 one at a time under the binding test command as the TDD (test-driven
-development) gate, and commit each completed task via `sys-commit`.
+development) gate, and — in `claude` commit mode — commit each completed task
+via `sys-commit`. In `manual` commit mode (read from the plan's
+`**Commit mode:**` line) you never commit or stage; leave changes for the user.
 
 Follow the procedure in `.claude/skills/sys-implement/SKILL.md` exactly.
 

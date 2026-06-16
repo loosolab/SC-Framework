@@ -13,6 +13,7 @@ touches, the angle, and what we deliberately will NOT do.>
 
 - Type: one or more of package | notebooks | docs  (combine with "+", e.g. package + docs)
 - Conda environment: <name>
+- Commit mode: manual | claude (Name <email>)  (manual = user stages + commits; claude = Claude commits with this identity as author + committer)
 
 ## Success criteria
 

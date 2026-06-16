@@ -27,6 +27,14 @@ If neither is given, ask the user what they want to design.
    sharp questions. Always include:
    - **Conda environment** — which env should the binding test command use?
    - **Change scope** — any combination of package (`src/sctoolbox/` + `tests/`), notebooks, and docs (`docs/`)?
+   - **Commit mode** — who commits the work? Offer two choices: **manual**
+     (the user stages and commits everything themselves — `/implement` never
+     touches git) or **claude** (Claude commits per the workflow convention).
+     If the user picks **claude**, ask for their **name and email** and record
+     them as `claude (Name <email>)` — these set both the author and committer
+     of each commit, scoped per-commit (no `git config` is written).
+     Default to **manual** if the user is unsure (the local setup can have
+     issues with automatic commits).
    Use `AskUserQuestion` when choices enumerate cleanly; free-text otherwise.
 4. **Verify the conda environment.** As soon as the env name is confirmed in
    step 3, follow the shared `sys-env-check` procedure — before any `design.md`
@@ -47,7 +55,8 @@ If neither is given, ask the user what they want to design.
    - **Approach** — high-level idea, modules touched, what will NOT be done.
    - **Scope** — `Type` is one or more of `package`, `notebooks`, `docs`
      (combine with `+`, e.g. `package + docs`); `Conda environment` is the
-     name confirmed in the questions above.
+     name confirmed in the questions above; `Commit mode` is either `manual`
+     or `claude (Name <email>)` as chosen above.
    - **Success criteria** — concrete, observable signals, numeric where possible.
    - **Open questions** — decisions the user must make before planning; empty if
      all resolved during the conversation.

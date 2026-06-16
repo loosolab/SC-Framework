@@ -28,15 +28,24 @@ without a path, ask for one.
    missing (running it only after you confirm). If it returns `blocked` (env
    absent and not wanted, or a needed install declined), stop and surface the
    gap.
+3. **Resolve the commit mode.** Read the `**Commit mode:**` line from `plan.md`
+   (falling back to `design.md` `## Scope`). If it is `manual`, no step in this
+   skill commits — the user stages and commits everything themselves. If it is
+   `claude (Name <email>)`, every `sys-commit` call passes that author. If it is
+   missing or `unspecified` (e.g. a plan predating this field, or `/implement`
+   run without `/design`), **ask the user now**: manual, or claude — and if
+   claude, their name and email. Carry the resolved mode through every
+   `sys-commit` call below.
 
 ## Process
 
 1. **Spawn the `implementer`.** Use the Agent tool with
-   `subagent_type: implementer`, passing the `plan.md` path. It follows
-   `sys-implement`: writes tests first (red), implements tasks one at a time
-   under the binding command, marks `- [x] T<N>` only on green with no
-   regression, and **commits per completed task** via `sys-commit`
-   (`impl(<slug>): T<N> <desc>`). It retries up to 3 attempts per task.
+   `subagent_type: implementer`, passing the `plan.md` path and the resolved
+   commit mode. It follows `sys-implement`: writes tests first (red), implements
+   tasks one at a time under the binding command, marks `- [x] T<N>` only on
+   green with no regression, and — in `claude` commit mode — **commits per
+   completed task** via `sys-commit` (`impl(<slug>): T<N> <desc>`); in `manual`
+   mode it leaves changes unstaged. It retries up to 3 attempts per task.
 2. **Handle a retry-cap or blocker handoff.** If the implementer returns a
    structured failure summary, **stop and ask the user** how to proceed:
    - Continue trying (resets the counter, explicit consent) — re-spawn the
@@ -97,10 +106,11 @@ without a path, ask for one.
      correction.
 
    If addressing findings or the spellcheck changed any code, invoke
-   `sys-commit` (step: review, slug: `<slug>`, intended files: the fixes + any
-   codespell auto-fixes — **never** `review-code.md`, which lives under the
-   gitignored `.work/`) → message `review: <slug>`. If no code changed (no
-   blockers, no typo fixes), there is nothing to commit at this step —
+   `sys-commit` (step: review, slug: `<slug>`, commit mode, intended files: the
+   fixes + any codespell auto-fixes — **never** `review-code.md`, which lives
+   under the gitignored `.work/`) → message `review: <slug>`. In `manual`
+   commit mode, skip the commit and leave the fixes unstaged. If no code changed
+   (no blockers, no typo fixes), there is nothing to commit at this step —
    `review-code.md` stays local-only.
 7. **Update `CHANGES.md`.** Use the format in `CLAUDE.md` (canonical spec:
    `development.rst`, Changelog section); CI's `check_changes.py` only verifies
@@ -115,9 +125,12 @@ without a path, ask for one.
         before the first existing `## ` line.
    c. Bullet = short imperative phrase for the user-visible change; append
       ` (#<N>)` only if the design or plan cites a GitLab issue.
-   d. Invoke `sys-commit` (step: changes, slug: `<slug>`, intended files:
-      `CHANGES.md`) → message `changes: <slug>`.
-8. **Done.** Report what shipped and the final test result.
+   d. Invoke `sys-commit` (step: changes, slug: `<slug>`, commit mode, intended
+      files: `CHANGES.md`) → message `changes: <slug>`. In `manual` commit
+      mode, skip the commit and leave `CHANGES.md` unstaged.
+8. **Done.** Report what shipped and the final test result. In `manual` commit
+   mode, also list every changed file (`git status --short`) and remind the user
+   that nothing was staged or committed — they stage and commit it themselves.
 
 ## Constraints
 
@@ -127,3 +140,6 @@ without a path, ask for one.
   to `/plan`.
 - **Commit only intended files** via `sys-commit`; never blind `git add -A`,
   never a git op denied by `.claude/settings.json`.
+- **Honour the commit mode.** In `manual` mode, no step here commits or stages —
+  leave the working tree for the user. In `claude` mode, pass the author through
+  every `sys-commit` call.

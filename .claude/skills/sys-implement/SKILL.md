@@ -25,6 +25,12 @@ Before touching any code:
 2. Extract the **binding test command** (the line beginning
    `**Test command for this plan:**`). If absent, return a note that the
    plan is missing its gate — the user should re-run `/plan`.
+   Also read the **commit mode** (the `**Commit mode:**` line). In
+   **`manual`** mode you do **not** commit at any point — complete tasks and run
+   the gate, but leave all changes unstaged for the user. In
+   **`claude (Name <email>)`** mode, commit per task via `sys-commit`, passing
+   the mode so the author is set. If the line is missing or `unspecified`,
+   return a note — the calling skill resolves it before you start.
 3. Confirm the command is invocable (conda env present, ruff and pytest or
    jupyter reachable, target files exist or are part of T1). If not, return
    the gap; do not start.
@@ -58,9 +64,11 @@ For each unchecked `- [ ] T<N>. ...` in order:
 3. **Decide:**
    - This task's target checks pass AND nothing previously-passing regressed
      → mark `- [x] T<N>` in `plan.md` (a local-only edit — `plan.md` is under
-     the gitignored `.work/` and is **never staged**); **commit via
-     `sys-commit`** with message `impl(<slug>): T<N> <short desc>`, staging only
-     this task's code/test files; continue.
+     the gitignored `.work/` and is **never staged**). In **`claude`** commit
+     mode, **commit via `sys-commit`** with message
+     `impl(<slug>): T<N> <short desc>`, staging only this task's code/test files.
+     In **`manual`** mode, skip the commit and leave the task's changes
+     unstaged. Either way, continue to the next task.
    - Target checks still failing → diagnose, fix, retry. **Up to 3 attempts
      total per task.** The counter resets when a task is marked done.
    - A previously-passing check regressed → revert the regression first; a
@@ -72,8 +80,9 @@ For each unchecked `- [ ] T<N>. ...` in order:
 ## After all tasks pass
 
 1. Run the test command once more. It MUST exit 0.
-2. Stop and return a structured summary (tasks completed, commits made, final
-   test result) to the calling skill.
+2. Stop and return a structured summary (tasks completed, commits made — or
+   "none, manual commit mode" — and final test result) to the calling skill.
+   In manual mode, list the changed files so the user can stage them.
 
 ## Constraints
 
