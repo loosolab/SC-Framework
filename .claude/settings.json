@@ -1,5 +1,19 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch --show-current)",
+      "Bash(conda env list)",
+      "Bash(conda run -n sctoolbox ruff check --preview .)",
+      "Bash(conda run -n sctoolbox ruff --version)",
+      "Bash(conda run -n sctoolbox python -m pytest:*)",
+      "Bash(conda run -n sctoolbox python -c \"import sctoolbox\")",
+      "Bash(conda run -n sctoolbox python -c \"import sphinx\")",
+      "Bash(conda run -n sctoolbox make -C docs html)",
+      "Bash(conda run -n sctoolbox sphinx-build -b dummy docs/source /tmp/scdocs:*)"
+    ],
     "deny": [
       "Bash(git merge:*)",
       "Bash(git checkout:*)",
