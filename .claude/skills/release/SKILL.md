@@ -31,15 +31,18 @@ decides.
 
 ### Step 2 — Update `_version.py`
 
-Replace the `__version__` value in `src/sctoolbox/_version.py` with the new
-version string.
+Set `src/sctoolbox/_version.py` to the clean `__version__ = "<new_version>"`.
+Per the version lifecycle in `.claude/skills/sys-changelog/SKILL.md`, the
+working tree carries the in-progress `X.Y.Zb0`; this strips the `b0` suffix to
+the released number.
 
 ### Step 3 — Finalise `CHANGES.md`
 
-Find the line starting with `## <new_version>` or `## <old_version>` followed
-by `(in progress)`. Replace `(in progress)` with today's date in
-`(DD-MM-YYYY)` format. If no `(in progress)` entry exists for this version,
-warn the user — the CHANGES.md may need a manual entry.
+Apply the **Finalise** procedure in `.claude/skills/sys-changelog/SKILL.md`: in
+the active `## … (in progress)` section header, replace `(in progress)` with
+today's date in `(DD-MM-YYYY)` format (updating the header version too if the
+chosen release number differs from the in-progress one). If no `(in progress)`
+entry exists, warn the user — the CHANGES.md may need a manual entry.
 
 ### Step 4 — Update notebook versions
 

@@ -111,41 +111,19 @@ without a path, ask for one.
    commit mode, skip the commit and leave the fixes unstaged. If no code changed
    (no blockers, no typo fixes), there is nothing to commit at this step —
    `review-code.md` stays local-only.
-7. **Update `CHANGES.md` and `_version.py`.** Use the format in `CLAUDE.md`
-   (canonical spec: `development.rst`, Changelog section); CI's
-   `check_changes.py` only verifies the file changed, not its structure.
+7. **Update `CHANGES.md` and `_version.py`.** Apply the **Append** procedure in
+   `.claude/skills/sys-changelog/SKILL.md` for this work item: add the bullet(s)
+   under the active `## … (in progress)` section (package/docs under the main
+   header, notebooks under `### Changes to notebooks`), creating that section and
+   setting `_version.py` to `X.Y.Zb0` if none exists. The bullet is a short
+   imperative phrase, with ` (#<N>)` appended only if the design or plan cites a
+   GitLab issue. (Format digest: `CLAUDE.md`; canonical spec: `development.rst`,
+   Changelog section.)
 
-   The changelog's dated sections record **released** versions. Everything
-   committed since the last release accumulates under a single
-   `## X.Y.Z (in progress)` section, and `src/sctoolbox/_version.py` mirrors
-   that in-progress version with a non-release **beta suffix**
-   (`__version__ = "X.Y.Zb0"`) so the working tree never carries a clean
-   released version number. `/release` later strips the suffix and dates the
-   section.
-   a. Locate the active section: the **topmost `## … (in progress)` section**.
-      The dated sections below it (e.g. `## 0.15.1 (15-05-2026)`) are released
-      and immutable — **never append to them.** Do **not** derive the target
-      from `_version.py` by string-matching a `## X.Y.Z` header; use the
-      `(in progress)` marker.
-   b. Apply by case:
-      - **An `(in progress)` section exists** — append bullet(s): package/docs
-        changes under its main header, notebook changes under its
-        `### Changes to notebooks` subsection (create the subsection if absent).
-        Confirm `_version.py` already carries that version with the `b0` suffix
-        (`X.Y.Zb0`); if it still shows the last released version, set it now.
-      - **No `(in progress)` section exists** (fresh state right after a
-        release) — choose the next version `X.Y.Z` above the latest released
-        section (bump the patch unless the design or plan calls for a
-        minor/major bump), prepend a new `## X.Y.Z (in progress)` section before
-        the first existing `## ` line (add a `### Changes to notebooks`
-        subsection if scope includes notebooks), **and** set
-        `src/sctoolbox/_version.py` to `__version__ = "X.Y.Zb0"`.
-   c. Bullet = short imperative phrase for the user-visible change; append
-      ` (#<N>)` only if the design or plan cites a GitLab issue.
-   d. Invoke `sys-commit` (step: changes, slug: `<slug>`, commit mode, intended
-      files: `CHANGES.md`, plus `src/sctoolbox/_version.py` if you changed it) →
-      message `changes: <slug>`. In `manual` commit mode, skip the commit and
-      leave the files unstaged.
+   Then invoke `sys-commit` (step: changes, slug: `<slug>`, commit mode, intended
+   files: `CHANGES.md`, plus `src/sctoolbox/_version.py` if you changed it) →
+   message `changes: <slug>`. In `manual` commit mode, skip the commit and leave
+   the files unstaged.
 8. **Done.** Report what shipped and the final test result. In `manual` commit
    mode, also list every changed file (`git status --short`) and remind the user
    that nothing was staged or committed — they stage and commit it themselves.
