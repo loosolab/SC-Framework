@@ -87,27 +87,26 @@ without a path, ask for one.
    cannot resolve without user input, stop and hand off.
 
    **Spellcheck (codespell).** CI runs `codespell --toml pyproject.toml`
-   (`.gitlab-ci.yml` `spellcheck` job). Run it here over the files this work
-   item changed (the same set `git diff --name-only` reports for the work —
-   never the whole repo, to honour minimal-diff):
+   (`.gitlab-ci.yml` `spellcheck` job). Run it here **read-only** (detection
+   only — never `-w`) over the files this work item changed (the same set
+   `git diff --name-only` reports for the work — never the whole repo, to honour
+   minimal-diff):
    `conda run -n <env> codespell --toml pyproject.toml <changed files>`.
-   - **Auto-fix the unambiguous cases.** Run
-     `conda run -n <env> codespell -w --toml pyproject.toml <changed files>`.
-     With `-w`, codespell rewrites only single-candidate corrections (a clear
-     typo → one obvious fix) and leaves multi-candidate ones untouched. Verify
-     each rewrite landed in a comment/docstring/string, not in code that would
-     change behaviour; re-run the binding test command after fixing.
-   - **Block on the unclear cases.** Re-run
-     `codespell --toml pyproject.toml <changed files>`. Anything it still
-     reports is ambiguous (multiple candidate fixes) or a domain term codespell
-     doesn't know. **Stop and ask the user** how to resolve each — apply a
-     specific fix, or add the term to `uri-ignore-words-list` /
+   Resolve each thing it reports **by hand** — codespell never edits files here:
+   - **Clear typo** (a single obvious correction, in a comment/docstring/string,
+     not in code that would change behaviour) → fix it directly with `Edit`.
+   - **Ambiguous** (codespell lists multiple candidate fixes) or a **domain term**
+     codespell doesn't know → **stop and ask the user** how to resolve each:
+     apply a specific fix, or add the term to `uri-ignore-words-list` /
      `ignore-words-list` in `pyproject.toml [tool.codespell]`. Do NOT guess a
      correction.
 
+   After any fix, re-run `codespell --toml pyproject.toml <changed files>` to
+   confirm it is clean, and re-run the binding test command since files changed.
+
    If addressing findings or the spellcheck changed any code, invoke
    `sys-commit` (step: review, slug: `<slug>`, commit mode, intended files: the
-   fixes + any codespell auto-fixes — **never** `review-code.md`, which lives
+   fixes + any spellcheck typo fixes — **never** `review-code.md`, which lives
    under the gitignored `.work/`) → message `review: <slug>`. In `manual`
    commit mode, skip the commit and leave the fixes unstaged. If no code changed
    (no blockers, no typo fixes), there is nothing to commit at this step —

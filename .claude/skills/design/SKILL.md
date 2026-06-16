@@ -26,6 +26,13 @@ If neither is given, ask the user what they want to design.
 3. **Ask clarifying questions.** Before any file is written, surface 1–4
    sharp questions. Always include:
    - **Conda environment** — which env should the binding test command use?
+     **Warn** the user if they name anything other than `sctoolbox`: the
+     `.claude/settings.json` allowlist pins every gate command to `-n sctoolbox`,
+     so a differently-named env matches no allow rule and every gate (ruff,
+     pytest, codespell, sphinx, nbconvert) will prompt for confirmation on each
+     run. Recommend `sctoolbox` unless they have a specific reason. (The
+     allowlist can't carry an inline comment — Claude Code rejects unknown JSON
+     keys — so this note is the canonical record of that pinning.)
    - **Change scope** — any combination of package (`src/sctoolbox/` + `tests/`), notebooks, and docs (`docs/`)?
    - **Commit mode** — who commits the work? Offer two choices: **manual**
      (the user stages and commits everything themselves — `/implement` never

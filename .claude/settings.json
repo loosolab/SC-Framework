@@ -14,9 +14,11 @@
       "Bash(conda run -n sctoolbox codespell --version)",
       "Bash(conda run -n sctoolbox codespell --toml pyproject.toml:*)",
       "Bash(conda run -n sctoolbox make -C docs html)",
-      "Bash(conda run -n sctoolbox sphinx-build -b dummy docs/source /tmp/scdocs:*)"
+      "Bash(conda run -n sctoolbox sphinx-build -b dummy docs/source /tmp/scdocs:*)",
+      "Bash(conda run -n sctoolbox jupyter nbconvert --to notebook --execute:*)"
     ],
     "deny": [
+      "Bash(git config:*)",
       "Bash(git merge:*)",
       "Bash(git checkout:*)",
       "Bash(git switch:*)",
