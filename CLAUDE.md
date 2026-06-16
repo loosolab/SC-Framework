@@ -1,5 +1,7 @@
 # SC-Framework — Claude context
 
+> **Authoritative sources** — conventions: `docs/source/development.rst`; tooling, deps, ruff, pytest, codespell: `pyproject.toml`; CI gates: `.gitlab-ci.yml`. This file is a curated summary; where it conflicts with them, they win — defer to the source and update this file.
+
 ## Project
 
 Python package (`sctoolbox`) for single-cell analysis workflows covering scRNA-seq and scATAC-seq data. Distributed as `SC-Framework` on PyPI. Maintained at MPI Bad Nauheim (Looso lab).
@@ -8,7 +10,7 @@ Python package (`sctoolbox`) for single-cell analysis workflows covering scRNA-s
 
 - **Language:** Python >=3.9, <3.13
 - **Core deps:** AnnData, Scanpy (+ leiden community detection)
-- **Optional dep groups:** `atac`, `batch_correction`, `receptor_ligand`, `pseudotime`, `gsea`, `deseq2`, `annotation`, `proportion`, `velocity`, `palantir`, `converter`, `interactive`
+- **Optional dep groups:** declared in `pyproject.toml` under `[project.optional-dependencies]` (the authoritative list — read it rather than relying on a copy here)
 - **Test framework:** pytest + pytest-cov + pytest-html (target coverage >90%)
 - **Linter:** ruff (config in `pyproject.toml`; targets `src/**/*.py`, `scripts/*.py`, `tests/**/*.py`)
 - **Notebooks:** Jupyter (rna_analysis/notebooks/, atac_analysis/notebooks/, general_notebooks/)
@@ -17,59 +19,15 @@ Python package (`sctoolbox`) for single-cell analysis workflows covering scRNA-s
 
 ## Module map
 
+Source lives under `src/sctoolbox/`, grouped by purpose — browse the directories for the full, current set:
+
 ```
 src/sctoolbox/
-  tools/
-    amulet.py           # doublet detection (ATAC)
-    bam.py              # BAM file utilities
-    calc_overlap_fc.py  # overlap fold-change calculations
-    celltype_annotation.py
-    clustering.py
-    dim_reduction.py
-    download_data.py
-    embedding.py
-    frip.py             # FRiP score (ATAC)
-    gene_correlation.py
-    gsea.py
-    highly_variable.py
-    insertsize.py       # insert size distribution (ATAC)
-    marker_genes.py
-    multiomics.py
-    norm_correct.py
-    palantir_analysis.py
-    peak_annotation.py  # ATAC peak annotation
-    qc_filter.py
-    receptor_ligand.py
-    report.py
-    tobias.py           # TOBIAS TF footprinting
-    tsse.py             # TSS enrichment score (ATAC)
-  plotting/
-    clustering.py
-    embedding.py
-    general.py
-    genometracks.py
-    gsea.py
-    highly_variable.py
-    marker_genes.py
-    multiomics.py
-    planet_plot.py
-    qc_filter.py
-    velocity.py
-  utils/
-    adata.py
-    assemblers.py
-    bioutils.py
-    checker.py
-    cli.py
-    creators.py
-    decorator.py        # @log_anndata and @beartype utilities
-    general.py
-    io.py
-    jupyter.py
-    multiprocessing.py
-    tables.py
-  _settings.py          # global SCtoolboxConfig; access via sctoolbox.settings
-  _modules.py           # lazy module loader
+  tools/        # analysis logic, one file per topic (e.g. clustering.py, qc_filter.py, tobias.py)
+  plotting/     # plot functions mirroring tools (e.g. embedding.py, marker_genes.py)
+  utils/        # shared helpers (e.g. adata.py, decorator.py — @log_anndata/@beartype)
+  _settings.py  # global SCtoolboxConfig; access via sctoolbox.settings
+  _modules.py   # lazy module loader
 ```
 
 ## Test layout
@@ -84,7 +42,11 @@ tests/
   data/       # test fixtures
 ```
 
+Tests mirror the source module structure: a test for `src/sctoolbox/<group>/<mod>.py` lives at `tests/<group>/test_<mod>.py`. A new submodule must come with its mirrored test file.
+
 ## Conventions
+
+The rules below are the working digest; `docs/source/development.rst` is the authoritative, fuller treatment (decorators, beartype, docstrings, examples, deprecation, changelog, notebooks, testing). Consult it when a case isn't covered here.
 
 ### Decorators
 
