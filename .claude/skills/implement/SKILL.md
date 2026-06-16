@@ -68,9 +68,10 @@ without a path, ask for one.
    traceback, a `NameError` from a missing pre-code variable) — hand it back to
    the implementer to fix the example or extend `utils_pre_code.py`. The
    `toctree`/cross-reference warnings about the unbuilt rest of the docs are
-   expected and do **not** fail it. `.. plot::` examples are only parsed here,
-   not executed (the full `make -C docs html` on CI verifies those); skip this
-   step entirely when no `.. exec_code::` example changed.
+   expected and do **not** fail it. Per `.claude/skills/sys-examples/SKILL.md`,
+   `.. plot::` examples are only parsed here, not executed (CI's full
+   `make -C docs html` verifies those); skip this step entirely when no
+   `.. exec_code::` example changed.
 4. **Spawn the `code-reviewer`.** Use the Agent tool with
    `subagent_type: code-reviewer`, passing `plan.md` and the changed files /
    work-item directory. It follows `sys-code-review` and **always runs**.

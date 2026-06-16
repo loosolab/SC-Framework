@@ -49,14 +49,10 @@ For each unchecked `- [ ] T<N>. ...` in order:
 1. **Implement only what this task describes.** No scope creep into the next
    task. Follow all conventions in `CLAUDE.md` (already in your context).
    Task-specific items the plan may invoke:
-   - **Renderable examples** when the plan has an example task: add a
-     `.. plot:: :context: close-figs` example to plotting functions, an
-     `.. exec_code::` example to other public functions. Reuse variables from
-     the page's pre-code script (`docs/source/plot_pre_code.py` /
-     `utils_pre_code.py`) and **never reassign shared ones** such as `adata`. If
-     the example needs new input data, extend the relevant pre-code script
-     minimally (the plan should pair such a task). See the "Example code and
-     results" section of `docs/source/development.rst`.
+   - **Renderable examples** when the plan has an example task: write it per
+     `.claude/skills/sys-examples/SKILL.md` (directive choice, reuse pre-code
+     variables, never reassign shared ones such as `adata`, extend the pre-code
+     script minimally if new input data is needed).
    - Notebook outputs cleared if scope includes notebooks
 2. **Run the test command.**
 3. **Decide:**

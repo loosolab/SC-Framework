@@ -108,29 +108,13 @@ When scope includes docs (changes under `docs/`):
 
 ## Doc-string examples
 
-Renderable `Examples` sections are best practice but never mandatory (see the
-"Example code and results" section of `docs/source/development.rst`). When a
-package-scope change adds or modifies public functions, weigh whether to plan
-an example task:
-
-- **New/modified public plotting function:** plan a task to add a
-  `.. plot:: :context: close-figs` example. Highly encouraged — omit only with a
-  noted reason.
-- **New/modified public non-plotting function** whose output is illustrative
-  (a table, a printed summary): plan a task to add an `.. exec_code::` example.
-  Encouraged where it adds value; skip otherwise.
-- **Pre-code fixtures.** If such an example needs input data not already
-  prepared in the relevant pre-code script (`docs/source/plot_pre_code.py` for
-  plotting, `docs/source/utils_pre_code.py` for utils), plan a paired task to
-  extend that script minimally so the variable exists.
-
-These example tasks are **orchestration**, not algorithmic-core — they get no
-`TC<N>`, and they never go in the binding test command. Their
-verification differs by directive: `.. exec_code::` examples are smoke-checked
-locally by the single-page `dummy` build `/implement` runs; `.. plot::` example
-*execution* is only verified by the full `make -C docs html` on CI. Do **not**
-add a docs gate to the binding command for examples alone; reserve
-`make -C docs html` for changes that declare docs scope.
+Policy in `.claude/skills/sys-examples/SKILL.md`. When a package-scope change
+adds or modifies public functions, weigh planning an example task — `.. plot::`
+for plotting functions (highly encouraged), `.. exec_code::` for other functions
+whose output is illustrative (where it adds value). Pair a pre-code fixture task
+if the example needs new input data. These are orchestration tasks: no `TC<N>`,
+never in the binding test command, and not a docs gate on their own — do **not**
+add `make -C docs html` to the binding command for examples alone.
 
 ## Constraints
 
