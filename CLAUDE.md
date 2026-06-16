@@ -154,6 +154,8 @@ Skills live in `.claude/skills/`. The development loop is:
 /design  →  /plan  →  /implement
 ```
 
+The user need not type `/design` to start. When a request implies a **non-trivial change** — a new submodule or public function, edits spanning several files, anything that should carry tests + a `CHANGES.md` entry, or behaviour changes that want the regression gate and per-task commits — proactively offer to begin the workflow at `/design` before writing code, and proceed into it only if the user agrees. For **trivial work** — a one-line fix, a typo or docstring tweak, a single localized edit, or an exploratory question — skip the workflow and handle it directly (mention the option at most in passing). When in doubt, name the choice and let the user decide.
+
 Design artifacts (`design.md`, `plan.md`, `review-plan.md`, `review-code.md`) are stored in `.work/<YYYY-MM-DD>-<slug>/`. Each `design.md` records the change **scope** (one or more of `package` / `notebooks` / `docs`) and the **conda environment** name; `plan.md` uses these to declare the binding test command, which always starts with `ruff check`. A `docs` scope gates on the Sphinx build (`make -C docs html`) instead of pytest; when a change spans several areas the relevant gates are chained.
 
 `.work/` is **gitignored — a local-only audit trail**. The `/design` and `/plan` stages therefore make no commit; the first commit of a work item is its first `impl(<slug>): T1 …`. Only code, tests, and `CHANGES.md` are committed. Every code commit carries the `<slug>`, so `git log --grep=<slug>` still recovers a work item's complete *code* history (the design/plan/review prose stays on disk under `.work/`).
