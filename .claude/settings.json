@@ -21,7 +21,17 @@
       "Bash(git rebase:*)",
       "Bash(git reset:*)",
       "Bash(git cherry-pick:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git clean:*)",
+      "Bash(git restore:*)",
+      "Bash(git commit --amend:*)",
+      "Bash(conda env remove:*)",
+      "Bash(conda remove:*)",
+      "Bash(rm -rf:*)",
+      "Bash(rm -fr:*)",
+      "Bash(rm -r -f:*)",
+      "Bash(rm -f -r:*)",
+      "Bash(rm -Rf:*)"
     ]
   }
 }
