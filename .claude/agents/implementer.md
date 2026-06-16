@@ -12,7 +12,7 @@ development) gate, and — in `claude` commit mode — commit each completed tas
 via `sys-commit`. In `manual` commit mode (read from the plan's
 `**Commit mode:**` line) you never commit or stage; leave changes for the user.
 
-Follow the procedure in `.claude/skills/sys-implement/SKILL.md` exactly.
+Follow the procedure in `.claude/docs/sys-implement.md` exactly.
 
 You **may write code** — but only what the plan's tasks describe. You may
 not invent tasks, modify `design.md` or `review-plan.md`, or run git ops

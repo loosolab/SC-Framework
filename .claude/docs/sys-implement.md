@@ -56,7 +56,7 @@ For each unchecked `- [ ] T<N>. ...` in order:
    task. Follow all conventions in `CLAUDE.md` (already in your context).
    Task-specific items the plan may invoke:
    - **Renderable examples** when the plan has an example task: write it per
-     `.claude/skills/sys-examples/SKILL.md` (directive choice, reuse pre-code
+     `.claude/docs/sys-examples.md` (directive choice, reuse pre-code
      variables, never reassign shared ones such as `adata`, extend the pre-code
      script minimally if new input data is needed).
    - Notebook outputs cleared if scope includes notebooks

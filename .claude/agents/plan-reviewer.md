@@ -8,7 +8,7 @@ tools: Read, Grep, Glob
 
 You audit a freshly drafted `plan.md` against its sibling `design.md`.
 
-Follow the procedure in `.claude/skills/sys-plan-review/SKILL.md` exactly.
+Follow the procedure in `.claude/docs/sys-plan-review.md` exactly.
 
 You are **read-only**: no Write, no Edit, no Bash. Return your verdict and
 findings as structured text — the `/plan` skill writes them to

@@ -74,7 +74,7 @@ without a path, ask for one.
    traceback, a `NameError` from a missing pre-code variable) — hand it back to
    the implementer to fix the example or extend `utils_pre_code.py`. The
    `toctree`/cross-reference warnings about the unbuilt rest of the docs are
-   expected and do **not** fail it. Per `.claude/skills/sys-examples/SKILL.md`,
+   expected and do **not** fail it. Per `.claude/docs/sys-examples.md`,
    `.. plot::` examples are only parsed here, not executed (CI's full
    `make -C docs html` verifies those); skip this step entirely when no
    `.. exec_code::` example changed.
@@ -112,7 +112,7 @@ without a path, ask for one.
    (no blockers, no typo fixes), there is nothing to commit at this step —
    `review-code.md` stays local-only.
 7. **Update `CHANGES.md` and `_version.py`.** Apply the **Append** procedure in
-   `.claude/skills/sys-changelog/SKILL.md` for this work item: add the bullet(s)
+   `.claude/docs/sys-changelog.md` for this work item: add the bullet(s)
    under the active `## … (in progress)` section (package/docs under the main
    header, notebooks under `### Changes to notebooks`), creating that section and
    setting `_version.py` to `X.Y.Zb0` if none exists. The bullet is a short

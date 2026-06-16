@@ -31,7 +31,7 @@ The calling skill passes:
    docstrings, plotting `ax`, deprecation. A missing `@beartype` on a public
    function is a **blocker**.
    - **Renderable examples** — policy in
-     `.claude/skills/sys-examples/SKILL.md`. A *missing* example is only ever a
+     `.claude/docs/sys-examples.md`. A *missing* example is only ever a
      suggestion (never a blocker). A *present* one must be correct — right
      pre-code variables, no reassigned `adata`, `.. plot::` carries
      `:context: close-figs`, any new fixture added to the pre-code script — and

@@ -42,13 +42,13 @@ decides.
 ### Step 2 — Update `_version.py`
 
 Set `src/sctoolbox/_version.py` to the clean `__version__ = "<new_version>"`.
-Per the version lifecycle in `.claude/skills/sys-changelog/SKILL.md`, the
+Per the version lifecycle in `.claude/docs/sys-changelog.md`, the
 working tree carries the in-progress `X.Y.Zb0`; this strips the `b0` suffix to
 the released number.
 
 ### Step 3 — Finalise `CHANGES.md`
 
-Apply the **Finalise** procedure in `.claude/skills/sys-changelog/SKILL.md`: in
+Apply the **Finalise** procedure in `.claude/docs/sys-changelog.md`: in
 the active `## … (in progress)` section header, replace `(in progress)` with
 today's date in `(DD-MM-YYYY)` format (updating the header version too if the
 chosen release number differs from the in-progress one). If no `(in progress)`

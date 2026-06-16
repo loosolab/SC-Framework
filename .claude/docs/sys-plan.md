@@ -54,7 +54,7 @@ calling skill passes it. If absent, return a note that the path is required.
    (see `implement/SKILL.md`). For scope with no pytest segment (notebook-only,
    docs-only) declare it `n/a`.
 4. **Draft `plan.md`** in the same directory as `design.md`, using the
-   template at `.claude/skills/sys-plan/plan-template.md`. The plan MUST
+   template at `.claude/docs/plan-template.md`. The plan MUST
    include:
    - Tasks as checkboxes (`- [ ] T1. ...`). Each task small enough to finish
      in one implement iteration with the test command run between tasks.
@@ -118,7 +118,7 @@ When scope includes docs (changes under `docs/`):
 
 ## Doc-string examples
 
-Policy in `.claude/skills/sys-examples/SKILL.md`. When a package-scope change
+Policy in `.claude/docs/sys-examples.md`. When a package-scope change
 adds or modifies public functions, weigh planning an example task — `.. plot::`
 for plotting functions (highly encouraged), `.. exec_code::` for other functions
 whose output is illustrative (where it adds value). Pair a pre-code fixture task
