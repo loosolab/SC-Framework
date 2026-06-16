@@ -20,6 +20,16 @@ ready to ship.
    there are, stop and ask the user to commit or stash them first.
 3. Read the current version from `src/sctoolbox/_version.py`
    (first line: `__version__ = "X.Y.Z"`).
+4. **Confirm the conda environment** for Step 4's notebook-version script.
+   Default `sctoolbox`; verify it exists with `conda env list`. The rest of the
+   workflow always runs project scripts via `conda run -n <env>` — release does
+   the same rather than assuming an env is active.
+5. **Resolve the commit mode** for Step 5. Ask the user: **manual** (default —
+   the user stages and commits the release themselves) or
+   **claude (Name <email>)** (this skill commits with that identity, set
+   per-commit via `-c` flags). Mirrors the design/plan/implement commit mode;
+   default to **manual**, since the local setup can have issues with automatic
+   commits.
 
 ## Process
 
@@ -46,25 +56,35 @@ entry exists, warn the user — the CHANGES.md may need a manual entry.
 
 ### Step 4 — Update notebook versions
 
-Run the version update script for each notebook directory:
+Run the version update script for each notebook directory, in the conda env
+confirmed in preflight:
 
 ```bash
-python scripts/change_notebook_version.py rna_analysis/notebooks/ <new_version>
-python scripts/change_notebook_version.py atac_analysis/notebooks/ <new_version>
-python scripts/change_notebook_version.py general_notebooks/ <new_version>
+conda run -n <env> python scripts/change_notebook_version.py rna_analysis/notebooks/ <new_version>
+conda run -n <env> python scripts/change_notebook_version.py atac_analysis/notebooks/ <new_version>
+conda run -n <env> python scripts/change_notebook_version.py general_notebooks/ <new_version>
 ```
 
 ### Step 5 — Commit
 
-Stage and commit all modified files:
+The modified files are:
 - `src/sctoolbox/_version.py`
 - `CHANGES.md`
 - All `.ipynb` files touched by the version script
 
-Commit message: `release: <new_version>`
+Honour the commit mode resolved in preflight:
+
+- **`manual`** (default) — do **not** commit. List the modified files
+  (`git status --short`) and tell the user to stage these explicitly and commit
+  with message `release: <new_version>`.
+- **`claude (Name <email>)`** — stage the files explicitly, then commit setting
+  both author and committer via per-invocation `-c` flags (never `git config`),
+  with message `release: <new_version>`:
+  `git -c user.name="Name" -c user.email="email" commit --author="Name <email>" -m "release: <new_version>"`.
 
 Do not use `sys-commit` — this release commit has its own convention and no
-slug. Stage the files explicitly; never blind `git add -A`.
+slug. Never blind `git add -A` / `git commit -a`; stage the listed paths
+explicitly. Never run a git op denied by `.claude/settings.json`.
 
 ## Post-merge checklist
 
