@@ -33,6 +33,11 @@ directory. The calling skill passes both.
    is `ruff check --preview .` verbatim — matching the CI `lint` job. A narrowed
    ruff path (e.g. `ruff check src/sctoolbox tests`) is a **blocker**: it skips
    notebooks/scripts that CI lints, so the gate can pass while CI fails.
+   Also verify the plan declares a `**Full-suite regression command:**` line:
+   for package scope it must be the whole-suite run (`python -m pytest tests`)
+   in the same env as the binding command; for scope with no pytest segment it
+   must be `n/a`. A missing or env-mismatched full-suite line for package scope
+   is a **blocker** — `/implement` runs it verbatim.
 4. **Scope and environment drift.** Extract from `design.md`:
    - `Type` field under `## Scope` (one or more of `package` | `notebooks` | `docs`)
    - `Conda environment` field under `## Scope`

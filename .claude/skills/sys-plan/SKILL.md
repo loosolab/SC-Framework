@@ -43,9 +43,12 @@ calling skill passes it. If absent, return a note that the path is required.
    skips the very files a notebook plan changes and lets CI fail on a
    green-locally gate.
 
-   The per-file `pytest tests/<target>.py` keeps the TDD loop fast; `/implement`
-   runs the full `pytest tests` once at final confirmation to catch cross-file
-   regressions (see `implement/SKILL.md`).
+   The per-file `pytest tests/<target>.py` keeps the TDD loop fast. Separately,
+   declare the whole-suite command on a `**Full-suite regression command:**`
+   line (`conda run -n <env> python -m pytest tests`, same env) — `/implement`
+   runs it **verbatim** at final confirmation to catch cross-file regressions
+   (see `implement/SKILL.md`). For scope with no pytest segment (notebook-only,
+   docs-only) declare it `n/a`.
 4. **Draft `plan.md`** in the same directory as `design.md`, using the
    template at `.claude/skills/sys-plan/plan-template.md`. The plan MUST
    include:
@@ -54,6 +57,8 @@ calling skill passes it. If absent, return a note that the path is required.
    - A `## Tests` section with concrete test cases (`TC<N>` (test case N))
      AND exactly one binding test command on a
      `**Test command for this plan:**` line.
+   - A `**Full-suite regression command:**` line — the whole-suite pytest run
+     for package scope, or `n/a` if scope excludes package.
    - Every success criterion from `design.md` mapped onto at least one task
      or test case.
 5. **Sanity-check the test command.** It must be invocable in this

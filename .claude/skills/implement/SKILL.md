@@ -48,15 +48,12 @@ without a path, ask for one.
    test command once yourself and confirm exit 0. If not, hand the
    still-failing task back to the implementer.
 
-   **Then run the full test suite once** to catch cross-file regressions the
-   per-file binding command cannot see. When the binding command contains
-   `pytest` (any scope that includes package), run the whole suite with the same conda
-   env prefix the binding command uses — i.e. replace its
-   `python -m pytest tests/<target>.py -v` segment with
-   `conda run -n <env> python -m pytest tests`. It MUST exit 0; if it fails, a
-   change regressed another module — hand the failure back to the implementer
-   before proceeding. (Notebook-only and docs-only scope have no pytest
-   segment; skip this.)
+   **Then run the plan's `**Full-suite regression command:**` once** to catch
+   cross-file regressions the per-file binding command cannot see. Run it
+   **verbatim** as the plan declares it — do not reconstruct it from the binding
+   command. It MUST exit 0; if it fails, a change regressed another module —
+   hand the failure back to the implementer before proceeding. (Notebook-only
+   and docs-only scope declare it `n/a` — skip this step.)
 
    **Render-check changed `.. exec_code::` examples.** If `git diff` shows an
    added/modified doc-string `.. exec_code::` example, the binding command did
