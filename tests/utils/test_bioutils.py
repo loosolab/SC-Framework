@@ -257,7 +257,7 @@ def test_peaks_to_bins(adata_atac, var_map):
                 bin_size=bin_size
             )
     else:
-        utils.bioutils.peaks_to_bins(
+        binned_adata = utils.bioutils.peaks_to_bins(
                 adata_atac,
                 chromsizes=chromsizes,
                 var_map=var_map,
