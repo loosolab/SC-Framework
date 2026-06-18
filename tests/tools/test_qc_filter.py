@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import logging
 from scipy.sparse import csr_matrix
 from contextlib import contextmanager
-from tests.conftest import DATA_DIR
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
@@ -33,16 +32,20 @@ def add_logger_handler(logger, handler):
 
 
 @pytest.fixture(scope="function")  # create for each test
-def adata():
-    """Load and returns an anndata object.
+def adata(adata_h5ad):
+    """Augment the shared ``adata.h5ad`` fixture with QC variables and cell cycle genes.
+
+    Parameters
+    ----------
+    adata_h5ad : anndata.AnnData
+        Shared base AnnData loaded from ``DATA_DIR/adata.h5ad`` (function-scoped).
 
     Returns
     -------
     anndata.AnnData
         RNA-seq AnnData object with QC variables and cell cycle genes.
     """
-    f = os.path.join(DATA_DIR, "adata.h5ad")
-    adata = sc.read_h5ad(f)
+    adata = adata_h5ad
     adata.obs['sample'] = np.random.choice(["sample1", "sample2"], size=len(adata))
 
     # add random groups
