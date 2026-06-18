@@ -37,7 +37,7 @@ def adata1():
 
 
 @pytest.fixture
-def adata2():
+def adata2(pbmc3k_processed):
     """Load scanpy processed pbmc3k adata.
 
     Returns
@@ -45,7 +45,7 @@ def adata2():
     sc.AnnData
         Processed PBMC3k dataset from scanpy.
     """
-    return sc.datasets.pbmc3k_processed()
+    return pbmc3k_processed
 
 
 @pytest.fixture(scope="session")  # reuse the fixture for all tests

@@ -119,6 +119,23 @@ def adata_h5ad():
     return _load_adata_h5ad()
 
 
+@pytest.fixture(scope="function")
+def pbmc3k_processed():
+    """Provide the shared processed PBMC3k dataset with function scope.
+
+    Function scope is used so that consumers cannot leak mutations across
+    tests; the equivalent (read-only) consumers depend on this fixture, while
+    mutating consumers build on their own copies.
+
+    Returns
+    -------
+    anndata.AnnData
+        A freshly loaded processed PBMC3k dataset from
+        ``scanpy.datasets.pbmc3k_processed``.
+    """
+    return sc.datasets.pbmc3k_processed()
+
+
 @pytest.fixture
 def adata_atac():
     """Load and return an ATAC-seq AnnData object.
