@@ -2,28 +2,29 @@
 import pytest
 import numpy as np
 import pandas as pd
-import os
-import scanpy as sc
 
 from sctoolbox.utils.adata import get_adata_subsets
 from sctoolbox.tools.gene_correlation import correlate_conditions, correlate_ref_vs_all, compare_two_conditons
-from tests.conftest import DATA_DIR
 
 
 # ---------------------------- FIXTURES -------------------------------- #
 
 
 @pytest.fixture
-def adata():
+def adata(adata_h5ad):
     """Fixture for simple adata to test with.
+
+    Parameters
+    ----------
+    adata_h5ad : anndata.AnnData
+        Shared ``adata.h5ad`` fixture from ``tests/conftest.py``.
 
     Returns
     -------
     anndata.AnnData
         RNA-seq AnnData object with gene names as index.
     """
-    h5ad = os.path.join(DATA_DIR, 'adata.h5ad')
-    adata = sc.read_h5ad(h5ad)
+    adata = adata_h5ad
 
     adata.obs["condition"] = np.random.choice(["C1", "C2"], size=adata.shape[0])
 
