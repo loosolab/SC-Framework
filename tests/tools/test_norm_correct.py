@@ -21,7 +21,7 @@ def adata_with_batch(adata_fun_scope):
         AnnData object with batch annotation and highly variable genes.
     """
     adata_fun_scope.obs['batch'] = (["a", "b"] * ((len(adata_fun_scope) // 2) + 1))[:len(adata_fun_scope)]
-    adata_fun_scope.obs['batch2'] = (["c", "d", "e"] * 100)[:len(adata_fun_scope)]
+    adata_fun_scope.obs['batch2'] = (["c", "d", "e"] * ((len(adata_fun_scope) // 3) + 1))[:len(adata_fun_scope)]
 
     sc.pp.highly_variable_genes(adata_fun_scope)
 
