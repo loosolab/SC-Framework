@@ -5,6 +5,7 @@ import anndata
 import numpy as np
 import muon as mu
 import pandas as pd
+import scanpy as sc
 
 import sctoolbox.tools.multiomics as multi
 
