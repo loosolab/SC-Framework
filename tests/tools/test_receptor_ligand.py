@@ -4,7 +4,6 @@ import pytest
 import os
 import pandas as pd
 import numpy as np
-import scanpy as sc
 import random
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -25,7 +24,7 @@ plt.switch_backend("Agg")
 
 
 @pytest.fixture
-def adata():
+def adata(adata_h5ad):
     """Load and returns an anndata object.
 
     Returns
@@ -33,9 +32,7 @@ def adata():
     sc.AnnData
         An anndata object with cluster annotations.
     """
-    f = os.path.join(DATA_DIR, "adata.h5ad")
-
-    obj = sc.read_h5ad(f)
+    obj = adata_h5ad
 
     # add cluster column
     def repeat_items(list, count):
