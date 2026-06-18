@@ -136,6 +136,21 @@ def pbmc3k_processed():
     return sc.datasets.pbmc3k_processed()
 
 
+@pytest.fixture(scope="function")
+def random_adata():
+    """Provide a trivial synthetic AnnData object for tests.
+
+    Function-scoped so each test receives a fresh object; consumers that
+    augment it in place therefore do not leak mutations into one another.
+
+    Returns
+    -------
+    anndata.AnnData
+        A new ``100 x 100`` integer-count AnnData object.
+    """
+    return sc.AnnData(np.random.randint(0, 100, (100, 100)))
+
+
 @pytest.fixture
 def adata_atac():
     """Load and return an ATAC-seq AnnData object.

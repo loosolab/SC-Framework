@@ -1,7 +1,6 @@
 """Test bioutils.py functions."""
 
 import pytest
-import scanpy as sc
 import numpy as np
 import os
 import sctoolbox.utils as utils
@@ -14,9 +13,14 @@ from tests.conftest import ATAC_DATA_DIR
 # --------------------------- FIXTURES ------------------------------ #
 
 
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata_mock():
+@pytest.fixture
+def adata_mock(random_adata):
     """Return adata object with 3 groups.
+
+    Parameters
+    ----------
+    random_adata : anndata.AnnData
+        Shared synthetic-AnnData object from ``tests/conftest.py``.
 
     Returns
     -------
@@ -24,7 +28,7 @@ def adata_mock():
         AnnData object with 3 groups.
     """
 
-    adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
+    adata = random_adata
     adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
 
     return adata
