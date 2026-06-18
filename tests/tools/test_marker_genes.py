@@ -12,7 +12,7 @@ from tests.conftest import DATA_DIR
 # ---------------------------- FIXTURES -------------------------------- #
 
 @pytest.fixture
-def adata():
+def adata(adata_h5ad):
     """Create testing adata.
 
     Returns
@@ -23,8 +23,7 @@ def adata():
 
     np.random.seed(1)  # set seed for reproducibility
 
-    h5ad = os.path.join(DATA_DIR, 'adata.h5ad')
-    adata = sc.read_h5ad(h5ad)
+    adata = adata_h5ad
 
     sample_names = ["C1_1", "C1_2", "C2_1", "C2_2", "C3_1", "C3_2"]
     adata.obs["samples"] = np.random.choice(sample_names, size=adata.shape[0])
