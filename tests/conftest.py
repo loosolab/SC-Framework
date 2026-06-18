@@ -93,6 +93,32 @@ def adata_raw():
     return sc.datasets.pbmc3k()
 
 
+def _load_adata_h5ad():
+    """Load the shared ``adata.h5ad`` test fixture from the data directory.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object read from ``DATA_DIR/adata.h5ad``.
+    """
+    return sc.read_h5ad(os.path.join(DATA_DIR, "adata.h5ad"))
+
+
+@pytest.fixture(scope="function")
+def adata_h5ad():
+    """Provide the shared ``adata.h5ad`` object with function scope.
+
+    Function scope is required because consumers mutate ``var`` index/names; a
+    shared session-scoped object would leak mutations across tests.
+
+    Returns
+    -------
+    anndata.AnnData
+        A freshly loaded AnnData object from ``DATA_DIR/adata.h5ad``.
+    """
+    return _load_adata_h5ad()
+
+
 @pytest.fixture
 def adata_atac():
     """Load and return an ATAC-seq AnnData object.
