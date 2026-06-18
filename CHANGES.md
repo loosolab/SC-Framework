@@ -3,6 +3,7 @@
 ## 0.15.2 (in progress)
 - document the development environment setup and the testing/linting dependency-groups in `development.rst`
 - document the doc-string example conventions (`.. plot::` / `.. exec_code::`) and pre-code fixtures in `development.rst`
+- refactor tests (moved duplicate fixtures into shared `conftest` and remove unreferenced test data)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
