@@ -4,6 +4,7 @@
 - document the development environment setup and the testing/linting dependency-groups in `development.rst`
 - document the doc-string example conventions (`.. plot::` / `.. exec_code::`) and pre-code fixtures in `development.rst`
 - refactor tests (moved duplicate fixtures into shared `conftest` and remove unreferenced test data)
+- fix broken tests (missing scanpy import in multiomics, unbound `peaks_to_bins` result, and batch-label length in the norm_correct fixture)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
