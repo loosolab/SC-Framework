@@ -21,49 +21,39 @@ without a path, ask for one.
 1. Read `plan.md`. Extract the **binding test command** (the line beginning
    `**Test command for this plan:**`). If absent, stop — tell the user the
    plan is missing its gate and to re-run `/plan`.
-2. Confirm the command is invocable. `/design` already verifies this up front,
-   but re-check here in case the env changed since: follow the shared
-   `sys-env-check` procedure, passing the env name and scope from `plan.md` /
-   `design.md`. It probes the per-scope tooling and offers to install anything
-   missing (running it only after you confirm). If it returns `blocked` (env
-   absent and not wanted, or a needed install declined), stop and surface the
-   gap.
-3. **Resolve the commit mode.** Read the `**Commit mode:**` line from `plan.md`
-   (falling back to `design.md` `## Scope`). If it is `manual`, no step in this
-   skill commits — the user stages and commits everything themselves. If it is
-   `claude (Name <email>)`, every `sys-commit` call passes that author. If it is
-   missing or `unspecified` (e.g. a plan predating this field, or `/implement`
-   run without `/design`), **ask the user now**: manual, or claude — and if
-   claude, their name and email. Carry the resolved mode through every
-   `sys-commit` call below.
-4. **Resolve the autonomy level.** Read the `**Autonomy:**` line from `plan.md`
-   (falling back to `design.md` `## Scope`). `per-task` → drive the task loop
-   from this skill, pausing after each task for the user's review/commit (Process
-   step 1, per-task branch). `end` → spawn the implementer once for the whole
-   plan (Process step 1, end branch). If the line is missing or `unspecified`,
-   **ask the user now** which they want.
+2. Confirm the command is invocable (the env may have changed since `/design`
+   verified it): follow `sys-env-check` with the env name and scope from
+   `plan.md` / `design.md`. If it returns `blocked`, stop and surface the gap.
+3. **Resolve the commit mode.** Read `**Commit mode:**` from `plan.md` (fall
+   back to `design.md` `## Scope`). `manual` → no step here commits.
+   `claude (Name <email>)` → every `sys-commit` call passes that author. Missing
+   or `unspecified` → **ask the user now** (manual, or claude + name/email).
+   Carry the resolved mode through every `sys-commit` below.
+4. **Resolve the autonomy level.** Read `**Autonomy:**` from `plan.md` (fall
+   back to `design.md` `## Scope`). `per-task` → drive the loop from this skill,
+   pausing after each task (Process step 1, per-task branch). `end` → spawn the
+   implementer once for the whole plan (end branch). Missing or `unspecified` →
+   **ask the user now**.
 
 ## Process
 
 1. **Run the implementation, per the autonomy level resolved in preflight.**
 
-   **`end` (autonomous run).** Spawn the `implementer` once with the Agent tool
-   (`subagent_type: implementer`), passing the `plan.md` path and the resolved
-   commit mode. It follows `sys-implement`'s full task loop: writes tests first
-   (red), implements tasks one at a time under the binding command, marks
-   `- [x] T<N>` only on green with no regression, and — in `claude` commit mode —
-   **commits per completed task** via `sys-commit` (`impl(<slug>): T<N> <desc>`);
-   in `manual` mode it leaves changes unstaged. It retries up to 3 attempts per
-   task.
+   **`end` (autonomous run).** Spawn the `implementer` once (Agent tool,
+   `subagent_type: implementer`), passing the `plan.md` path and the resolved
+   commit mode. It runs `sys-implement`'s full TDD loop — tests-first, one task
+   at a time, marks `- [x] T<N>` on green with no regression, commits per task
+   (`impl(<slug>): T<N> <desc>`) in `claude` mode, 3-attempt cap — and returns a
+   summary.
 
    **`per-task` (pause after each task).** Drive the loop from this skill, one
    task at a time. For each unchecked `- [ ] T<N>` in `plan.md`, in order:
    1. **Spawn the `implementer` for that one task** (Agent tool,
-      `subagent_type: implementer`), passing the `plan.md` path, the task id
-      `T<N>`, and the commit mode, with the instruction to run in
-      **single-task mode** (`sys-implement`). It writes that task's tests first,
-      implements, runs the binding command to green (3-attempt cap), commits in
-      `claude` mode, and returns a summary **without** ticking the checkbox.
+      `subagent_type: implementer`) in **single-task mode** (`sys-implement`),
+      passing the `plan.md` path, the task id `T<N>`, and the commit mode. It
+      writes tests first, implements, runs the binding command to green
+      (3-attempt cap), commits in `claude` mode, and returns a summary
+      **without** ticking the checkbox.
    2. **Confirm the gate is green**, then show the user the change
       (`git status --short` + `git diff`) and **pause for review**. In `manual`
       mode the user commits the task; in `claude` mode it is already committed and
@@ -93,20 +83,20 @@ without a path, ask for one.
    hand the failure back to the implementer before proceeding. (Notebook-only
    and docs-only scope declare it `n/a` — skip this step.)
 
-   **Render-check changed `.. exec_code::` examples.** If `git diff` shows an
-   added/modified doc-string `.. exec_code::` example, the binding command did
-   not execute it. Build that module's API page with the **`dummy`** builder
-   (executes `.. exec_code::`, skips HTML finalisation — a single-page `-b html`
-   fails on nbsphinx's notebook collection, so do **not** use it):
+   **Render-check changed `.. exec_code::` examples.** Only if `git diff` shows
+   an added/modified `.. exec_code::` docstring example (the binding command does
+   not execute these; skip otherwise). Build that module's API page with the
+   **`dummy`** builder — it executes `.. exec_code::` but skips HTML finalisation
+   (a single-page `-b html` fails on nbsphinx's notebook collection — do **not**
+   use it):
    `conda run <env-spec> sphinx-build -b dummy docs/source /tmp/scdocs docs/source/API/<m>.rst`
-   (`<m>` = `tools`, `utils`, …). A **non-zero exit** means an example raised (a
-   traceback, a `NameError` from a missing pre-code variable) — hand it back to
+   (`<m>` = `tools`, `utils`, …). **Non-zero exit** = an example raised (a
+   traceback, or a `NameError` from a missing pre-code variable) → hand back to
    the implementer to fix the example or extend `utils_pre_code.py`. The
    `toctree`/cross-reference warnings about the unbuilt rest of the docs are
-   expected and do **not** fail it. Per `.claude/docs/sys-examples.md`,
-   `.. plot::` examples are only parsed here, not executed (CI's full
-   `make -C docs html` verifies those); skip this step entirely when no
-   `.. exec_code::` example changed.
+   expected and do **not** fail it. `.. plot::` examples are only parsed here,
+   not executed — CI's `make -C docs html` verifies those
+   (`.claude/docs/sys-examples.md`).
 4. **Spawn the `code-reviewer`.** Use the Agent tool with
    `subagent_type: code-reviewer`, passing `plan.md` and the changed files /
    work-item directory. It follows `sys-code-review` and **always runs**.
@@ -116,22 +106,20 @@ without a path, ask for one.
    cannot resolve without user input, stop and hand off.
 
    **Spellcheck (codespell).** CI runs `codespell --toml pyproject.toml`
-   (`.gitlab-ci.yml` `spellcheck` job). Run it here **read-only** (detection
-   only — never `-w`) over the files this work item changed (the same set
-   `git diff --name-only` reports for the work — never the whole repo, to honour
-   minimal-diff):
+   (`.gitlab-ci.yml` `spellcheck` job). Run it here **read-only** (never `-w`)
+   over only this work item's changed files (`git diff --name-only`, not the
+   whole repo):
    `conda run <env-spec> codespell --toml pyproject.toml <changed files>`.
-   Resolve each thing it reports **by hand** — codespell never edits files here:
-   - **Clear typo** (a single obvious correction, in a comment/docstring/string,
-     not in code that would change behaviour) → fix it directly with `Edit`.
-   - **Ambiguous** (codespell lists multiple candidate fixes) or a **domain term**
-     codespell doesn't know → **stop and ask the user** how to resolve each:
-     apply a specific fix, or add the term to `uri-ignore-words-list` /
-     `ignore-words-list` in `pyproject.toml [tool.codespell]`. Do NOT guess a
-     correction.
+   Resolve each report **by hand**:
+   - **Clear typo** (one obvious correction, in a comment/docstring/string, not
+     behaviour-changing code) → fix with `Edit`.
+   - **Ambiguous** (multiple candidates) or a **domain term** codespell doesn't
+     know → **stop and ask the user**: apply a specific fix, or add the term to
+     `uri-ignore-words-list` / `ignore-words-list` in
+     `pyproject.toml [tool.codespell]`. Do NOT guess.
 
-   After any fix, re-run `codespell --toml pyproject.toml <changed files>` to
-   confirm it is clean, and re-run the binding test command since files changed.
+   After any fix, re-run codespell to confirm clean, and re-run the binding test
+   command (files changed).
 
    If addressing findings or the spellcheck changed any code, invoke
    `sys-commit` (step: review, slug: `<slug>`, commit mode, intended files: the

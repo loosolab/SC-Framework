@@ -22,49 +22,43 @@ calling skill passes it. If absent, return a note that the path is required.
    requirements and discussion), which is prime planning context. `CLAUDE.md`
    (module map, stack, conventions) is already in your context — no need to
    re-read it.
-2. **Extract scope and environment** from the `design.md` `## Scope` section:
-   - `Type`: one or more of package | notebooks | docs (combinable)
-   - `Conda environment`: the env name to use in all commands
-   - `Commit mode`: `manual` or `claude (Name <email>)` — copy it **verbatim**
-     onto the `**Commit mode:**` line of `plan.md` so the implementer has it
-     without re-reading `design.md`. If `design.md` omits it, write
-     `**Commit mode:** unspecified` and note it in the plan's Open questions.
-   - `Autonomy`: `per-task` or `end` — copy it **verbatim** onto the
-     `**Autonomy:**` line of `plan.md` so `/implement` knows whether to pause
-     after each task. If `design.md` omits it, write `**Autonomy:** end` and note
-     it in the plan's Open questions.
-   - `Related`: the `#`/`!` issue/MR numbers (or `none`) — copy **verbatim** onto
-     the `**Related:**` line of `plan.md` so `/implement` can cite the issue in
+2. **Extract scope and environment** from `design.md` `## Scope`. Copy
+   `Commit mode`, `Autonomy`, and `Related` **verbatim** onto the matching
+   `**…:**` line of `plan.md` so `/implement` and the implementer needn't
+   re-read `design.md`:
+   - `Type`: one or more of package | notebooks | docs (combinable) — drives the
+     binding command (step 3).
+   - `Conda environment`: the env selector used in all commands.
+   - `Commit mode`: `manual` or `claude (Name <email>)`. If omitted, write
+     `unspecified` and note it in Open questions.
+   - `Autonomy`: `per-task` or `end`. If omitted, default `end` and note it in
+     Open questions.
+   - `Related`: `#`/`!` numbers or `none` — lets `/implement` cite the issue in
      the changelog (`add_change.py --issue <N>`).
-3. **Select the binding test command** based on scope. Every command opens
-   with the single shared ruff step; append the gate(s) for each scope the
-   change touches, chained with `&&`. `<env-spec>` is the conda env selector from
-   `design.md` `## Scope` — `-n <name>` for a named env or `-p <prefix>` for a
-   prefix env; use exactly the form the design records so the command matches an
-   allow rule:
+3. **Select the binding test command** based on scope. It opens with the shared
+   ruff step, then chains the gate(s) for each scope touched with `&&`.
+   `<env-spec>` is the env selector from `design.md` `## Scope` (`-n <name>` or
+   `-p <prefix>`) — use exactly the form the design records so the command
+   matches an allow rule:
    - **ruff (always, leads the command):** `conda run <env-spec> ruff check --preview .`
    - **package → pytest:** `conda run <env-spec> python -m pytest tests/<target>.py -v`
    - **notebooks → nbconvert:** `conda run <env-spec> jupyter nbconvert --to notebook --execute <notebook_path>`
    - **docs → Sphinx build:** `conda run <env-spec> make -C docs html`
 
-   A multi-area change chains the relevant gates after the shared ruff step —
-   e.g. package + notebooks is `ruff … && pytest … && nbconvert …`, and
-   package + docs is `ruff … && pytest … && make -C docs html`.
+   Multi-area scope chains each gate after ruff (e.g. package + notebooks →
+   `ruff … && pytest … && nbconvert …`).
 
    The ruff step is `ruff check --preview .` **verbatim** — identical to the CI
-   `lint` job (`.gitlab-ci.yml`). It relies on the `[tool.ruff].include` list in
-   `pyproject.toml` (which already covers `src/`, `scripts/`, `tests/`, and the
-   notebooks), so a notebook- or script-scope change is actually linted. Do NOT
-   substitute a narrower path such as `ruff check src/sctoolbox tests` — that
-   skips the very files a notebook plan changes and lets CI fail on a
-   green-locally gate.
+   `lint` job and relying on `[tool.ruff].include` in `pyproject.toml` (covers
+   `src/`, `scripts/`, `tests/`, notebooks). Do NOT narrow it to e.g.
+   `ruff check src/sctoolbox tests` — that skips files CI lints, so the gate
+   passes while CI fails.
 
-   The per-file `pytest tests/<target>.py` keeps the TDD loop fast. Separately,
-   declare the whole-suite command on a `**Full-suite regression command:**`
-   line (`conda run <env-spec> python -m pytest tests`, same env) — `/implement`
-   runs it **verbatim** at final confirmation to catch cross-file regressions
-   (see `implement/SKILL.md`). For scope with no pytest segment (notebook-only,
-   docs-only) declare it `n/a`.
+   The per-file `pytest tests/<target>.py` keeps the TDD loop fast. Separately
+   declare the whole-suite run on a `**Full-suite regression command:**` line
+   (`conda run <env-spec> python -m pytest tests`, same env) — `/implement` runs
+   it **verbatim** at final confirmation to catch cross-file regressions. Scope
+   with no pytest segment (notebook-only, docs-only) → `n/a`.
 4. **Draft `plan.md`** in the same directory as `design.md`, using the
    template at `.claude/docs/plan-template.md`. The plan MUST
    include:
