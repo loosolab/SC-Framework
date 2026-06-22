@@ -30,7 +30,8 @@ def test_gitlab_download(tmp_path):
     out_path.mkdir()
     result_file = out_path / "Notebook1.ipynb"
     missing_file = out_path / "FileX.py"
-    with patch("creator.gitlab_download", return_value=mock):
+    with patch("sctoolbox.utils.creators.gitlab.Gitlab", return_value=mock), \
+            patch("sctoolbox.utils.creators.time.sleep"):
         creator.gitlab_download("notebooks", file_regex=".*.ipynb", out_path=str(out_path))
         assert result_file.is_file()
         assert not missing_file.is_file()
