@@ -69,7 +69,7 @@ without a path, ask for one.
    not execute it. Build that module's API page with the **`dummy`** builder
    (executes `.. exec_code::`, skips HTML finalisation — a single-page `-b html`
    fails on nbsphinx's notebook collection, so do **not** use it):
-   `conda run -n <env> sphinx-build -b dummy docs/source /tmp/scdocs docs/source/API/<m>.rst`
+   `conda run <env-spec> sphinx-build -b dummy docs/source /tmp/scdocs docs/source/API/<m>.rst`
    (`<m>` = `tools`, `utils`, …). A **non-zero exit** means an example raised (a
    traceback, a `NameError` from a missing pre-code variable) — hand it back to
    the implementer to fix the example or extend `utils_pre_code.py`. The
@@ -91,7 +91,7 @@ without a path, ask for one.
    only — never `-w`) over the files this work item changed (the same set
    `git diff --name-only` reports for the work — never the whole repo, to honour
    minimal-diff):
-   `conda run -n <env> codespell --toml pyproject.toml <changed files>`.
+   `conda run <env-spec> codespell --toml pyproject.toml <changed files>`.
    Resolve each thing it reports **by hand** — codespell never edits files here:
    - **Clear typo** (a single obvious correction, in a comment/docstring/string,
      not in code that would change behaviour) → fix it directly with `Edit`.

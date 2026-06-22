@@ -29,11 +29,14 @@ calling skill passes it. If absent, return a note that the path is required.
      `**Commit mode:** unspecified` and note it in the plan's Open questions.
 3. **Select the binding test command** based on scope. Every command opens
    with the single shared ruff step; append the gate(s) for each scope the
-   change touches, chained with `&&`:
-   - **ruff (always, leads the command):** `conda run -n <env> ruff check --preview .`
-   - **package → pytest:** `conda run -n <env> python -m pytest tests/<target>.py -v`
-   - **notebooks → nbconvert:** `conda run -n <env> jupyter nbconvert --to notebook --execute <notebook_path>`
-   - **docs → Sphinx build:** `conda run -n <env> make -C docs html`
+   change touches, chained with `&&`. `<env-spec>` is the conda env selector from
+   `design.md` `## Scope` — `-n <name>` for a named env or `-p <prefix>` for a
+   prefix env; use exactly the form the design records so the command matches an
+   allow rule:
+   - **ruff (always, leads the command):** `conda run <env-spec> ruff check --preview .`
+   - **package → pytest:** `conda run <env-spec> python -m pytest tests/<target>.py -v`
+   - **notebooks → nbconvert:** `conda run <env-spec> jupyter nbconvert --to notebook --execute <notebook_path>`
+   - **docs → Sphinx build:** `conda run <env-spec> make -C docs html`
 
    A multi-area change chains the relevant gates after the shared ruff step —
    e.g. package + notebooks is `ruff … && pytest … && nbconvert …`, and
@@ -49,7 +52,7 @@ calling skill passes it. If absent, return a note that the path is required.
 
    The per-file `pytest tests/<target>.py` keeps the TDD loop fast. Separately,
    declare the whole-suite command on a `**Full-suite regression command:**`
-   line (`conda run -n <env> python -m pytest tests`, same env) — `/implement`
+   line (`conda run <env-spec> python -m pytest tests`, same env) — `/implement`
    runs it **verbatim** at final confirmation to catch cross-file regressions
    (see `implement/SKILL.md`). For scope with no pytest segment (notebook-only,
    docs-only) declare it `n/a`.

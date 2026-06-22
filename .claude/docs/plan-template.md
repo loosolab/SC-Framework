@@ -9,7 +9,7 @@ Slug: <slug>
 `<binding command: ruff + per-file pytest — the fast TDD gate>`
 
 **Full-suite regression command:**
-`<whole suite, e.g. conda run -n <env> python -m pytest tests; "n/a" if scope excludes package>`
+`<whole suite, e.g. conda run <env-spec> python -m pytest tests; "n/a" if scope excludes package>`
 
 **Commit mode:** `manual | claude (Name <email>)`  (copied verbatim from design.md `## Scope`)
 

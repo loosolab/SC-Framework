@@ -25,7 +25,7 @@ it. Invoked by `/design` (before any `design.md` is written) and by
      (`conda env create -f sctoolbox_env.yml` — note this creates an env named
      `sctoolbox`). If the user meant a different name, ask which existing env to
      use instead. Create only after the user confirms.
-2. **Probe dependencies by scope** (run each with `conda run -n <env> …`):
+2. **Probe dependencies by scope** (run each with `conda run <env-spec> …`):
    - **always** (the binding command starts with `ruff check`): `ruff --version`
      and `python -c "import sctoolbox"` (package importable in editable mode).
    - **package scope** adds: `pytest --version` and `codespell --version`.
@@ -34,8 +34,9 @@ it. Invoked by `/design` (before any `design.md` is written) and by
 3. **Something missing → offer to install it.** Don't just stop — offer to run
    the dev-setup install from `docs/source/development.rst` yourself, and run it
    only after the user confirms:
-   `conda run -n <env> pip install -e '.[all]' --group test --group lint --group spellcheck`
-   plus, for docs scope, `conda run -n <env> pip install --group docs`.
+   `conda run <env-spec> pip install -e '.[all]' --group dev` (the `dev` group
+   bundles the test + lint + spellcheck + docs tooling plus dev-only extras such
+   as the GraphQL client used by `scripts/gitlab_query.py`).
    Alternatively let the user point to an env that already has everything.
 4. **Outcome.** Return one of:
    - **verified** — env exists and every probe for the scope passed.

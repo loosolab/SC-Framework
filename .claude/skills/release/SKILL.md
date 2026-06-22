@@ -22,7 +22,7 @@ ready to ship.
    (first line: `__version__ = "X.Y.Z"`).
 4. **Confirm the conda environment** for Step 4's notebook-version script.
    Default `sctoolbox`; verify it exists with `conda env list`. The rest of the
-   workflow always runs project scripts via `conda run -n <env>` — release does
+   workflow always runs project scripts via `conda run <env-spec>` — release does
    the same rather than assuming an env is active.
 5. **Resolve the commit mode** for Step 5. Ask the user: **manual** (default —
    the user stages and commits the release themselves) or
@@ -60,9 +60,9 @@ Run the version update script for each notebook directory, in the conda env
 confirmed in preflight:
 
 ```bash
-conda run -n <env> python scripts/change_notebook_version.py rna_analysis/notebooks/ <new_version>
-conda run -n <env> python scripts/change_notebook_version.py atac_analysis/notebooks/ <new_version>
-conda run -n <env> python scripts/change_notebook_version.py general_notebooks/ <new_version>
+conda run <env-spec> python scripts/change_notebook_version.py rna_analysis/notebooks/ <new_version>
+conda run <env-spec> python scripts/change_notebook_version.py atac_analysis/notebooks/ <new_version>
+conda run <env-spec> python scripts/change_notebook_version.py general_notebooks/ <new_version>
 ```
 
 ### Step 5 — Commit
