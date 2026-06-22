@@ -144,13 +144,53 @@ def search(project: object, terms: str, kind: str, state: str, limit: int) -> No
         print()
 
 
-def fetch(project: object, kind: str, number: int, full: bool) -> None:
+def graphql_notes(base_url: str, project_path: str, kind: str, number: int) -> list[dict]:
+    """Fetch an issue/MR's discussion notes via GraphQL.
+
+    The REST ``notes`` endpoint is authentication-gated (HTTP 401) for anonymous
+    access on some instances (e.g. GWDG), while GraphQL serves the same notes
+    anonymously — so discussion is read through GraphQL rather than the REST
+    object model.
+
+    Parameters
+    ----------
+    base_url : str
+        The GitLab base URL.
+    project_path : str
+        The full project path (``group/subgroup/project``).
+    kind : str
+        ``"issue"`` or ``"mr"``.
+    number : int
+        The issue/MR ``iid``.
+
+    Returns
+    -------
+    list[dict]
+        Note dicts with ``author``, ``body``, ``system`` and ``createdAt`` keys.
+    """
+    field = "issue" if kind == "issue" else "mergeRequest"
+    query = (
+        f'query {{ project(fullPath: "{project_path}") {{ {field}(iid: "{number}") {{ '
+        f"discussions {{ nodes {{ notes {{ nodes {{ author {{ username }} body system createdAt }} }} }} }} "
+        f"}} }} }}"
+    )
+    data = gitlab.GraphQL(base_url).execute(query)
+    node = (data.get("project") or {}).get(field) or {}
+    discussions = (node.get("discussions") or {}).get("nodes") or []
+    return [note for d in discussions for note in (d.get("notes") or {}).get("nodes") or []]
+
+
+def fetch(project: object, base_url: str, project_path: str, kind: str, number: int, full: bool) -> None:
     """Print one issue or MR with its description and discussion.
 
     Parameters
     ----------
     project : object
         The resolved ``python-gitlab`` project.
+    base_url : str
+        The GitLab base URL (used for the GraphQL notes query).
+    project_path : str
+        The full project path (used for the GraphQL notes query).
     kind : str
         ``"issue"`` or ``"mr"``.
     number : int
@@ -169,15 +209,21 @@ def fetch(project: object, kind: str, number: int, full: bool) -> None:
     print("## Description\n")
     print((obj.description or "*(no description)*").strip(), "\n")
 
-    notes = sorted(obj.notes.list(get_all=True), key=lambda note: note.created_at)
     print("## Discussion\n")
+    try:
+        notes = graphql_notes(base_url, project_path, kind, number)
+    except Exception as err:  # noqa: BLE001 — degrade gracefully if discussion is unreachable
+        print(f"*(discussion unavailable — {err}; a configured python-gitlab token may be required)*")
+        return
+    notes.sort(key=lambda note: note["createdAt"])
     shown = 0
     for note in notes:
-        if note.system and not full:
+        if note["system"] and not full:
             continue
-        tag = " (system)" if note.system else ""
-        print(f"**{note.author['username']}**{tag} — {note.created_at[:10]}\n")
-        print(note.body.strip(), "\n")
+        tag = " (system)" if note["system"] else ""
+        author = (note.get("author") or {}).get("username", "unknown")
+        print(f"**{author}**{tag} — {note['createdAt'][:10]}\n")
+        print(note["body"].strip(), "\n")
         shown += 1
     if shown == 0:
         print("*(no discussion)*")
@@ -206,7 +252,7 @@ def main() -> None:
     if args.command == "search":
         search(project, args.terms, args.type, args.state, args.limit)
     else:
-        fetch(project, args.kind, args.number, args.full)
+        fetch(project, base_url, project_path, args.kind, args.number, args.full)
 
 
 if __name__ == "__main__":
