@@ -27,6 +27,10 @@ calling skill passes it. If absent, return a note that the path is required.
      onto the `**Commit mode:**` line of `plan.md` so the implementer has it
      without re-reading `design.md`. If `design.md` omits it, write
      `**Commit mode:** unspecified` and note it in the plan's Open questions.
+   - `Autonomy`: `per-task` or `end` — copy it **verbatim** onto the
+     `**Autonomy:**` line of `plan.md` so `/implement` knows whether to pause
+     after each task. If `design.md` omits it, write `**Autonomy:** end` and note
+     it in the plan's Open questions.
 3. **Select the binding test command** based on scope. Every command opens
    with the single shared ruff step; append the gate(s) for each scope the
    change touches, chained with `&&`. `<env-spec>` is the conda env selector from
@@ -67,6 +71,7 @@ calling skill passes it. If absent, return a note that the path is required.
    - A `**Full-suite regression command:**` line — the whole-suite pytest run
      for package scope, or `n/a` if scope excludes package.
    - A `**Commit mode:**` line copied verbatim from `design.md` `## Scope`.
+   - An `**Autonomy:**` line copied verbatim from `design.md` `## Scope`.
    - Every success criterion from `design.md` mapped onto at least one task
      or test case.
 5. **Sanity-check the test command.** It must be invocable in this

@@ -36,16 +36,44 @@ without a path, ask for one.
    run without `/design`), **ask the user now**: manual, or claude — and if
    claude, their name and email. Carry the resolved mode through every
    `sys-commit` call below.
+4. **Resolve the autonomy level.** Read the `**Autonomy:**` line from `plan.md`
+   (falling back to `design.md` `## Scope`). `per-task` → drive the task loop
+   from this skill, pausing after each task for the user's review/commit (Process
+   step 1, per-task branch). `end` → spawn the implementer once for the whole
+   plan (Process step 1, end branch). If the line is missing or `unspecified`,
+   **ask the user now** which they want.
 
 ## Process
 
-1. **Spawn the `implementer`.** Use the Agent tool with
-   `subagent_type: implementer`, passing the `plan.md` path and the resolved
-   commit mode. It follows `sys-implement`: writes tests first (red), implements
-   tasks one at a time under the binding command, marks `- [x] T<N>` only on
-   green with no regression, and — in `claude` commit mode — **commits per
-   completed task** via `sys-commit` (`impl(<slug>): T<N> <desc>`); in `manual`
-   mode it leaves changes unstaged. It retries up to 3 attempts per task.
+1. **Run the implementation, per the autonomy level resolved in preflight.**
+
+   **`end` (autonomous run).** Spawn the `implementer` once with the Agent tool
+   (`subagent_type: implementer`), passing the `plan.md` path and the resolved
+   commit mode. It follows `sys-implement`'s full task loop: writes tests first
+   (red), implements tasks one at a time under the binding command, marks
+   `- [x] T<N>` only on green with no regression, and — in `claude` commit mode —
+   **commits per completed task** via `sys-commit` (`impl(<slug>): T<N> <desc>`);
+   in `manual` mode it leaves changes unstaged. It retries up to 3 attempts per
+   task.
+
+   **`per-task` (pause after each task).** Drive the loop from this skill, one
+   task at a time. For each unchecked `- [ ] T<N>` in `plan.md`, in order:
+   1. **Spawn the `implementer` for that one task** (Agent tool,
+      `subagent_type: implementer`), passing the `plan.md` path, the task id
+      `T<N>`, and the commit mode, with the instruction to run in
+      **single-task mode** (`sys-implement`). It writes that task's tests first,
+      implements, runs the binding command to green (3-attempt cap), commits in
+      `claude` mode, and returns a summary **without** ticking the checkbox.
+   2. **Confirm the gate is green**, then show the user the change
+      (`git status --short` + `git diff`) and **pause for review**. In `manual`
+      mode the user commits the task; in `claude` mode it is already committed and
+      the user reviews (and may amend/revert) before continuing.
+   3. **On the user's go-ahead, tick `- [x] T<N>`** in `plan.md` (a local-only
+      edit — never staged) and move to the next task. If the user wants changes,
+      address them (re-spawning the implementer if needed) before ticking.
+
+   The pause happens after **every** task, in both commit modes. A retry-cap or
+   blocker handoff from any single-task spawn is handled by step 2 below.
 2. **Handle a retry-cap or blocker handoff.** If the implementer returns a
    structured failure summary, **stop and ask the user** how to proceed:
    - Continue trying (resets the counter, explicit consent) — re-spawn the

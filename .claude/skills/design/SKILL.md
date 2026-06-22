@@ -43,6 +43,11 @@ If neither is given, ask the user what they want to design.
      of each commit, scoped per-commit (no `git config` is written).
      Default to **manual** if the user is unsure (the local setup can have
      issues with automatic commits).
+   - **Autonomy** — how much should `/implement` run unattended? Two choices:
+     **per-task** (the implementer runs one task at a time and `/implement`
+     pauses after each for the user to review and, in manual mode, commit before
+     continuing) or **end** (all tasks run, then the user reviews once at the
+     end — the original behaviour). **No default — always ask.**
    Use `AskUserQuestion` when choices enumerate cleanly; free-text otherwise.
 4. **Verify the conda environment.** As soon as the env name is confirmed in
    step 3, follow the shared `sys-env-check` procedure — before any `design.md`
@@ -64,7 +69,8 @@ If neither is given, ask the user what they want to design.
    - **Scope** — `Type` is one or more of `package`, `notebooks`, `docs`
      (combine with `+`, e.g. `package + docs`); `Conda environment` is the
      name confirmed in the questions above; `Commit mode` is either `manual`
-     or `claude (Name <email>)` as chosen above.
+     or `claude (Name <email>)` as chosen above; `Autonomy` is either `per-task`
+     or `end` as chosen above.
    - **Success criteria** — concrete, observable signals, numeric where possible.
    - **Open questions** — decisions the user must make before planning; empty if
      all resolved during the conversation.

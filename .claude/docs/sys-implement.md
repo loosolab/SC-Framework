@@ -77,6 +77,27 @@ For each unchecked `- [ ] T<N>. ...` in order:
    commit it. Return a **structured failure summary** to the calling skill —
    what was tried across the attempts and the last test output.
 
+## Single-task mode (per-task autonomy)
+
+The task loop above is the full-plan (`end` autonomy) run. When the calling skill
+(`/implement` in `per-task` autonomy) assigns **one named task** `T<N>` instead of
+the whole plan, run only that task:
+
+1. Author that task's `TC<N>` test case(s) first, where the binding command finds
+   them (red), then implement only what `T<N>` describes — no scope creep.
+2. Run the binding test command. Apply the same decision/retry rules as the task
+   loop: green with no regression → done; still failing → diagnose, fix, retry up
+   to 3 attempts; a regressed previously-passing check → revert it first (no
+   retry consumed).
+3. In **`claude`** commit mode, commit via `sys-commit`
+   (`impl(<slug>): T<N> <short desc>`), staging only this task's code/test files;
+   in **`manual`** mode leave the changes unstaged.
+4. **Do not tick `- [x] T<N>`** and do not touch other tasks. Return a structured
+   summary (files changed, commit made or "none, manual mode", gate result). The
+   calling skill ticks the checkbox after the user's review, then re-spawns you
+   for the next task. If the 3-attempt cap is hit, return the failure summary
+   without committing or ticking (as in the task loop).
+
 ## After all tasks pass
 
 1. Run the test command once more. It MUST exit 0.

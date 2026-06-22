@@ -13,6 +13,8 @@ Slug: <slug>
 
 **Commit mode:** `manual | claude (Name <email>)`  (copied verbatim from design.md `## Scope`)
 
+**Autonomy:** `per-task | end`  (copied verbatim from design.md `## Scope`)
+
 ## Tasks
 
 - [ ] T1. <description>
