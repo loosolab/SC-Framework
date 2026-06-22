@@ -23,15 +23,24 @@ If neither is given, ask the user what they want to design.
    conventions) and `CHANGES.md` (what shipped recently).
 2. **Think before drafting.** Reason about the goal, which modules it
    touches, and what could go wrong, before writing anything.
-3. **Ask clarifying questions.** Before any file is written, surface 1–4
-   sharp questions. Always include:
+3. **Ask clarifying questions.** Before any file is written, resolve the five
+   items below. `AskUserQuestion` caps at four questions per call, so batch the
+   four enumerable choices — **conda environment**, **change scope**,
+   **commit mode**, **autonomy** — into one `AskUserQuestion` call (each option's
+   "Other" handles a prefix env, a custom name/email, etc.), and handle
+   **related issues/MRs** as a follow-up free-text prompt (it is open-ended, not
+   a clean enumeration). Always resolve all five:
    - **Conda environment** — which env runs the gate commands (via
      `conda run <env-spec>`)? `<env-spec>` is `-n <name>` or `-p <prefix>`;
      record the exact form in `design.md` so the binding command matches an allow
      rule. `.claude/settings.json` allow-lists `-n sctoolbox`; a **prefix or
      differently-named env** needs matching rules in the gitignored, per-user
      `.claude/settings.local.json`, else every gate prompts. Recommend
-     `sctoolbox` unless the user has a reason.
+     `sctoolbox` unless the user has a reason. (Maintenance note: a new
+     `conda run` allow rule must be added to **both** files — `settings.json`
+     for `-n sctoolbox` and `settings.local.json` for the prefix env — or the
+     prefix-env user gets prompted. JSON takes no comments, so the rule lives
+     here.)
    - **Change scope** — any combination of package (`src/sctoolbox/` + `tests/`), notebooks, and docs (`docs/`)?
    - **Commit mode** — who commits? **manual** (user stages + commits;
      `/implement` never touches git) or **claude** (Claude commits per the
@@ -45,7 +54,6 @@ If neither is given, ask the user what they want to design.
    - **Related issues/MRs** — `#`/`!` numbers, a request to **scan**, or none.
      (The lookup runs in step 6 via `scripts/gitlab_query.py`, once the env is
      verified.)
-   Use `AskUserQuestion` when choices enumerate cleanly; free-text otherwise.
 4. **Verify the conda environment.** As soon as the env name is confirmed in
    step 3, follow the shared `sys-env-check` procedure — before any `design.md`
    is written — to confirm the env exists and carries the tooling the chosen

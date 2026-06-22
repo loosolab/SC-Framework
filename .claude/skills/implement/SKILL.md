@@ -84,19 +84,10 @@ without a path, ask for one.
    and docs-only scope declare it `n/a` — skip this step.)
 
    **Render-check changed `.. exec_code::` examples.** Only if `git diff` shows
-   an added/modified `.. exec_code::` docstring example (the binding command does
-   not execute these; skip otherwise). Build that module's API page with the
-   **`dummy`** builder — it executes `.. exec_code::` but skips HTML finalisation
-   (a single-page `-b html` fails on nbsphinx's notebook collection — do **not**
-   use it):
-   `conda run <env-spec> sphinx-build -b dummy docs/source /tmp/scdocs docs/source/API/<m>.rst`
-   (`<m>` = `tools`, `utils`, …). **Non-zero exit** = an example raised (a
-   traceback, or a `NameError` from a missing pre-code variable) → hand back to
-   the implementer to fix the example or extend `utils_pre_code.py`. The
-   `toctree`/cross-reference warnings about the unbuilt rest of the docs are
-   expected and do **not** fail it. `.. plot::` examples are only parsed here,
-   not executed — CI's `make -C docs html` verifies those
-   (`.claude/docs/sys-examples.md`).
+   an added/modified `.. exec_code::` docstring example (skip otherwise — the
+   binding command does not execute these). When it does, follow the single-page
+   `dummy`-build **Render-check procedure** in `.claude/docs/sys-examples.md`; a
+   non-zero exit means an example raised — hand it back to the implementer.
 4. **Spawn the `code-reviewer`.** Use the Agent tool with
    `subagent_type: code-reviewer`, passing `plan.md` and the changed files /
    work-item directory. It follows `sys-code-review` and **always runs**.

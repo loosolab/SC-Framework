@@ -31,8 +31,9 @@ calling skill passes it. If absent, return a note that the path is required.
    - `Conda environment`: the env selector used in all commands.
    - `Commit mode`: `manual` or `claude (Name <email>)`. If omitted, write
      `unspecified` and note it in Open questions.
-   - `Autonomy`: `per-task` or `end`. If omitted, default `end` and note it in
-     Open questions.
+   - `Autonomy`: `per-task` or `end` (`/design` always asks, so a well-formed
+     design records it; this default only guards a malformed `design.md`). If
+     omitted, default `end` and note it in Open questions.
    - `Related`: `#`/`!` numbers or `none` — lets `/implement` cite the issue in
      the changelog (`add_change.py --issue <N>`).
 3. **Select the binding test command** based on scope. It opens with the shared
