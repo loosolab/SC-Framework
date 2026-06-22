@@ -25,33 +25,26 @@ If neither is given, ask the user what they want to design.
    touches, and what could go wrong, before writing anything.
 3. **Ask clarifying questions.** Before any file is written, surface 1–4
    sharp questions. Always include:
-   - **Conda environment** — which env should the binding test command use?
-     Gate commands run in it via `conda run <env-spec>`, where `<env-spec>` is
-     `-n <name>` for a named env or `-p <prefix>` for a prefix env — record the
-     exact form in `design.md` so the binding command matches an allow rule. The
-     committed `.claude/settings.json` allow-lists the named `-n sctoolbox` form;
-     a **prefix env or a differently-named env** needs matching rules in the
-     gitignored, per-user `.claude/settings.local.json` (never committed),
-     otherwise every gate (ruff, pytest, codespell, sphinx, nbconvert) prompts on
-     each run. Recommend `sctoolbox` unless the user has a specific reason.
+   - **Conda environment** — which env runs the gate commands (via
+     `conda run <env-spec>`)? `<env-spec>` is `-n <name>` or `-p <prefix>`;
+     record the exact form in `design.md` so the binding command matches an allow
+     rule. `.claude/settings.json` allow-lists `-n sctoolbox`; a **prefix or
+     differently-named env** needs matching rules in the gitignored, per-user
+     `.claude/settings.local.json`, else every gate prompts. Recommend
+     `sctoolbox` unless the user has a reason.
    - **Change scope** — any combination of package (`src/sctoolbox/` + `tests/`), notebooks, and docs (`docs/`)?
-   - **Commit mode** — who commits the work? Offer two choices: **manual**
-     (the user stages and commits everything themselves — `/implement` never
-     touches git) or **claude** (Claude commits per the workflow convention).
-     If the user picks **claude**, ask for their **name and email** and record
-     them as `claude (Name <email>)` — these set both the author and committer
-     of each commit, scoped per-commit (no `git config` is written).
-     Default to **manual** if the user is unsure (the local setup can have
-     issues with automatic commits).
-   - **Autonomy** — how much should `/implement` run unattended? Two choices:
-     **per-task** (the implementer runs one task at a time and `/implement`
-     pauses after each for the user to review and, in manual mode, commit before
-     continuing) or **end** (all tasks run, then the user reviews once at the
-     end — the original behaviour). **No default — always ask.**
-   - **Related issues/MRs** — does this work relate to existing GitLab issues or
-     merge requests? The user can give `#`/`!` numbers, ask to **scan** for
-     related ones, or say none. (The lookup itself runs in step 6 via
-     `scripts/gitlab_query.py`, once the env is verified.)
+   - **Commit mode** — who commits? **manual** (user stages + commits;
+     `/implement` never touches git) or **claude** (Claude commits per the
+     workflow convention — ask for **name and email**, record as
+     `claude (Name <email>)`, which sets author + committer per-commit with no
+     `git config`). Default **manual** if unsure (local setup can have issues
+     with auto-commits).
+   - **Autonomy** — how much should `/implement` run unattended? **per-task**
+     (`/implement` pauses after each task for review/commit) or **end** (all
+     tasks run, then one review). **No default — always ask.**
+   - **Related issues/MRs** — `#`/`!` numbers, a request to **scan**, or none.
+     (The lookup runs in step 6 via `scripts/gitlab_query.py`, once the env is
+     verified.)
    Use `AskUserQuestion` when choices enumerate cleanly; free-text otherwise.
 4. **Verify the conda environment.** As soon as the env name is confirmed in
    step 3, follow the shared `sys-env-check` procedure — before any `design.md`
@@ -81,12 +74,9 @@ If neither is given, ask the user what they want to design.
    - **Problem** — what and why now; draw on `related.md` (the issue/MR
      requirements and discussion) where relevant.
    - **Approach** — high-level idea, modules touched, what will NOT be done.
-   - **Scope** — `Type` is one or more of `package`, `notebooks`, `docs`
-     (combine with `+`, e.g. `package + docs`); `Conda environment` is the
-     name confirmed in the questions above; `Commit mode` is either `manual`
-     or `claude (Name <email>)` as chosen above; `Autonomy` is either `per-task`
-     or `end` as chosen above; `Related` is the confirmed issue/MR numbers
-     (e.g. `#445, !515`) or `none`.
+   - **Scope** — fill `Type` (package/notebooks/docs, combine with `+`),
+     `Conda environment`, `Commit mode`, `Autonomy`, and `Related` from the
+     answers above (the template explains each field).
    - **Success criteria** — concrete, observable signals, numeric where possible
      (derive from the issue/MR acceptance criteria in `related.md` where present).
    - **Open questions** — decisions the user must make before planning; empty if
