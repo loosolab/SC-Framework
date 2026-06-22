@@ -36,12 +36,8 @@ def find_in_progress(lines: list[str]) -> tuple[int, str]:
     Returns
     -------
     tuple[int, str]
-        The header's line index and its ``"X.Y.Z"`` version string.
-
-    Raises
-    ------
-    SystemExit
-        If no in-progress section exists.
+        The header's line index and its ``"X.Y.Z"`` version string. Exits the
+        process if no in-progress section exists.
     """
     for i, line in enumerate(lines):
         match = IN_PROGRESS_RE.match(line)
