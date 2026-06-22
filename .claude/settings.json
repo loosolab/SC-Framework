@@ -15,7 +15,20 @@
       "Bash(conda run -n sctoolbox codespell --toml pyproject.toml:*)",
       "Bash(conda run -n sctoolbox make -C docs html)",
       "Bash(conda run -n sctoolbox sphinx-build -b dummy docs/source /tmp/scdocs:*)",
-      "Bash(conda run -n sctoolbox jupyter nbconvert --to notebook --execute:*)"
+      "Bash(conda run -n sctoolbox jupyter nbconvert --to notebook --execute:*)",
+      "Bash(python3 scripts/add_change.py:*)",
+      "Bash(python3 scripts/finalize_release.py:*)",
+      "Bash(conda run -n sctoolbox python scripts/gitlab_query.py:*)",
+      "Edit(tests/**)",
+      "Write(tests/**)",
+      "Edit(src/sctoolbox/**)",
+      "Write(src/sctoolbox/**)",
+      "Edit(docs/**)",
+      "Write(docs/**)",
+      "Edit(CHANGES.md)",
+      "Write(CHANGES.md)",
+      "Edit(.work/**)",
+      "Write(.work/**)"
     ],
     "deny": [
       "Bash(git config:*)",

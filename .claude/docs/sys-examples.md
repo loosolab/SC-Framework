@@ -32,6 +32,24 @@ the encouraged-not-required policy is in `CLAUDE.md`. This file holds only the
   their own.
 - **Verification differs by directive:**
   - `.. exec_code::` — smoke-checked locally by the single-page `dummy` build
-    `/implement` runs; an example that raises fails it.
+    `/implement` runs (see **Render-check procedure** below); an example that
+    raises fails it.
   - `.. plot::` — execution verified only by the full `make -C docs html` on CI;
     locally it is parsed, not executed.
+
+## Render-check procedure (used by /implement)
+
+Run this **only** when `git diff` shows an added/modified `.. exec_code::`
+docstring example (the binding command does not execute these; skip otherwise).
+Build that module's API page with the **`dummy`** builder — it executes
+`.. exec_code::` but skips HTML finalisation (a single-page `-b html` fails on
+nbsphinx's notebook collection — do **not** use it):
+
+`conda run <env-spec> sphinx-build -b dummy docs/source /tmp/scdocs docs/source/API/<m>.rst`
+
+(`<m>` = `tools`, `utils`, …). **Non-zero exit** = an example raised (a
+traceback, or a `NameError` from a missing pre-code variable) → hand back to the
+implementer to fix the example or extend `utils_pre_code.py`. The
+`toctree`/cross-reference warnings about the unbuilt rest of the docs are
+expected and do **not** fail it. `.. plot::` examples are only parsed by this
+build, not executed — CI's `make -C docs html` verifies those.

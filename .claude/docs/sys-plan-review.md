@@ -45,8 +45,11 @@ directory. The calling skill passes both.
    Verify both are preserved in the plan:
    - The binding command's test tools must match `Type` (same rule as check 3,
      but flagged here as a **design drift blocker** rather than a command error).
-   - The `conda run -n <env>` name in the binding command must exactly match the
-     `Conda environment` from the design. A mismatch is a **blocker**.
+   - The `conda run <env-spec>` selector in the binding command must exactly match
+     the `Conda environment` from the design (`-n <name>` or `-p <prefix>`). A
+     mismatch is a **blocker**.
+   - The `**Autonomy:**` line must be present and match the design's `Autonomy`
+     (`per-task` or `end`). A missing or mismatched value is a **blocker**.
 5. **Test-case definition.** Each `TC<N>` (test case N) must describe a
    verifiable check, not aspirational language. "The function works" is not
    a check; "TC1 — output AnnData contains column `leiden` in `.obs` after

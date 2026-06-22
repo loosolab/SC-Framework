@@ -202,3 +202,6 @@ atac_analysis/tobias/
 
 # Agentic workflow artifacts (design.md / plan.md / review-*.md) — local only, not committed
 .work/
+
+# Per-user Claude Code settings (e.g. prefix-env allow rules) — local only, never committed
+.claude/settings.local.json

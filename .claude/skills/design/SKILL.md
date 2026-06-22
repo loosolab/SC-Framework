@@ -23,26 +23,37 @@ If neither is given, ask the user what they want to design.
    conventions) and `CHANGES.md` (what shipped recently).
 2. **Think before drafting.** Reason about the goal, which modules it
    touches, and what could go wrong, before writing anything.
-3. **Ask clarifying questions.** Before any file is written, surface 1–4
-   sharp questions. Always include:
-   - **Conda environment** — which env should the binding test command use?
-     **Warn** the user if they name anything other than `sctoolbox`: the
-     `.claude/settings.json` allowlist pins every gate command to `-n sctoolbox`,
-     so a differently-named env matches no allow rule and every gate (ruff,
-     pytest, codespell, sphinx, nbconvert) will prompt for confirmation on each
-     run. Recommend `sctoolbox` unless they have a specific reason. (The
-     allowlist can't carry an inline comment — Claude Code rejects unknown JSON
-     keys — so this note is the canonical record of that pinning.)
+3. **Ask clarifying questions.** Before any file is written, resolve the five
+   items below. `AskUserQuestion` caps at four questions per call, so batch the
+   four enumerable choices — **conda environment**, **change scope**,
+   **commit mode**, **autonomy** — into one `AskUserQuestion` call (each option's
+   "Other" handles a prefix env, a custom name/email, etc.), and handle
+   **related issues/MRs** as a follow-up free-text prompt (it is open-ended, not
+   a clean enumeration). Always resolve all five:
+   - **Conda environment** — which env runs the gate commands (via
+     `conda run <env-spec>`)? `<env-spec>` is `-n <name>` or `-p <prefix>`;
+     record the exact form in `design.md` so the binding command matches an allow
+     rule. `.claude/settings.json` allow-lists `-n sctoolbox`; a **prefix or
+     differently-named env** needs matching rules in the gitignored, per-user
+     `.claude/settings.local.json`, else every gate prompts. Recommend
+     `sctoolbox` unless the user has a reason. (Maintenance note: a new
+     `conda run` allow rule must be added to **both** files — `settings.json`
+     for `-n sctoolbox` and `settings.local.json` for the prefix env — or the
+     prefix-env user gets prompted. JSON takes no comments, so the rule lives
+     here.)
    - **Change scope** — any combination of package (`src/sctoolbox/` + `tests/`), notebooks, and docs (`docs/`)?
-   - **Commit mode** — who commits the work? Offer two choices: **manual**
-     (the user stages and commits everything themselves — `/implement` never
-     touches git) or **claude** (Claude commits per the workflow convention).
-     If the user picks **claude**, ask for their **name and email** and record
-     them as `claude (Name <email>)` — these set both the author and committer
-     of each commit, scoped per-commit (no `git config` is written).
-     Default to **manual** if the user is unsure (the local setup can have
-     issues with automatic commits).
-   Use `AskUserQuestion` when choices enumerate cleanly; free-text otherwise.
+   - **Commit mode** — who commits? **manual** (user stages + commits;
+     `/implement` never touches git) or **claude** (Claude commits per the
+     workflow convention — ask for **name and email**, record as
+     `claude (Name <email>)`, which sets author + committer per-commit with no
+     `git config`). Default **manual** if unsure (local setup can have issues
+     with auto-commits).
+   - **Autonomy** — how much should `/implement` run unattended? **per-task**
+     (`/implement` pauses after each task for review/commit) or **end** (all
+     tasks run, then one review). **No default — always ask.**
+   - **Related issues/MRs** — `#`/`!` numbers, a request to **scan**, or none.
+     (The lookup runs in step 6 via `scripts/gitlab_query.py`, once the env is
+     verified.)
 4. **Verify the conda environment.** As soon as the env name is confirmed in
    step 3, follow the shared `sys-env-check` procedure — before any `design.md`
    is written — to confirm the env exists and carries the tooling the chosen
@@ -55,16 +66,27 @@ If neither is given, ask the user what they want to design.
    (e.g. `qc-filter-fix`, `embedding-plot`). Present the full directory
    `.work/<YYYY-MM-DD>-<slug>/` and **wait for confirmation** before creating
    anything. Use today's date from the environment.
-6. **Write `.work/<YYYY-MM-DD>-<slug>/design.md`** using
+6. **Pull related issues/MRs (if any), then write `design.md`.**
+
+   First, if the user gave `#`/`!` numbers or asked to scan in step 3, use the
+   read-only `scripts/gitlab_query.py` in the verified env: run
+   `conda run <env-spec> python scripts/gitlab_query.py search "<keywords>"` to
+   discover candidates (present them, confirm with the user), then
+   `… gitlab_query.py fetch issue|mr <n>` for each confirmed item. Save the
+   combined markdown to `.work/<YYYY-MM-DD>-<slug>/related.md`. Skip entirely if
+   the user said none.
+
+   Then write `.work/<YYYY-MM-DD>-<slug>/design.md` using
    `.claude/skills/design/design-template.md` as the skeleton. Fill every
    section; do not add or remove sections. Guidance per section:
-   - **Problem** — what and why now; link related prior work if relevant.
+   - **Problem** — what and why now; draw on `related.md` (the issue/MR
+     requirements and discussion) where relevant.
    - **Approach** — high-level idea, modules touched, what will NOT be done.
-   - **Scope** — `Type` is one or more of `package`, `notebooks`, `docs`
-     (combine with `+`, e.g. `package + docs`); `Conda environment` is the
-     name confirmed in the questions above; `Commit mode` is either `manual`
-     or `claude (Name <email>)` as chosen above.
-   - **Success criteria** — concrete, observable signals, numeric where possible.
+   - **Scope** — fill `Type` (package/notebooks/docs, combine with `+`),
+     `Conda environment`, `Commit mode`, `Autonomy`, and `Related` from the
+     answers above (the template explains each field).
+   - **Success criteria** — concrete, observable signals, numeric where possible
+     (derive from the issue/MR acceptance criteria in `related.md` where present).
    - **Open questions** — decisions the user must make before planning; empty if
      all resolved during the conversation.
 

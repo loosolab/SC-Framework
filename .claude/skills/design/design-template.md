@@ -14,6 +14,8 @@ touches, the angle, and what we deliberately will NOT do.>
 - Type: one or more of package | notebooks | docs  (combine with "+", e.g. package + docs)
 - Conda environment: <name>
 - Commit mode: manual | claude (Name <email>)  (manual = user stages + commits; claude = Claude commits with this identity as author + committer)
+- Autonomy: per-task | end  (per-task = /implement pauses for review/commit after each task; end = run all tasks, then review once)
+- Related: #N, !M | none  (related issues / merge requests; fetched to related.md, informs planning and the changelog (#N) link)
 
 ## Success criteria
 

@@ -66,9 +66,9 @@ For each unchecked `- [ ] T<N>. ...` in order:
      → mark `- [x] T<N>` in `plan.md` (a local-only edit — `plan.md` is under
      the gitignored `.work/` and is **never staged**). In **`claude`** commit
      mode, **commit via `sys-commit`** with message
-     `impl(<slug>): T<N> <short desc>`, staging only this task's code/test files.
-     In **`manual`** mode, skip the commit and leave the task's changes
-     unstaged. Either way, continue to the next task.
+     `impl(<slug>): T<N> <short desc>`, staging only this task's code/test files
+     (in `manual` mode there is no commit — see Preflight). Continue to the next
+     task.
    - Target checks still failing → diagnose, fix, retry. **Up to 3 attempts
      total per task.** The counter resets when a task is marked done.
    - A previously-passing check regressed → revert the regression first; a
@@ -76,6 +76,27 @@ For each unchecked `- [ ] T<N>. ...` in order:
 4. **If the 3-attempt cap is hit:** stop. Do NOT mark the task done, do NOT
    commit it. Return a **structured failure summary** to the calling skill —
    what was tried across the attempts and the last test output.
+
+## Single-task mode (per-task autonomy)
+
+The task loop above is the full-plan (`end` autonomy) run. When the calling skill
+(`/implement` in `per-task` autonomy) assigns **one named task** `T<N>` instead of
+the whole plan, run only that task:
+
+1. Author that task's `TC<N>` test case(s) first, where the binding command finds
+   them (red), then implement only what `T<N>` describes — no scope creep.
+2. Run the binding test command. Apply the same decision/retry rules as the task
+   loop: green with no regression → done; still failing → diagnose, fix, retry up
+   to 3 attempts; a regressed previously-passing check → revert it first (no
+   retry consumed).
+3. In **`claude`** commit mode, commit via `sys-commit`
+   (`impl(<slug>): T<N> <short desc>`), staging only this task's code/test files;
+   in **`manual`** mode leave the changes unstaged.
+4. **Do not tick `- [x] T<N>`** and do not touch other tasks. Return a structured
+   summary (files changed, commit made or "none, manual mode", gate result). The
+   calling skill ticks the checkbox after the user's review, then re-spawns you
+   for the next task. If the 3-attempt cap is hit, return the failure summary
+   without committing or ticking (as in the task loop).
 
 ## After all tasks pass
 
