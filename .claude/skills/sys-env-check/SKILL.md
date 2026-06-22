@@ -29,6 +29,7 @@ it. Invoked by `/design` (before any `design.md` is written) and by
    - **always** (the binding command starts with `ruff check`): `ruff --version`
      and `python -c "import sctoolbox"` (package importable in editable mode).
    - **package scope** adds: `pytest --version` and `codespell --version`.
+   - **notebooks scope** adds: `jupyter --version` (the nbconvert gate needs it).
    - **docs scope** adds: `python -c "import sphinx"`. The docs build also needs
      a system `pandoc` on `PATH` (see `development.rst`); flag it if absent.
 3. **Something missing → offer to install it.** Don't just stop — offer to run

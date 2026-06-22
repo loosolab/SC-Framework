@@ -66,9 +66,9 @@ For each unchecked `- [ ] T<N>. ...` in order:
      → mark `- [x] T<N>` in `plan.md` (a local-only edit — `plan.md` is under
      the gitignored `.work/` and is **never staged**). In **`claude`** commit
      mode, **commit via `sys-commit`** with message
-     `impl(<slug>): T<N> <short desc>`, staging only this task's code/test files.
-     In **`manual`** mode, skip the commit and leave the task's changes
-     unstaged. Either way, continue to the next task.
+     `impl(<slug>): T<N> <short desc>`, staging only this task's code/test files
+     (in `manual` mode there is no commit — see Preflight). Continue to the next
+     task.
    - Target checks still failing → diagnose, fix, retry. **Up to 3 attempts
      total per task.** The counter resets when a task is marked done.
    - A previously-passing check regressed → revert the regression first; a

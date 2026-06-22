@@ -81,7 +81,8 @@ without a path, ask for one.
    - Re-plan (`/plan`).
    - Re-design (`/design`).
    Do not invent tasks or force past the cap yourself.
-3. **Confirm the gate.** When the implementer reports done, run the binding
+3. **Confirm the gate** (once, after the *whole* plan — in `per-task` mode that
+   is after the final task's review, not after each task). Run the binding
    test command once yourself and confirm exit 0. If not, hand the
    still-failing task back to the implementer.
 
@@ -135,8 +136,7 @@ without a path, ask for one.
    If addressing findings or the spellcheck changed any code, invoke
    `sys-commit` (step: review, slug: `<slug>`, commit mode, intended files: the
    fixes + any spellcheck typo fixes — **never** `review-code.md`, which lives
-   under the gitignored `.work/`) → message `review: <slug>`. In `manual`
-   commit mode, skip the commit and leave the fixes unstaged. If no code changed
+   under the gitignored `.work/`) → message `review: <slug>`. If no code changed
    (no blockers, no typo fixes), there is nothing to commit at this step —
    `review-code.md` stays local-only.
 7. **Update `CHANGES.md` and `_version.py`.** Run `scripts/add_change.py` once per
@@ -153,8 +153,7 @@ without a path, ask for one.
 
    Then invoke `sys-commit` (step: changes, slug: `<slug>`, commit mode, intended
    files: `CHANGES.md`, plus `src/sctoolbox/_version.py` if you changed it) →
-   message `changes: <slug>`. In `manual` commit mode, skip the commit and leave
-   the files unstaged.
+   message `changes: <slug>`.
 8. **Done.** Report what shipped and the final test result. In `manual` commit
    mode, also list every changed file (`git status --short`) and remind the user
    that nothing was staged or committed — they stage and commit it themselves.
