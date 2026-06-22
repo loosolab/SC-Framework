@@ -48,6 +48,10 @@ If neither is given, ask the user what they want to design.
      pauses after each for the user to review and, in manual mode, commit before
      continuing) or **end** (all tasks run, then the user reviews once at the
      end — the original behaviour). **No default — always ask.**
+   - **Related issues/MRs** — does this work relate to existing GitLab issues or
+     merge requests? The user can give `#`/`!` numbers, ask to **scan** for
+     related ones, or say none. (The lookup itself runs in step 6 via
+     `scripts/gitlab_query.py`, once the env is verified.)
    Use `AskUserQuestion` when choices enumerate cleanly; free-text otherwise.
 4. **Verify the conda environment.** As soon as the env name is confirmed in
    step 3, follow the shared `sys-env-check` procedure — before any `design.md`
@@ -61,17 +65,30 @@ If neither is given, ask the user what they want to design.
    (e.g. `qc-filter-fix`, `embedding-plot`). Present the full directory
    `.work/<YYYY-MM-DD>-<slug>/` and **wait for confirmation** before creating
    anything. Use today's date from the environment.
-6. **Write `.work/<YYYY-MM-DD>-<slug>/design.md`** using
+6. **Pull related issues/MRs (if any), then write `design.md`.**
+
+   First, if the user gave `#`/`!` numbers or asked to scan in step 3, use the
+   read-only `scripts/gitlab_query.py` in the verified env: run
+   `conda run <env-spec> python scripts/gitlab_query.py search "<keywords>"` to
+   discover candidates (present them, confirm with the user), then
+   `… gitlab_query.py fetch issue|mr <n>` for each confirmed item. Save the
+   combined markdown to `.work/<YYYY-MM-DD>-<slug>/related.md`. Skip entirely if
+   the user said none.
+
+   Then write `.work/<YYYY-MM-DD>-<slug>/design.md` using
    `.claude/skills/design/design-template.md` as the skeleton. Fill every
    section; do not add or remove sections. Guidance per section:
-   - **Problem** — what and why now; link related prior work if relevant.
+   - **Problem** — what and why now; draw on `related.md` (the issue/MR
+     requirements and discussion) where relevant.
    - **Approach** — high-level idea, modules touched, what will NOT be done.
    - **Scope** — `Type` is one or more of `package`, `notebooks`, `docs`
      (combine with `+`, e.g. `package + docs`); `Conda environment` is the
      name confirmed in the questions above; `Commit mode` is either `manual`
      or `claude (Name <email>)` as chosen above; `Autonomy` is either `per-task`
-     or `end` as chosen above.
-   - **Success criteria** — concrete, observable signals, numeric where possible.
+     or `end` as chosen above; `Related` is the confirmed issue/MR numbers
+     (e.g. `#445, !515`) or `none`.
+   - **Success criteria** — concrete, observable signals, numeric where possible
+     (derive from the issue/MR acceptance criteria in `related.md` where present).
    - **Open questions** — decisions the user must make before planning; empty if
      all resolved during the conversation.
 

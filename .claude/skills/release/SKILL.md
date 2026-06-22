@@ -39,20 +39,27 @@ Ask the user for the new version number. Show the current version as context.
 Accept any valid semver `X.Y.Z`. Do not infer or auto-increment — the user
 decides.
 
-### Step 2 — Update `_version.py`
+### Step 2 — Update `_version.py` and finalise `CHANGES.md`
 
-Set `src/sctoolbox/_version.py` to the clean `__version__ = "<new_version>"`.
-Per the version lifecycle in `.claude/docs/sys-changelog.md`, the
-working tree carries the in-progress `X.Y.Zb0`; this strips the `b0` suffix to
-the released number.
+Run `scripts/finalize_release.py` — it performs the **Finalise** procedure from
+`.claude/docs/sys-changelog.md` in one step: strips the in-progress `b0` suffix in
+`src/sctoolbox/_version.py` to the clean `__version__ = "<new_version>"`, and in
+the active `## … (in progress)` header replaces `(in progress)` with today's date
+in `(DD-MM-YYYY)` format (updating the header version if the chosen release number
+differs):
 
-### Step 3 — Finalise `CHANGES.md`
+```bash
+python3 scripts/finalize_release.py --version <new_version>
+```
 
-Apply the **Finalise** procedure in `.claude/docs/sys-changelog.md`: in
-the active `## … (in progress)` section header, replace `(in progress)` with
-today's date in `(DD-MM-YYYY)` format (updating the header version too if the
-chosen release number differs from the in-progress one). If no `(in progress)`
-entry exists, warn the user — the CHANGES.md may need a manual entry.
+Omit `--version` to release the in-progress number as-is; add `--dry-run` to
+preview. The script warns and exits non-zero if no `(in progress)` section
+exists — add a manual entry before continuing if so.
+
+### Step 3 — Verify the finalised changelog
+
+Confirm the active section now shows the dated header (the Step 2 script already
+did the edit); this is just a read-back before the notebook bump.
 
 ### Step 4 — Update notebook versions
 

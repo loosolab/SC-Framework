@@ -139,14 +139,17 @@ without a path, ask for one.
    commit mode, skip the commit and leave the fixes unstaged. If no code changed
    (no blockers, no typo fixes), there is nothing to commit at this step —
    `review-code.md` stays local-only.
-7. **Update `CHANGES.md` and `_version.py`.** Apply the **Append** procedure in
-   `.claude/docs/sys-changelog.md` for this work item: add the bullet(s)
-   under the active `## … (in progress)` section (package/docs under the main
-   header, notebooks under `### Changes to notebooks`), creating that section and
-   setting `_version.py` to `X.Y.Zb0` if none exists. The bullet is a short
-   imperative phrase, with ` (#<N>)` appended only if the design or plan cites a
-   GitLab issue. (Format digest: `CLAUDE.md`; canonical spec: `development.rst`,
-   Changelog section.)
+7. **Update `CHANGES.md` and `_version.py`.** Run `scripts/add_change.py` once per
+   user-visible bullet — it applies the **Append** procedure from
+   `.claude/docs/sys-changelog.md` deterministically (locates the active
+   `(in progress)` section, inserts under the right place, creates the section and
+   sets `_version.py` to `X.Y.Zb0` if none exists, refuses duplicates):
+   `python3 scripts/add_change.py "<imperative phrase>" --scope package|docs|notebook [--issue <N>]`.
+   Choose `--scope` by where the change lands (`notebook` → the
+   `### Changes to notebooks` subsection); pass `--issue <N>` from the plan's
+   `**Related:**` line when it cites an issue. Use `--dry-run` first if unsure.
+   (Format digest: `CLAUDE.md`; canonical spec: `development.rst`, Changelog
+   section.)
 
    Then invoke `sys-commit` (step: changes, slug: `<slug>`, commit mode, intended
    files: `CHANGES.md`, plus `src/sctoolbox/_version.py` if you changed it) →

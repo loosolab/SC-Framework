@@ -48,6 +48,9 @@ released and off-limits.
 
 ## Append (used by /implement)
 
+`/implement` performs this with `scripts/add_change.py` (one call per bullet); the
+steps below are the spec it implements and the reference for any manual edit.
+
 1. Locate the active section (above).
 2. **An `(in progress)` section exists** — append the bullet(s) in the right
    place per *Section structure*. Confirm `_version.py` already carries that
@@ -61,6 +64,9 @@ released and off-limits.
    set `_version.py` to `__version__ = "X.Y.Zb0"`.
 
 ## Finalise (used by /release)
+
+`/release` performs steps 2–3 with `scripts/finalize_release.py`; the steps below
+are the spec it implements.
 
 1. The user chooses the release version `X.Y.Z` — the active section's
    in-progress version, or a deliberate bump of it.

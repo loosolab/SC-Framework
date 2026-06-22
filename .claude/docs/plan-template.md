@@ -15,6 +15,8 @@ Slug: <slug>
 
 **Autonomy:** `per-task | end`  (copied verbatim from design.md `## Scope`)
 
+**Related:** `#N, !M | none`  (copied verbatim from design.md `## Scope`)
+
 ## Tasks
 
 - [ ] T1. <description>
