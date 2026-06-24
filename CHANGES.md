@@ -5,6 +5,7 @@
 - document the doc-string example conventions (`.. plot::` / `.. exec_code::`) and pre-code fixtures in `development.rst`
 - refactor tests (moved duplicate fixtures into shared `conftest` and remove unreferenced test data)
 - fix broken tests (missing scanpy import in multiomics, unbound `peaks_to_bins` result, and batch-label length in the norm_correct fixture)
+- fix gitlab_download: replace the broken throttler rate limiter with a basic time.sleep and remove the throttler dependency
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
