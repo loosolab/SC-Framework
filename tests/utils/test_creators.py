@@ -2,6 +2,7 @@
 
 import sctoolbox.utils.creators as creator
 import pytest
+import deprecation
 from glob import glob
 from pathlib import Path
 from unittest.mock import patch, Mock
@@ -10,6 +11,7 @@ from unittest.mock import patch, Mock
 # --------------------------- TESTS --------------------------------- #
 
 
+@deprecation.fail_if_not_removed
 def test_gitlab_download(tmp_path):
     """Test gitlab download."""
     def side_effect(search):
