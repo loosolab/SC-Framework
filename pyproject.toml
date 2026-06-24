@@ -103,7 +103,6 @@ dependencies = [
         'pyyaml',
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'packaging',
-        'throttler',
         'upsetplot',
         'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
