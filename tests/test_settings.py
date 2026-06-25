@@ -8,15 +8,16 @@ import sys
 
 from sctoolbox.utils.adata import load_h5ad, get_adata_subsets
 from sctoolbox import settings
+from tests.conftest import DATA_DIR
 logger = settings.logger
 
 
 # --------------------------- FIXTURES ------------------------------ #
 
 
-adata_path = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
-config_path = os.path.join(os.path.dirname(__file__), 'data', "test_config.yaml")
-config_path_nokey = os.path.join(os.path.dirname(__file__), 'data', "test_config_nokey.yaml")
+adata_path = os.path.join(DATA_DIR, "adata.h5ad")
+config_path = os.path.join(DATA_DIR, "test_config.yaml")
+config_path_nokey = os.path.join(DATA_DIR, "test_config_nokey.yaml")
 
 
 # --------------------------- TESTS --------------------------------- #
