@@ -50,7 +50,6 @@ def _make_adata():
     adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
 
     sc.tl.umap(adata, n_components=3)  # to have more than two components available
-    sc.tl.tsne(adata)
 
     sc.tl.rank_genes_groups(adata, groupby='louvain', key_added=__rank_key)
 

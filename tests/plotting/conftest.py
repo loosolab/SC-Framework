@@ -5,6 +5,7 @@ import matplotlib.axes
 import numpy as np
 import pandas as pd
 import ipywidgets as widgets
+import scanpy as sc
 import sctoolbox.tools as tools
 
 # ---------------------------- Script variables --------------------------- #
@@ -14,6 +15,20 @@ __rank_key = "rank_genes_groups"
 
 
 # ------------------------------ FIXTURES --------------------------------- #
+
+
+@pytest.fixture
+def adata_tsne(adata):
+    """Provide a copy of the session ``adata`` with a precomputed t-SNE basis.
+
+    Returns
+    -------
+    anndata.AnnData
+        A function-scoped copy of the session ``adata`` with ``obsm["X_tsne"]``.
+    """
+    adata = adata.copy()
+    sc.tl.tsne(adata)
+    return adata
 
 
 @pytest.fixture

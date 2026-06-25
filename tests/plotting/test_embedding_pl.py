@@ -204,8 +204,12 @@ def test_search_dim_red_parameters_ranges(adata, min_dist_range, spread_range):
 
 
 @pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
-def test_plot_group_embeddings(adata, embedding):
+def test_plot_group_embeddings(request, adata, embedding):
     """Test if plot_group_embeddings runs through."""
+
+    # plot_group_embeddings uses sc.pl.tsne, which needs a precomputed X_tsne
+    if embedding == "tsne":
+        adata = request.getfixturevalue("adata_tsne")
 
     axarr = pl.plot_group_embeddings(adata, groupby="condition",
                                      embedding=embedding, ncols=2)
@@ -216,8 +220,12 @@ def test_plot_group_embeddings(adata, embedding):
 @pytest.mark.parametrize("embedding, var_list", [("pca", "list"),
                                                  ("umap", "condition"),
                                                  ("tsne", "list")])
-def test_compare_embeddings(adata, embedding, var_list):
+def test_compare_embeddings(request, adata, embedding, var_list):
     """Test if compare_embeddings runs through."""
+
+    # compare_embeddings uses sc.pl.tsne, which needs a precomputed X_tsne
+    if embedding == "tsne":
+        adata = request.getfixturevalue("adata_tsne")
 
     adata_cp = adata.copy()
 
@@ -278,8 +286,10 @@ def test_umap_marker_overview(adata, n_markers):
     assert isinstance(axes_list[0], matplotlib.axes.Axes)
 
 
-def test_anndata_overview(adata, tmp_path):
+def test_anndata_overview(adata_tsne, tmp_path):
     """Test anndata_overview success and file generation."""
+    # requires data with precomputed tsne and umap
+    adata = adata_tsne
     adatas = {"raw": adata, "corrected": adata}
     tmp_file = str(tmp_path / "output.pdf")
 
