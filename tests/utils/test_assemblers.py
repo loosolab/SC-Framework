@@ -3,8 +3,10 @@
 import os
 import re
 import anndata
+import numpy as np
 import pytest
 import sctoolbox.utils.assemblers as assemblers
+import sctoolbox.utils.general as general
 import scanpy as sc
 from tests.conftest import DATA_DIR
 
@@ -36,16 +38,48 @@ def h5ad_file2():
     return os.path.join(DATA_DIR, 'scsa', 'adata_scsa.h5ad')
 
 
-@pytest.fixture()
-def rds_file():
-    """Return path to rds file.
+@pytest.fixture(scope="session")
+def rds_file(tmp_path_factory):
+    """Build a small Seurat .rds from a scanpy dataset and return its path.
+
+    A small AnnData (slice of ``sc.datasets.pbmc68k_reduced``) is converted to a
+    Seurat object via the same rpy2 + anndata2ri path that ``from_R`` uses in
+    reverse, then serialized with ``saveRDS``. The Seurat ``RNA`` assay lets
+    ``from_R`` read it back with ``layer=None`` and ``layer="RNA"``. The file is
+    read-only and reused across the parametrized cases, hence session scope.
 
     Returns
     -------
     str
-        Path to rds file.
+        Path to the generated .rds file.
     """
-    return os.path.join(DATA_DIR, 'adata_rna.rds')
+    # small, scanpy-backed AnnData; the from_R assertion is type-level only
+    adata = sc.datasets.pbmc68k_reduced()[:50, :100].copy()
+    adata.X = np.asarray(adata.X)
+    # Seurat requires a non-negative counts assay
+    adata.layers['counts'] = np.abs(np.rint(adata.X)).astype('float32')
+
+    # set up the R <-> python interface (same entry point convertToAdata uses)
+    general.setup_R(None)
+    import anndata2ri
+    from rpy2.robjects import r, default_converter, conversion, globalenv
+
+    # AnnData -> SingleCellExperiment via the anndata2ri converter
+    with conversion.localconverter(anndata2ri.converter):
+        globalenv['sce'] = adata
+
+    out_path = str(tmp_path_factory.mktemp('rds') / 'adata_rna.rds')
+    with conversion.localconverter(default_converter):
+        r('suppressPackageStartupMessages(library(SingleCellExperiment))')
+        r('suppressPackageStartupMessages(library(Seurat))')
+        # name the main experiment "RNA" so the resulting Seurat assay is "RNA"
+        r('mainExpName(sce) <- "RNA"')
+        # SCE -> Seurat so convertToAdata's UpdateSeuratObject/as.SingleCellExperiment path applies
+        r('srt <- as.Seurat(sce, counts = "counts", data = "X")')
+        globalenv['out_path'] = out_path
+        r('saveRDS(srt, out_path)')
+
+    return out_path
 
 # --------------------------- TESTS --------------------------------- #
 
