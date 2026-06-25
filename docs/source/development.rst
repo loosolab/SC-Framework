@@ -465,6 +465,15 @@ The `sctoolbox` contains unit-tests, utilizing `Pytest <https://docs.pytest.org/
 
 Tests are located within the ``tests`` directory. The structure within the directory follows the structure of the package (``src/sctoolbox``) for convenience.
 
+Fixtures and test data
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+To keep the suite fast and free of duplication, shared `pytest fixtures <https://docs.pytest.org/en/stable/explanation/fixtures.html>`_ live in ``conftest.py`` files, which pytest auto-loads:
+
+- The top-level ``tests/conftest.py`` holds cross-cutting fixtures, while per-directory conftests (``tests/tools/``, ``tests/plotting/``, ``tests/utils/``) hold group-specific ones. Reuse these instead of re-defining the same fixture in an individual test file.
+- Prefer datasets from ``scanpy.datasets`` (e.g. ``pbmc3k``, ``pbmc68k_reduced``, ``pbmc3k_processed``) over committing new data files to ``tests/data/``. Downloads are redirected to a temporary ``datasetdir`` in the top-level conftest, so they never pollute the repository. Reserve bundled data files for inputs scanpy cannot provide (e.g. ATAC, BAM or GTF data).
+- Choose fixture scopes deliberately: use ``scope="session"`` for expensive, read-only builds so they are created only once, and ``scope="function"`` (typically a ``.copy()`` of the session object) for tests that mutate the object, keeping mutations isolated. Note that ``@log_anndata`` records each call into ``uns``, so passing a shared session object to a logged function mutates it — copy first.
+
 Decorators
 ~~~~~~~~~~
 
