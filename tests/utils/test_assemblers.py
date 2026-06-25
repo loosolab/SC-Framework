@@ -6,7 +6,7 @@ import anndata
 import pytest
 import sctoolbox.utils.assemblers as assemblers
 import scanpy as sc
-from tests.conftest import DATA_DIR, ATAC_DATA_DIR
+from tests.conftest import DATA_DIR
 
 
 # --------------------------- FIXTURES ------------------------------ #
@@ -34,48 +34,6 @@ def h5ad_file2():
         Path to h5ad file.
     """
     return os.path.join(DATA_DIR, 'scsa', 'adata_scsa.h5ad')
-
-
-@pytest.fixture
-def named_var_adata():
-    """Return a adata object with a prefix attached to the .var index.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with a prefix attached to the .var index.
-    """
-    return sc.read(os.path.join(ATAC_DATA_DIR, 'mm10_atac_named_var.h5ad'))
-
-
-@pytest.fixture
-def adata_atac_emptyvar(adata_atac):
-    """Create adata with empty adata.var.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with empty var table.
-    """
-    adata = adata_atac.copy()
-    adata.var = adata.var.drop(columns=adata.var.columns)
-    return adata
-
-
-@pytest.fixture
-def adata_atac_invalid(adata_atac):
-    """Create adata with invalid index.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with invalid index.
-    """
-    adata = adata_atac.copy()
-    adata.var.iloc[0, 1] = 500  # start
-    adata.var.iloc[0, 2] = 100  # end
-    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-stop index
-    return adata
 
 
 @pytest.fixture()

@@ -37,18 +37,6 @@ def adata1():
 
 
 @pytest.fixture
-def adata2(pbmc3k_processed):
-    """Load scanpy processed pbmc3k adata.
-
-    Returns
-    -------
-    sc.AnnData
-        Processed PBMC3k dataset from scanpy.
-    """
-    return pbmc3k_processed
-
-
-@pytest.fixture
 def adata(random_adata):
     """Return adata object with 3 groups.
 
