@@ -89,25 +89,29 @@ def venn_dict():
 
 
 @pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata_gsea():
-    """Minimal adata file for testing.
+def adata_gsea(adata):
+    """Provide a copy of the session ``adata`` with GSEA results layered on top.
+
+    Depends on the session-scoped ``adata`` fixture (which already carries the
+    ``rank_genes_groups`` ranking that ``gene_set_enrichment`` consumes) and
+    copies it before running GSEA, so the expensive UMAP/ranking build is not
+    repeated and the shared session object is left unmutated.
 
     Returns
     -------
     anndata.AnnData
-        AnnData object with GSEA results.
+        A session-scoped copy of ``adata`` with GSEA results.
     """
-    from tests.conftest import _make_adata
-    adata = _make_adata()
+    obj = adata.copy()
 
-    tools.gsea.gene_set_enrichment(adata,
+    tools.gsea.gene_set_enrichment(obj,
                                    marker_key=__rank_key,
                                    organism="human",
                                    method="prerank",
                                    inplace=True,
                                    save_table=None)
 
-    return adata
+    return obj
 
 
 @pytest.fixture
