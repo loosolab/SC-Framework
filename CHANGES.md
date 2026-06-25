@@ -3,7 +3,7 @@
 ## 0.15.2 (in progress)
 - document the development environment setup and the testing/linting dependency-groups in `development.rst`
 - document the doc-string example conventions (`.. plot::` / `.. exec_code::`) and pre-code fixtures in `development.rst`
-- refactor tests (moved duplicate fixtures into shared `conftest` and remove unreferenced test data)
+- refactor tests: consolidate duplicate fixtures into shared `conftest` files (tools, plotting, utils, settings), migrate RNA test data to `scanpy.datasets` (drop the bundled `adata_rna.rds`), reduce runtime by removing unused t-SNE and sharing expensive fixture builds, and document the fixture/test-data conventions in `development.rst` (#445)
 - fix broken tests (missing scanpy import in multiomics, unbound `peaks_to_bins` result, and batch-label length in the norm_correct fixture)
 - fix gitlab_download: replace the broken throttler rate limiter with a basic time.sleep and remove the throttler dependency
 
