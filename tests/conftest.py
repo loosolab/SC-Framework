@@ -69,15 +69,29 @@ def adata():
 
 
 @pytest.fixture(scope="function")  # create a new fixture for each test
-def adata_fun_scope():
-    """Create a fixture of the adata with function scope.
+def adata_fun_scope(adata):
+    """Provide a function-scoped, mutable copy of the shared session ``adata``.
+
+    Depends on the session-scoped ``adata`` fixture and returns a deep copy
+    (``AnnData.copy()``), so the expensive build runs once per session while
+    each consuming test still gets an isolated object it can mutate in place
+    without leaking changes into the shared session build.
+
+    The shared session ``adata`` can accumulate ``@log_anndata`` entries under
+    ``uns["sctoolbox"]`` whenever another test passes it to a logged function
+    (the decorator records the call even when the function later raises). A
+    fresh ``_make_adata()`` build carries no such log, so the copy strips it to
+    give each consumer the same clean slate the fresh build used to provide.
 
     Returns
     -------
     anndata.AnnData
-        AnnData object with function scope.
+        A deep copy of the session ``adata`` fixture, with any accumulated
+        ``uns["sctoolbox"]`` log removed.
     """
-    return _make_adata()
+    obj = adata.copy()
+    obj.uns.pop("sctoolbox", None)
+    return obj
 
 
 @pytest.fixture(scope="session")
