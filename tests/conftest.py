@@ -5,9 +5,8 @@ import scanpy as sc
 import numpy as np
 import os
 import tempfile
-
-# Redirect scanpy dataset cache to a temp directory to avoid writing to the repo
-sc.settings.datasetdir = tempfile.mkdtemp()
+import filelock
+from typing import Callable
 
 # ---------------------------- Script variables --------------------------- #
 # global variables for this script
@@ -19,6 +18,56 @@ ATAC_DATA_DIR = os.path.join(DATA_DIR, 'atac')
 
 
 # ------------------------------ FIXTURES --------------------------------- #
+
+
+@pytest.fixture(scope="session", autouse=True)
+def scanpy_datasetdir(tmp_path_factory: pytest.TempPathFactory, worker_id: str) -> str:
+    """Point scanpy's dataset cache at a directory shared across xdist workers.
+
+    Parameters
+    ----------
+    tmp_path_factory : pytest.TempPathFactory
+        Session-scoped factory whose ``getbasetemp().parent`` is the directory
+        xdist shares across the controller and every ``gw<N>`` worker.
+    worker_id : str
+        The xdist worker identifier (``"gw0"``, ``"gw1"``, ...), or
+        ``"master"`` when running serially without xdist.
+
+    Returns
+    -------
+    str
+        The directory scanpy writes downloaded datasets into.
+    """
+    if worker_id == "master":
+        datasetdir = os.path.join(tempfile.gettempdir(), "sctoolbox_scanpy_data")
+    else:
+        datasetdir = os.path.join(tmp_path_factory.getbasetemp().parent, "scanpy_data")
+
+    os.makedirs(datasetdir, exist_ok=True)
+    sc.settings.datasetdir = datasetdir
+    return datasetdir
+
+
+def _download_once(datasetdir: str, name: str, loader: Callable[[], sc.AnnData]) -> sc.AnnData:
+    """Fetch a scanpy dataset under a per-dataset lock so workers never race.
+
+    Parameters
+    ----------
+    datasetdir : str
+        The shared scanpy dataset cache directory.
+    name : str
+        Dataset name, used to name the lock file.
+    loader : Callable[[], anndata.AnnData]
+        The ``sc.datasets.*`` loader to call inside the lock.
+
+    Returns
+    -------
+    anndata.AnnData
+        The loaded dataset.
+    """
+    lock_path = os.path.join(datasetdir, f"{name}.lock")
+    with filelock.FileLock(lock_path):
+        return loader()
 
 
 def _make_adata():
@@ -95,15 +144,20 @@ def adata_fun_scope(adata):
 
 
 @pytest.fixture(scope="session")
-def adata_raw():
+def adata_raw(scanpy_datasetdir: str) -> sc.AnnData:
     """Load and return the raw PBMC3k dataset.
+
+    Parameters
+    ----------
+    scanpy_datasetdir : str
+        The shared scanpy dataset cache directory (autouse fixture).
 
     Returns
     -------
     anndata.AnnData
         AnnData object with raw counts.
     """
-    return sc.datasets.pbmc3k()
+    return _download_once(scanpy_datasetdir, "pbmc3k_raw", sc.datasets.pbmc3k)
 
 
 @pytest.fixture(scope="function")
@@ -145,12 +199,17 @@ def adata_h5ad():
 
 
 @pytest.fixture(scope="function")
-def pbmc3k_processed():
+def pbmc3k_processed(scanpy_datasetdir: str) -> sc.AnnData:
     """Provide the shared processed PBMC3k dataset with function scope.
 
     Function scope is used so that consumers cannot leak mutations across
     tests; the equivalent (read-only) consumers depend on this fixture, while
     mutating consumers build on their own copies.
+
+    Parameters
+    ----------
+    scanpy_datasetdir : str
+        The shared scanpy dataset cache directory (autouse fixture).
 
     Returns
     -------
@@ -158,7 +217,7 @@ def pbmc3k_processed():
         A freshly loaded processed PBMC3k dataset from
         ``scanpy.datasets.pbmc3k_processed``.
     """
-    return sc.datasets.pbmc3k_processed()
+    return _download_once(scanpy_datasetdir, "pbmc3k_processed", sc.datasets.pbmc3k_processed)
 
 
 @pytest.fixture(scope="function")
