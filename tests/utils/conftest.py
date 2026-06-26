@@ -6,24 +6,27 @@ Consolidates fixtures that were duplicated byte-for-byte across multiple
 local definitions so consumers need no change.
 """
 
-import os
 import pytest
-import scanpy as sc
 import numpy as np
 import pandas as pd
-from tests.conftest import ATAC_DATA_DIR
 
 
 @pytest.fixture
-def named_var_adata():
+def named_var_adata(adata_atac):
     """Return a adata object with a prefix attached to the .var index.
 
     Returns
     -------
     anndata.AnnData
-        AnnData object with a prefix attached to the .var index.
+        AnnData object with a prefixed coordinate column and a string
+        RangeIndex as .var index.
     """
-    return sc.read(os.path.join(ATAC_DATA_DIR, 'mm10_atac_named_var.h5ad'))
+    adata = adata_atac.copy()
+    adata.var['coordinate_col'] = ('prefix-' + adata.var['chr'].astype(str)
+                                   + ':' + adata.var['start'].astype(str)
+                                   + '-' + adata.var['stop'].astype(str))
+    adata.var.index = [str(i) for i in range(adata.n_vars)]
+    return adata
 
 
 @pytest.fixture
