@@ -48,6 +48,10 @@ Tests mirror the source module structure: a test for `src/sctoolbox/<group>/<mod
 
 The rules below are the working digest; `docs/source/development.rst` is the authoritative, fuller treatment (decorators, beartype, docstrings, examples, deprecation, changelog, notebooks, testing). Consult it when a case isn't covered here.
 
+### Style fidelity
+
+New code, tests, docstrings, examples, and changelog entries must read like the existing repository — not a generic house style. Before writing into a module, read its nearest existing sibling (the mirrored test file, a neighbouring `tools/`/`plotting/`/`utils/` module) and mirror what you find: import grouping and aliases, naming, helper/fixture reuse, error and logging idioms, docstring phrasing, and comment density. Prefer an existing helper over a new one; match the surrounding patterns rather than introducing a different-but-valid approach. The explicit conventions below take precedence where they apply.
+
 ### Decorators
 
 Decorator order is strict — `@log_anndata` must always be outermost, `@beartype` directly above the function:
