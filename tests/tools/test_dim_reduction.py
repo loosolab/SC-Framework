@@ -49,10 +49,10 @@ def test_lsi(adata_hv, use_highly_variable):
 # -------------------------------- propose_pcs --------------------------------
 
 
-def test_propose_pcs_failure(adata_raw):
+def test_propose_pcs_failure(adata_raw_small):
     """Test the propose_pcs function fails without precomputed PCA."""
     with pytest.raises(ValueError):
-        std.propose_pcs(anndata=adata_raw)
+        std.propose_pcs(anndata=adata_raw_small)
 
 
 @pytest.mark.parametrize("var_method, kwargs", [("knee", {}), ("percent", {"perc_thresh": 10})])
@@ -99,9 +99,9 @@ def test_subset_PCA(adata, inplace, kwargs, expected_n_pcs):
 
 @pytest.mark.parametrize("inplace", [True, False])
 @pytest.mark.parametrize("method", ["PCA", "LSI"])
-def test_dim_red(adata_raw, method, inplace):
+def test_dim_red(adata_raw_small, method, inplace):
     """Test the dim_red function."""
-    adata = adata_raw.copy()
+    adata = adata_raw_small.copy()
 
     # check there is no dimension reduction and neighbor graph
     assert "X_pca" not in adata.obsm.keys()

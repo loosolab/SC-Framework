@@ -106,6 +106,18 @@ def adata_raw():
     return sc.datasets.pbmc3k()
 
 
+@pytest.fixture(scope="function")
+def adata_raw_small(adata_raw):
+    """Provide a downsized, function-scoped copy of the raw PBMC3k dataset.
+
+    Returns
+    -------
+    anndata.AnnData
+        A ``300 x 3000`` copy of the raw PBMC3k dataset.
+    """
+    return adata_raw[:300, :3000].copy()
+
+
 def _load_adata_h5ad():
     """Load the shared ``adata.h5ad`` test fixture from the data directory.
 
