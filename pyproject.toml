@@ -191,6 +191,8 @@ test = [
     "pytest-mock",
     "pytest-cov",
     "pytest-html",
+    "pytest-xdist",
+    "filelock",
     "openpyxl"
 ]
 lint = [
