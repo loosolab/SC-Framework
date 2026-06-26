@@ -28,8 +28,12 @@ The calling skill passes:
    - Filter or threshold values contradicting plan numbers.
 2. **sctoolbox conventions.** Audit against the `CLAUDE.md` conventions
    (already in your context): decorators, `__init__.py` registration, numpy
-   docstrings, plotting `ax`, deprecation. A missing `@beartype` on a public
-   function is a **blocker**.
+   docstrings, plotting `ax`, deprecation, **style fidelity**. A missing
+   `@beartype` on a public function is a **blocker**. A pure **style-fidelity**
+   deviation — code that works but diverges from the nearest sibling's import
+   grouping, naming, helper reuse, or comment density — is **suggestion-level**,
+   unless it also breaks one of the explicit conventions above (then grade it by
+   that convention).
    - **Renderable examples** — policy in
      `.claude/docs/sys-examples.md`. A *missing* example is only ever a
      suggestion (never a blocker). A *present* one must be correct — right
