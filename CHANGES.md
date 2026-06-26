@@ -6,6 +6,7 @@
 - refactor tests: consolidate duplicate fixtures into shared `conftest` files (tools, plotting, utils, settings), migrate RNA test data to `scanpy.datasets` (drop the bundled `adata_rna.rds`), reduce runtime by removing unused t-SNE and sharing expensive fixture builds, and document the fixture/test-data conventions in `development.rst` (#445)
 - fix broken tests (missing scanpy import in multiomics, unbound `peaks_to_bins` result, and batch-label length in the norm_correct fixture)
 - fix gitlab_download: replace the broken throttler rate limiter with a basic time.sleep and remove the throttler dependency
+- reduce test-data size and mock S3 download to reduce runtime and size (#445)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
