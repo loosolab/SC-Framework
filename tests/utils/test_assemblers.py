@@ -111,7 +111,7 @@ def test_from_h5ad(files, request):
                           ("adata", KeyError, ["chr", "start", "stop"]),
                           # expects a valueerror due to missing columns
                           ("adata_atac_invalid", False, ["chr", "start", "stop"]),
-                          ("named_var_adata", True, 'coordinate_col')])  # expects a valueerror due to format of columns
+                          ("named_var_adata", True, 'coordinate_col')])  # expects coordinate_col to be parsed into a valid chr:start-stop var index
 def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
     """Test prepare_atac_anndata success."""
 
