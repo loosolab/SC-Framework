@@ -21,23 +21,23 @@ ATAC_DATA_DIR = os.path.join(DATA_DIR, 'atac')
 
 
 @pytest.fixture(scope="session", autouse=True)
-def scanpy_datasetdir(tmp_path_factory: pytest.TempPathFactory, worker_id: str) -> str:
+def scanpy_datasetdir(tmp_path_factory: pytest.TempPathFactory) -> str:
     """Point scanpy's dataset cache at a directory shared across xdist workers.
+
+    Also works with xdist disabled.
 
     Parameters
     ----------
     tmp_path_factory : pytest.TempPathFactory
         Session-scoped factory whose ``getbasetemp().parent`` is the directory
         xdist shares across the controller and every ``gw<N>`` worker.
-    worker_id : str
-        The xdist worker identifier (``"gw0"``, ``"gw1"``, ...), or
-        ``"master"`` when running serially without xdist.
 
     Returns
     -------
     str
         The directory scanpy writes downloaded datasets into.
     """
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
     if worker_id == "master":
         datasetdir = os.path.join(tempfile.gettempdir(), "sctoolbox_scanpy_data")
     else:
