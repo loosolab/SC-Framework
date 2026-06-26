@@ -78,6 +78,8 @@ def rds_file(tmp_path_factory):
         r('srt <- as.Seurat(sce, counts = "counts", data = "X")')
         globalenv['out_path'] = out_path
         r('saveRDS(srt, out_path)')
+        # drop the temporary names we bound so we leave no state in the R session
+        r('rm(sce, srt, out_path)')
 
     return out_path
 
