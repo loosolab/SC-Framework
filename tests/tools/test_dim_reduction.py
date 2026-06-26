@@ -3,28 +3,25 @@
 import pytest
 import sctoolbox.tools.dim_reduction as std
 
-import scanpy as sc
 import numpy as np
-import os
-from tests.conftest import ATAC_DATA_DIR
 
 
 # ----------------------------- FIXTURES ------------------------------- #
 
 
 @pytest.fixture
-def adata_hv():
-    """Load ATAC-seq AnnData with QC metrics and highly_variable annotation.
-
-    Uses anndata_2.h5ad instead of the shared adata_atac fixture because
-    test_lsi requires 'highly_variable' in var, which mm10_atac.h5ad lacks.
+def adata_hv(adata_atac):
+    """Provide an ATAC-seq AnnData object with a deterministic highly_variable mask.
 
     Returns
     -------
     anndata.AnnData
-        ATAC-seq AnnData object with highly_variable annotation.
+        A deep copy of the ``adata_atac`` object with a boolean
+        ``var['highly_variable']`` column set from a fixed index-parity mask.
     """
-    return sc.read_h5ad(os.path.join(ATAC_DATA_DIR, 'anndata_2.h5ad'))
+    adata = adata_atac.copy()
+    adata.var['highly_variable'] = np.arange(adata.n_vars) % 2 == 0
+    return adata
 
 
 # ------------------------------ TESTS --------------------------------- #
