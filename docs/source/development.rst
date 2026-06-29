@@ -75,6 +75,24 @@ The ``--group`` flag can be combined with a normal install target, so the packag
   pytest             # unit tests with coverage
   codespell          # spellcheck (uses the config in pyproject.toml)
 
+One test dependency is **not** part of these groups: `scar <https://github.com/Novartis/scar.git>`_ is installed from git rather than PyPI and is deliberately left out of ``[all]`` and ``sctoolbox_env.yml`` because of its size. The CI test job installs it to exercise the scar-related functions. Install it if you want to run those tests locally:
+
+.. code-block:: bash
+
+  pip install git+https://github.com/Novartis/scar.git
+
+Verifying the environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To confirm an environment carries everything the workflow needs, run ``scripts/check_dev_env.py`` inside it. It reads the required packages from the ``[dependency-groups]`` table of ``pyproject.toml`` and reports anything missing or version-mismatched, alongside an editable ``sctoolbox`` install, the ``scar`` test dependency, and — for the docs build — the system ``pandoc`` binary:
+
+.. code-block:: bash
+
+  python scripts/check_dev_env.py                  # full dev environment
+  python scripts/check_dev_env.py --scope package  # just the package test/lint/spellcheck tooling
+
+A zero exit status means the environment is complete; otherwise the report lists the gaps and the command to install them.
+
 Git
 ---
 
