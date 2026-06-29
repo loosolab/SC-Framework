@@ -18,6 +18,7 @@
       "Bash(conda run -n sctoolbox jupyter nbconvert --to notebook --execute:*)",
       "Bash(python3 scripts/add_change.py:*)",
       "Bash(python3 scripts/finalize_release.py:*)",
+      "Bash(python3 scripts/sync_local_allowlist.py:*)",
       "Bash(conda run -n sctoolbox python scripts/gitlab_query.py:*)",
       "Bash(conda run -n sctoolbox python scripts/check_dev_env.py:*)",
       "Edit(tests/**)",

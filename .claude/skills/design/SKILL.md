@@ -31,16 +31,11 @@ If neither is given, ask the user what they want to design.
    **related issues/MRs** as a follow-up free-text prompt (it is open-ended, not
    a clean enumeration). Always resolve all five:
    - **Conda environment** — which env runs the gate commands (via
-     `conda run <env-spec>`)? `<env-spec>` is `-n <name>` or `-p <prefix>`;
-     record the exact form in `design.md` so the binding command matches an allow
-     rule. `.claude/settings.json` allow-lists `-n sctoolbox`; a **prefix or
-     differently-named env** needs matching rules in the gitignored, per-user
-     `.claude/settings.local.json`, else every gate prompts. Recommend
-     `sctoolbox` unless the user has a reason. (Maintenance note: a new
-     `conda run` allow rule must be added to **both** files — `settings.json`
-     for `-n sctoolbox` and `settings.local.json` for the prefix env — or the
-     prefix-env user gets prompted. JSON takes no comments, so the rule lives
-     here.)
+     `conda run <env-spec>`, `-n <name>` or `-p <prefix>`)? Record the exact
+     form in `design.md` so the binding command matches an allow rule. Recommend
+     `sctoolbox` (allow-listed in `settings.json`); a prefix or differently-named
+     env needs its `settings.local.json` mirror — regenerate it with
+     `python3 scripts/sync_local_allowlist.py` (don't hand-edit).
    - **Change scope** — any combination of package (`src/sctoolbox/` + `tests/`), notebooks, and docs (`docs/`)?
    - **Commit mode** — who commits? **manual** (user stages + commits;
      `/implement` never touches git) or **claude** (Claude commits per the
