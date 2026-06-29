@@ -19,6 +19,7 @@
       "Bash(python3 scripts/add_change.py:*)",
       "Bash(python3 scripts/finalize_release.py:*)",
       "Bash(conda run -n sctoolbox python scripts/gitlab_query.py:*)",
+      "Bash(conda run -n sctoolbox python scripts/check_dev_env.py:*)",
       "Edit(tests/**)",
       "Write(tests/**)",
       "Edit(src/sctoolbox/**)",
