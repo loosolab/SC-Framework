@@ -26,7 +26,7 @@
       "Edit(docs/**)",
       "Write(docs/**)",
       "Edit(CHANGES.md)",
-      "Write(CHANGES.md)",
+      "Edit(pyproject.toml)",
       "Edit(.work/**)",
       "Write(.work/**)"
     ],
