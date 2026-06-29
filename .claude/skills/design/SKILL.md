@@ -6,9 +6,9 @@ description: Stage 1 of the dev workflow (design → plan → implement). Intera
 # design
 
 First stage of the sc-framework development workflow
-(design → plan → implement). Interactive, **main loop, no subagent** —
-subagents can't talk to the user, and this stage is all conversation.
-Produces a `design.md` that `/plan` turns into a concrete plan.
+(design → plan → implement). Interactive **main-loop** skill, no subagent
+(this stage is all conversation). Produces a `design.md` that `/plan` turns
+into a concrete plan.
 
 ## Inputs (combinable, all optional)
 

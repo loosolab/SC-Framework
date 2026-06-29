@@ -41,19 +41,15 @@ without a path, ask for one.
 
    **`end` (autonomous run).** Spawn the `implementer` once (Agent tool,
    `subagent_type: implementer`), passing the `plan.md` path and the resolved
-   commit mode. It runs `sys-implement`'s full TDD loop — tests-first, one task
-   at a time, marks `- [x] T<N>` on green with no regression, commits per task
-   (`impl(<slug>): T<N> <desc>`) in `claude` mode, 3-attempt cap — and returns a
-   summary.
+   commit mode. It runs `sys-implement`'s full TDD loop (one task at a time,
+   per-task commit in `claude` mode, 3-attempt cap) and returns a summary.
 
    **`per-task` (pause after each task).** Drive the loop from this skill, one
    task at a time. For each unchecked `- [ ] T<N>` in `plan.md`, in order:
    1. **Spawn the `implementer` for that one task** (Agent tool,
       `subagent_type: implementer`) in **single-task mode** (`sys-implement`),
       passing the `plan.md` path, the task id `T<N>`, and the commit mode. It
-      writes tests first, implements, runs the binding command to green
-      (3-attempt cap), commits in `claude` mode, and returns a summary
-      **without** ticking the checkbox.
+      returns a summary **without** ticking the checkbox.
    2. **Confirm the gate is green**, then show the user the change
       (`git status --short` + `git diff`) and **pause for review**. In `manual`
       mode the user commits the task; in `claude` mode it is already committed and
@@ -121,9 +117,7 @@ without a path, ask for one.
    scope declare it `n/a` — skip.)
 8. **Update `CHANGES.md` and `_version.py`.** Run `scripts/add_change.py` once per
    user-visible bullet — it applies the **Append** procedure from
-   `.claude/docs/sys-changelog.md` deterministically (locates the active
-   `(in progress)` section, inserts under the right place, creates the section and
-   sets `_version.py` to `X.Y.Zb0` if none exists, refuses duplicates):
+   `.claude/docs/sys-changelog.md` deterministically:
    `python3 scripts/add_change.py "<imperative phrase>" --scope package|docs|notebook [--issue <N>]`.
    Choose `--scope` by where the change lands (`notebook` → the
    `### Changes to notebooks` subsection); pass `--issue <N>` from the plan's
