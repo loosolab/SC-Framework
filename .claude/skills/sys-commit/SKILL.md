@@ -59,7 +59,8 @@ Keep the subject line short. The `<slug>` must appear in every message so
 **The `.work/` artifacts are never committed.** `design.md`, `plan.md`, and
 `review-*.md` live under the gitignored `.work/` directory (local-only audit
 trail) — the `/design` and `/plan` stages therefore make **no commit**, and
-implement-stage commits stage only code, tests, and `CHANGES.md`. Never
+implement-stage commits stage only code, tests, `CHANGES.md`, and (when a task
+changes it) `pyproject.toml`. Never
 `git add` a path under `.work/` (it would require `-f` to override the ignore;
 do not do this).
 
