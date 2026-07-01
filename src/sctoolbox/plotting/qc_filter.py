@@ -714,7 +714,7 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
 
         @property
         def ext_value(self) -> tuple:
-            """Return _init_values if never updated otherwise self.value."""
+            """_init_values if never updated otherwise self.value are returned ."""
             return (
                 self._init_values[0] if not self._low_updated else self.value[0],
                 self._init_values[1] if not self._high_updated else self.value[1]

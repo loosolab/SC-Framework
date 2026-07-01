@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.16.0 (in progres)
+## 0.16.0 (in progress)
 - connectionPlot: Fix colormap by replacing deprecated function get_cmap (#462)
 
 ## 0.15.1 (15-05-2026)
