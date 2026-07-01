@@ -17,6 +17,8 @@ Python package (`sctoolbox`) for single-cell analysis workflows covering scRNA-s
 - **Build:** setuptools + setuptools_scm
 - **Runtime type checking:** beartype (>=0.18.2)
 
+> Not every dev/test dependency lives in `pyproject.toml`. Some are git-only and installed **only by CI** — notably `scar` (lazy `import scar` in `tools/qc_filter.py`; commented out in `pyproject.toml` and `sctoolbox_env.yml`, excluded from `.[all]`) and the `papermill`/`mampok` installs in the notebook jobs. When reasoning about "all dev packages," check `.gitlab-ci.yml` too.
+
 ## Module map
 
 Source lives under `src/sctoolbox/`, grouped by purpose — browse the directories for the full, current set:
@@ -44,13 +46,23 @@ tests/
 
 Tests mirror the source module structure: a test for `src/sctoolbox/<group>/<mod>.py` lives at `tests/<group>/test_<mod>.py`. A new submodule must come with its mirrored test file.
 
+## Commands
+
+Run all of these **inside the project conda env** (the env name/path is per-user; see the workflow's recorded env / your local settings). The workflow's binding test command is authoritative for a given change — this is the general cheat-sheet:
+
+```bash
+ruff check          # lint + docstring checks (the binding test command always starts here)
+pytest              # unit tests with coverage (target > 90%)
+make -C docs html   # full Sphinx build — the authoritative check for renderable examples
+```
+
 ## Conventions
 
 The rules below are the working digest; `docs/source/development.rst` is the authoritative, fuller treatment (decorators, beartype, docstrings, examples, deprecation, changelog, notebooks, testing). Consult it when a case isn't covered here.
 
 ### Style fidelity
 
-New code, tests, docstrings, examples, and changelog entries must read like the existing repository — not a generic house style. Before writing into a module, read its nearest existing sibling (the mirrored test file, a neighbouring `tools/`/`plotting/`/`utils/` module) and mirror what you find: import grouping and aliases, naming, helper/fixture reuse, error and logging idioms, docstring phrasing, and comment density. Prefer an existing helper over a new one; match the surrounding patterns rather than introducing a different-but-valid approach. The explicit conventions below take precedence where they apply.
+New code, tests, docstrings, examples, and changelog entries must read like the existing repository — not a generic house style. Before writing into a module, read its nearest existing sibling (the mirrored test file, a neighbouring `tools/`/`plotting/`/`utils/` module) and mirror what you find: import grouping and aliases, naming, helper/fixture reuse, error and logging idioms, docstring phrasing, and comment density. Prefer an existing helper over a new one; match the surrounding patterns rather than introducing a different-but-valid approach. Prefer the smallest change that solves the actual problem — no speculative abstraction, no new helper where an existing one fits, no scope creep beyond what was asked. The explicit conventions below take precedence where they apply.
 
 ### Decorators
 
@@ -72,6 +84,14 @@ def my_function(...):
 
 Functions either modify `adata` in-place (return `None`) or return a new object — never both. The docstring must state which.
 
+### Logging
+
+Acquire the logger as `logger = settings.logger` (module level) — never `print()` or a bare `logging.getLogger`. Emit via `logger.info` / `logger.warning`, matching the surrounding call sites.
+
+### Imports
+
+Keep module top-level imports light: import optional or heavy dependencies *inside* the function that needs them, not at module top (e.g. `scar` and often `scanpy` in `tools/qc_filter.py`). `import sctoolbox` must succeed without any optional dep installed, and the docs build must be able to import every module — a top-level optional import breaks both.
+
 ### Plotting functions
 
 Accept an optional `ax` parameter (matplotlib `Axes`); create one internally if `None`. Always return the axes object.
@@ -87,6 +107,14 @@ A new file in `tools/`, `plotting/`, or `utils/` must be registered in the `__al
 ### Settings
 
 Functions should use `sctoolbox.settings` for defaults (threads, file paths). Allow a parameter to override the setting where appropriate.
+
+### Tests
+
+Don't mask a missing optional dependency to make the suite go green — no `pytest.importorskip`, skip markers, or try/except import guards added for that purpose. Leave a genuine environment gap as a visible failure and report it; fix real test bugs (e.g. a fixture setup error) instead. Add a guard only if explicitly asked.
+
+### Bug fixes
+
+Fix causes, not symptoms. When a regenerable artifact/cache lands in the wrong place (e.g. scanpy's default `./data/` datasetdir polluting the repo root), route the write to the right location rather than adding a `.gitignore` entry to hide it; offer a `.gitignore` only as a last resort.
 
 ### Deprecation
 
@@ -112,18 +140,14 @@ Every change to the package, notebooks, or documentation requires an entry in `C
 - description (#<issue number>)
 ```
 
+Keep each bullet a terse phrase (e.g. "enables parallel test execution"), not a multi-clause sentence enumerating every sub-change — the detail lives in the commit history and `.work/`.
+
 ## Agentic workflow
 
-Skills live in `.claude/skills/`. The development loop is:
+Skills live in `.claude/skills/`. The development loop is `/design → /plan → /implement`.
 
-```
-/design  →  /plan  →  /implement
-```
+The user need not type `/design` to start. For a **non-trivial change** — a new submodule or public function, edits spanning several files, anything that should carry tests + a `CHANGES.md` entry, or behaviour that wants the regression gate — proactively offer to begin at `/design` and proceed only if the user agrees. For **trivial work** (a one-line fix, typo or docstring tweak, single localized edit, or exploratory question) skip the workflow and handle it directly. When in doubt, name the choice and let the user decide.
 
-The user need not type `/design` to start. When a request implies a **non-trivial change** — a new submodule or public function, edits spanning several files, anything that should carry tests + a `CHANGES.md` entry, or behaviour changes that want the regression gate and per-task commits — proactively offer to begin the workflow at `/design` before writing code, and proceed into it only if the user agrees. For **trivial work** — a one-line fix, a typo or docstring tweak, a single localized edit, or an exploratory question — skip the workflow and handle it directly (mention the option at most in passing). When in doubt, name the choice and let the user decide.
+Artifacts (`design.md`, `plan.md`, `review-*.md`) live in `.work/<YYYY-MM-DD>-<slug>/` — **gitignored, a local-only audit trail**. `design.md` records the **scope** (`package` / `notebooks` / `docs`), conda env, commit mode, and autonomy (`per-task` / `end`); `plan.md` declares the binding test command (always starts with `ruff check`; a `docs` scope gates on `make -C docs html`, mixed scopes chain the gates). The per-skill mechanics — including staging and commit identity — live in the skills (`.claude/skills/sys-commit/SKILL.md` for commits).
 
-Design artifacts (`design.md`, `plan.md`, `review-plan.md`, `review-code.md`) are stored in `.work/<YYYY-MM-DD>-<slug>/`. Each `design.md` records the change **scope** (one or more of `package` / `notebooks` / `docs`), the **conda environment** name, the **commit mode**, and the **autonomy** level (`per-task` / `end`); `plan.md` carries these forward to declare the binding test command, which always starts with `ruff check`. A `docs` scope gates on the Sphinx build (`make -C docs html`) instead of pytest; when a change spans several areas the relevant gates are chained.
-
-**Commit mode** is chosen at the start of `/design` (or asked at `/implement` if unset): `manual` (default — the user stages and commits everything; the workflow never touches git) or `claude (Name <email>)` (the workflow commits per task with that identity). The exact staging and per-commit-identity mechanics live in `.claude/skills/sys-commit/SKILL.md`. The default is `manual`, since the local setup can have issues with automatic commits.
-
-`.work/` is **gitignored — a local-only audit trail**, so `/design` and `/plan` make no commit; code commits begin in `/implement` and stage only code, tests, and `CHANGES.md`. Every code commit carries the `<slug>`, so `git log --grep=<slug>` recovers a work item's full *code* history (the design/plan/review prose stays on disk under `.work/`).
+**Commit mode** (default `manual` — the workflow never touches git; the local setup can misbehave on auto-commits) is set at `/design`. `/design` and `/plan` make no commit; code commits begin in `/implement`, stage only code/tests/`CHANGES.md`, and carry the `<slug>` so `git log --grep=<slug>` recovers a work item's code history.
