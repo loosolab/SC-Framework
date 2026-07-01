@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.16.0 (in progres)
+- connectionPlot: Fix colormap by replacing deprecated function get_cmap (#462)
+
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
 - Reduce package build size (#448)
