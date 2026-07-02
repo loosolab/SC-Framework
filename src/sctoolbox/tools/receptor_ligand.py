@@ -1299,7 +1299,7 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
 
     # create colorramp
     if line_colors:
-        cmap = matplotlib.cm.get_cmap(line_colors, len(receptors))
+        cmap = plt.get_cmap(line_colors, len(receptors))
         colors = cmap(range(len(receptors)))
     else:
         colors = ["black"] * len(receptors)
@@ -1390,7 +1390,8 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
         # hue
         hue_steps = np.linspace(*hue_range, num=step_num)
         # set colormap
-        colormap = plt.cm.ScalarMappable(cmap=palette, norm=plt.Normalize(*hue_range))
+        colormap = plt.get_cmap(palette)
+        norm = plt.Normalize(*hue_range)
 
         # size
         size_steps = np.linspace(*(size_range), num=step_num)
@@ -1410,7 +1411,7 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
             # create one legend for hue and one for size
             # add hue legend entries
             handles.append(plt.scatter([], [], alpha=0, label=hue))  # add title
-            handles.extend([plt.scatter([], [], s=50, color=colormap.cmap(s), label=f"{s:.2f}") for s in hue_steps])
+            handles.extend([plt.scatter([], [], s=50, color=colormap(norm(s)), label=f"{s:.2f}") for s in hue_steps])
 
             # add size legend entries
             handles.append(plt.scatter([], [], alpha=0, label=size))  # add title
@@ -1419,7 +1420,7 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
             # create a combined legend if hue and size show the same data
             # add combined legend entries
             handles.append(plt.scatter([], [], alpha=0, label=size))  # add title
-            handles.extend([plt.scatter([], [], s=size_norm(color), color=colormap.cmap(color), label=f"{color:.2f}") for color in hue_steps])
+            handles.extend([plt.scatter([], [], s=size_norm(color), color=colormap(norm(color)), label=f"{color:.2f}") for color in hue_steps])
 
         return handles
 

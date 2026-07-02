@@ -1,6 +1,7 @@
 # Changelog
 
-## 0.15.2 (in progress)
+## 0.16.0 (in progress)
+- connectionPlot: Fix colormap by replacing deprecated function get_cmap (#462)
 - document the development environment setup and the testing/linting dependency-groups in `development.rst`
 - document the doc-string example conventions (`.. plot::` / `.. exec_code::`) and pre-code fixtures in `development.rst`
 
