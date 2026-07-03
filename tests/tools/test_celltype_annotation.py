@@ -1,10 +1,8 @@
 """Test functions related to cell type annotation."""
 
-import os
 import pytest
-import anndata as ad
 from sctoolbox.tools import celltype_annotation
-from tests.conftest import DATA_DIR
+from tests.conftest import _load_adata_scsa_h5ad
 
 
 # --------------------------- FIXTURES ------------------------------ #
@@ -19,9 +17,7 @@ def test_adata():
     anndata.AnnData
         AnnData object for SCSA testing.
     """
-    adata_dir = os.path.join(DATA_DIR, 'scsa')
-    adata = ad.read_h5ad(adata_dir + '/adata_scsa.h5ad')
-    return adata
+    return _load_adata_scsa_h5ad()
 
 
 # --------------------------- TESTS --------------------------------- #

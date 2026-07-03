@@ -30,20 +30,6 @@ def named_var_adata(adata_atac):
 
 
 @pytest.fixture
-def adata_atac_emptyvar(adata_atac):
-    """Create adata with empty adata.var.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with empty var table.
-    """
-    adata = adata_atac.copy()
-    adata.var = adata.var.drop(columns=adata.var.columns)
-    return adata
-
-
-@pytest.fixture
 def adata_atac_invalid(adata_atac):
     """Create adata with invalid index.
 

@@ -22,30 +22,6 @@ def atac_bam_file():
 
 
 @pytest.fixture
-def atac_fragments():
-    """Path to ATAC-seq fragments BED file.
-
-    Returns
-    -------
-    str
-        Path to mm10_atac_fragments.bed.
-    """
-    return os.path.join(ATAC_DATA_DIR, 'mm10_atac_fragments.bed')
-
-
-@pytest.fixture
-def sorted_fragments():
-    """Path to sorted ATAC-seq fragments BED file.
-
-    Returns
-    -------
-    str
-        Path to mm10_sorted_fragments.bed.
-    """
-    return os.path.join(ATAC_DATA_DIR, 'mm10_sorted_fragments.bed')
-
-
-@pytest.fixture
 def atac_gtf():
     """Path to GTF annotation file.
 

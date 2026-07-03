@@ -58,18 +58,6 @@ def unsorted_fragments():
     return os.path.join(ATAC_DATA_DIR, 'mm10_atac_fragments.bed')
 
 
-@pytest.fixture
-def sorted_fragments():
-    """Return path to sorted fragments bedfile.
-
-    Returns
-    -------
-    str
-        Path to sorted fragments bedfile.
-    """
-    return os.path.join(ATAC_DATA_DIR, 'mm10_sorted_fragments.bed')
-
-
 # --------------------------- TESTS --------------------------------- #
 
 

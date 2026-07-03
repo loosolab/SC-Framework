@@ -57,20 +57,6 @@ def barcodes(atac_bam_file, bam_handle):
     return [read.get_tag("CB") for index, read in enumerate(bam_handle) if index in indices]
 
 
-@pytest.fixture
-def adata_atac_emptyvar(adata_atac):
-    """Create adata with empty adata.var.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object with empty var DataFrame.
-    """
-    adata = adata_atac.copy()
-    adata.var = adata.var.drop(columns=adata.var.columns)
-    return adata
-
-
 # ------------------------------ TESTS --------------------------------- #
 
 

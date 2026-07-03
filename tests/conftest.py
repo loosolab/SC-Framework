@@ -198,6 +198,17 @@ def adata_h5ad():
     return _load_adata_h5ad()
 
 
+def _load_adata_scsa_h5ad():
+    """Load the shared ``scsa/adata_scsa.h5ad`` test fixture from the data directory.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object read from ``DATA_DIR/scsa/adata_scsa.h5ad``.
+    """
+    return sc.read_h5ad(os.path.join(DATA_DIR, "scsa", "adata_scsa.h5ad"))
+
+
 @pytest.fixture(scope="function")
 def pbmc3k_processed(scanpy_datasetdir: str) -> sc.AnnData:
     """Provide the shared processed PBMC3k dataset with function scope.
@@ -245,3 +256,41 @@ def adata_atac():
         ATAC-seq AnnData object from mm10_atac.h5ad.
     """
     return sc.read_h5ad(os.path.join(ATAC_DATA_DIR, 'mm10_atac.h5ad'))
+
+
+@pytest.fixture
+def adata_atac_emptyvar(adata_atac):
+    """Create adata with empty adata.var.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with empty var table.
+    """
+    adata = adata_atac.copy()
+    adata.var = adata.var.drop(columns=adata.var.columns)
+    return adata
+
+
+@pytest.fixture
+def atac_fragments():
+    """Path to ATAC-seq fragments BED file.
+
+    Returns
+    -------
+    str
+        Path to mm10_atac_fragments.bed.
+    """
+    return os.path.join(ATAC_DATA_DIR, 'mm10_atac_fragments.bed')
+
+
+@pytest.fixture
+def sorted_fragments():
+    """Path to sorted ATAC-seq fragments BED file.
+
+    Returns
+    -------
+    str
+        Path to mm10_sorted_fragments.bed.
+    """
+    return os.path.join(ATAC_DATA_DIR, 'mm10_sorted_fragments.bed')
