@@ -41,19 +41,15 @@ without a path, ask for one.
 
    **`end` (autonomous run).** Spawn the `implementer` once (Agent tool,
    `subagent_type: implementer`), passing the `plan.md` path and the resolved
-   commit mode. It runs `sys-implement`'s full TDD loop — tests-first, one task
-   at a time, marks `- [x] T<N>` on green with no regression, commits per task
-   (`impl(<slug>): T<N> <desc>`) in `claude` mode, 3-attempt cap — and returns a
-   summary.
+   commit mode. It runs `sys-implement`'s full TDD loop (one task at a time,
+   per-task commit in `claude` mode, 3-attempt cap) and returns a summary.
 
    **`per-task` (pause after each task).** Drive the loop from this skill, one
    task at a time. For each unchecked `- [ ] T<N>` in `plan.md`, in order:
    1. **Spawn the `implementer` for that one task** (Agent tool,
       `subagent_type: implementer`) in **single-task mode** (`sys-implement`),
       passing the `plan.md` path, the task id `T<N>`, and the commit mode. It
-      writes tests first, implements, runs the binding command to green
-      (3-attempt cap), commits in `claude` mode, and returns a summary
-      **without** ticking the checkbox.
+      returns a summary **without** ticking the checkbox.
    2. **Confirm the gate is green**, then show the user the change
       (`git status --short` + `git diff`) and **pause for review**. In `manual`
       mode the user commits the task; in `claude` mode it is already committed and
@@ -71,17 +67,9 @@ without a path, ask for one.
    - Re-plan (`/plan`).
    - Re-design (`/design`).
    Do not invent tasks or force past the cap yourself.
-3. **Confirm the gate** (once, after the *whole* plan — in `per-task` mode that
-   is after the final task's review, not after each task). Run the binding
-   test command once yourself and confirm exit 0. If not, hand the
-   still-failing task back to the implementer.
-
-   **Then run the plan's `**Full-suite regression command:**` once** to catch
-   cross-file regressions the per-file binding command cannot see. Run it
-   **verbatim** as the plan declares it — do not reconstruct it from the binding
-   command. It MUST exit 0; if it fails, a change regressed another module —
-   hand the failure back to the implementer before proceeding. (Notebook-only
-   and docs-only scope declare it `n/a` — skip this step.)
+3. **Confirm the binding gate.** After all tasks are done, run the binding test
+   command once yourself and confirm exit 0. If not, hand the still-failing task
+   back to the implementer.
 
    **Render-check changed `.. exec_code::` examples.** Only if `git diff` shows
    an added/modified `.. exec_code::` docstring example (skip otherwise — the
@@ -118,11 +106,18 @@ without a path, ask for one.
    under the gitignored `.work/`) → message `review: <slug>`. If no code changed
    (no blockers, no typo fixes), there is nothing to commit at this step —
    `review-code.md` stays local-only.
-7. **Update `CHANGES.md` and `_version.py`.** Run `scripts/add_change.py` once per
+7. **Run the full-suite regression — the end-of-workflow gate.** Now that all
+   code is final (tasks *and* any review/spellcheck fixes from step 6), run the
+   plan's `**Full-suite regression command:**` **once**, **verbatim** as the plan
+   declares it — do not reconstruct it from the binding command. This is the
+   workflow's only full-suite run: it catches cross-file regressions the per-file
+   binding command cannot see, including any a review fix just introduced. It
+   MUST exit 0; if it fails, a change regressed another module — hand the failure
+   back to the implementer, then re-run this step. (Notebook-only and docs-only
+   scope declare it `n/a` — skip.)
+8. **Update `CHANGES.md` and `_version.py`.** Run `scripts/add_change.py` once per
    user-visible bullet — it applies the **Append** procedure from
-   `.claude/docs/sys-changelog.md` deterministically (locates the active
-   `(in progress)` section, inserts under the right place, creates the section and
-   sets `_version.py` to `X.Y.Zb0` if none exists, refuses duplicates):
+   `.claude/docs/sys-changelog.md` deterministically:
    `python3 scripts/add_change.py "<imperative phrase>" --scope package|docs|notebook [--issue <N>]`.
    Choose `--scope` by where the change lands (`notebook` → the
    `### Changes to notebooks` subsection); pass `--issue <N>` from the plan's
@@ -133,7 +128,7 @@ without a path, ask for one.
    Then invoke `sys-commit` (step: changes, slug: `<slug>`, commit mode, intended
    files: `CHANGES.md`, plus `src/sctoolbox/_version.py` if you changed it) →
    message `changes: <slug>`.
-8. **Done.** Report what shipped and the final test result. In `manual` commit
+9. **Done.** Report what shipped and the final test result. In `manual` commit
    mode, also list every changed file (`git status --short`) and remind the user
    that nothing was staged or committed — they stage and commit it themselves.
 

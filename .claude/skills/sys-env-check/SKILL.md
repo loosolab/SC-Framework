@@ -25,13 +25,10 @@ it. Invoked by `/design` (before any `design.md` is written) and by
      (`conda env create -f sctoolbox_env.yml` — note this creates an env named
      `sctoolbox`). If the user meant a different name, ask which existing env to
      use instead. Create only after the user confirms.
-2. **Probe dependencies by scope** (run each with `conda run <env-spec> …`):
-   - **always** (the binding command starts with `ruff check`): `ruff --version`
-     and `python -c "import sctoolbox"` (package importable in editable mode).
-   - **package scope** adds: `pytest --version` and `codespell --version`.
-   - **notebooks scope** adds: `jupyter --version` (the nbconvert gate needs it).
-   - **docs scope** adds: `python -c "import sphinx"`. The docs build also needs
-     a system `pandoc` on `PATH` (see `development.rst`); flag it if absent.
+2. **Probe dependencies — don't check by hand.** Run
+   `conda run <env-spec> python scripts/check_dev_env.py --scope <package|notebooks|docs>`
+   (repeat `--scope` to combine; omit for the full `dev` group). Exit 0 = all
+   present; otherwise its report lists the gaps.
 3. **Something missing → offer to install it.** Don't just stop — offer to run
    the dev-setup install from `docs/source/development.rst` yourself, and run it
    only after the user confirms:

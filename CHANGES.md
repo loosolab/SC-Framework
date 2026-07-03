@@ -1,6 +1,7 @@
 # Changelog
 
-## 0.15.2 (in progress)
+## 0.16.0 (in progress)
+- connectionPlot: Fix colormap by replacing deprecated function get_cmap (#462)
 - document the development environment setup and the testing/linting dependency-groups in `development.rst`
 - document the doc-string example conventions (`.. plot::` / `.. exec_code::`) and pre-code fixtures in `development.rst`
 - refactor tests: consolidate duplicate fixtures into shared `conftest` files (tools, plotting, utils, settings), migrate RNA test data to `scanpy.datasets` (drop the bundled `adata_rna.rds`), reduce runtime by removing unused t-SNE and sharing expensive fixture builds, and document the fixture/test-data conventions in `development.rst` (#445)

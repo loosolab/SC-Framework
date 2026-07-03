@@ -313,7 +313,7 @@ class SctoolboxConfig(object):
 
     @property
     def logger(self) -> logging.Logger:
-        """Return logger object."""
+        """The logger object."""
         return self._logger
 
     @beartype

@@ -67,6 +67,7 @@ For each unchecked `- [ ] T<N>. ...` in order:
      the gitignored `.work/` and is **never staged**). In **`claude`** commit
      mode, **commit via `sys-commit`** with message
      `impl(<slug>): T<N> <short desc>`, staging only this task's code/test files
+     (plus `pyproject.toml` if the task changes it)
      (in `manual` mode there is no commit — see Preflight). Continue to the next
      task.
    - Target checks still failing → diagnose, fix, retry. **Up to 3 attempts
@@ -90,7 +91,8 @@ the whole plan, run only that task:
    to 3 attempts; a regressed previously-passing check → revert it first (no
    retry consumed).
 3. In **`claude`** commit mode, commit via `sys-commit`
-   (`impl(<slug>): T<N> <short desc>`), staging only this task's code/test files;
+   (`impl(<slug>): T<N> <short desc>`), staging only this task's code/test files
+   (plus `pyproject.toml` if the task changes it);
    in **`manual`** mode leave the changes unstaged.
 4. **Do not tick `- [x] T<N>`** and do not touch other tasks. Return a structured
    summary (files changed, commit made or "none, manual mode", gate result). The
