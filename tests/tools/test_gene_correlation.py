@@ -47,6 +47,15 @@ def test_correlate_ref_vs_all(adata, gene, save, tmp_path):
     if save is not None:
         save = str(tmp_path / save)
 
+    # Subset locally to a small gene set (including the reference gene): the
+    # assertions are type- and column-name-level, so a handful of genes exercises
+    # the same code path while trimming the per-gene correlation loop and the
+    # umap_marker_overview render (which plots one UMAP per correlating gene).
+    genes = list(adata.var.index[:5])
+    if gene not in genes:
+        genes.append(gene)
+    adata = adata[:, genes].copy()
+
     results = correlate_ref_vs_all(adata, gene, save=save)
 
     # Test if dataframe is returned
