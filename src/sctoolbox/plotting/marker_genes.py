@@ -326,14 +326,14 @@ def grouped_violin(adata: sc.AnnData,  # noqa: C901
 
     # Normalize values to 0-1 per group in x_var
     if normalize:
-        obs_table[y_var] = obs_table.groupby(x_var, group_keys=False)[y_var].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
+        obs_table[y_var] = obs_table.groupby(x_var, group_keys=False, observed=False)[y_var].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
 
     # Plot expression from obs table
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
 
     if style == "violin":
-        kwargs["scale"] = "width" if "scale" not in kwargs else kwargs["scale"]  # set defaults
+        kwargs["density_norm"] = "width" if "density_norm" not in kwargs else kwargs["density_norm"]  # set defaults ("scale" renamed to "density_norm" in seaborn)
         kwargs["cut"] = 0 if "cut" not in kwargs else kwargs["cut"]
         sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     elif style == "boxplot":
@@ -352,6 +352,7 @@ def grouped_violin(adata: sc.AnnData,  # noqa: C901
     if x_assignment == "obs" and y_assignment == "var":
         ax.set_ylabel(ax.get_ylabel() + " expression")
 
+    ax.set_xticks(ax.get_xticks())  # fix the locator so set_xticklabels does not warn
     _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
     ax.set_title(title)
 
@@ -431,6 +432,7 @@ def group_expression_boxplot(adata: sc.AnnData,
     g = sns.boxplot(data=gene_table_melted_sorted, x=groupby, y="value", ax=ax, color="darkgrey", **kwargs)
     ax.set_ylabel("Normalized expression")
 
+    ax.set_xticks(ax.get_xticks())  # fix the locator so set_xticklabels does not warn
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
 
     return g
@@ -513,7 +515,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
                                                 colors_ratio=0.03)
     """
 
-    adata = adata[:, genes]  # Subset to genes
+    adata = adata[:, genes].copy()  # Subset to genes (copy so the later .obs writes don't warn on a view)
 
     # Decide which combination to cluster by
     groupby_col = "_cluster_by"

@@ -1,5 +1,5 @@
 """Tools for marker gene analysis."""
-from typing import Sequence, Union
+from typing import Union
 
 import re
 import glob
@@ -14,7 +14,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from beartype import beartype
-from beartype.typing import Optional, Tuple, Any, Literal
+from beartype.typing import Optional, Tuple, Any, Literal, Sequence
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -286,7 +286,7 @@ def _annotate(genes: pd.Series,
         return genes.isin(labeler)
     elif regex:
         return genes.str.match(regex, case=False)
-    logger.warn("Neither genelist nor regex available. Skipping...")
+    logger.warning("Neither genelist nor regex available. Skipping...")
 
 
 @deco.log_anndata
@@ -367,7 +367,11 @@ def run_rank_genes(adata: sc.AnnData,
         raise ValueError(f"Argument `variable={variable}` is not a valid column in `adata.var`.")
 
     if adata.obs[groupby].dtype.name != "category":
-        adata.obs[groupby] = adata.obs[groupby].astype("category")
+        # adata may be passed as a view; this intended in-place cast otherwise
+        # triggers anndata's ImplicitModificationWarning
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", anndata.ImplicitModificationWarning)
+            adata.obs[groupby] = adata.obs[groupby].astype("category")
 
     if "log1p" in adata.uns:
         adata.uns['log1p']['base'] = None  # hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881
@@ -898,7 +902,7 @@ def run_deseq2(adata: sc.AnnData,  # noqa: C901
     design_factors = confounders + [condition_col]
     dds = DeseqDataSet(counts=counts_df,
                        metadata=sample_df,
-                       design_factors=design_factors,
+                       design="~" + " + ".join(design_factors),  # formulaic formula; replaces deprecated design_factors
                        refit_cooks=True,
                        n_cpus=threads)
     dds.deseq2()
@@ -908,7 +912,10 @@ def run_deseq2(adata: sc.AnnData,  # noqa: C901
 
     # Get normalized counts per sample and condition
     for i, condition in enumerate(conditions):
-        mean_values = dds.layers["normed_counts"][dds.obs[condition_col] == condition, :].mean(axis=0)
+        condition_counts = dds.layers["normed_counts"][dds.obs[condition_col] == condition, :]
+        # guard against "Mean of empty slice" when a condition has no samples; return NaN explicitly
+        mean_values = (condition_counts.mean(axis=0) if condition_counts.shape[0]
+                       else np.full(condition_counts.shape[1], np.nan))
         deseq_table.insert(i, condition + "_mean", mean_values)
 
     # Get results per contrast
