@@ -64,7 +64,11 @@ def adata_batch_dict(adata_with_batch):
 @pytest.mark.parametrize("method", ["tfidf", "total"])
 def test_normalize_adata_success(adata_atac, method):
     """Test normalize_adata success."""
-    adata_norm = tools.norm_correct.normalize_adata(adata_atac, method=method, target_sum=1e6)  # return from function is a dict
+    # The assertions only check for presence of the dim-reduction keys, so a small
+    # subset suffices. Both dimensions stay > the default n_comps (50) so the
+    # LSI/SVD (svds k < min(shape)) and PCA paths remain valid.
+    adata_sub = adata_atac[:100, :200].copy()
+    adata_norm = tools.norm_correct.normalize_adata(adata_sub, method=method, target_sum=1e6)  # return from function is a dict
 
     if method == "tfidf":
         assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
