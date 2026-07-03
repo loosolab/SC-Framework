@@ -17,18 +17,38 @@ __rank_key = "rank_genes_groups"
 # ------------------------------ FIXTURES --------------------------------- #
 
 
+@pytest.fixture(scope="session")
+def adata_tsne_session(adata):
+    """Compute a t-SNE basis on a copy of the session ``adata`` once per session.
+
+    Depends on the session-scoped ``adata`` fixture and copies it before
+    running ``sc.tl.tsne``, so the expensive t-SNE build runs exactly once and
+    the shared session object is left unmutated.
+
+    Returns
+    -------
+    anndata.AnnData
+        A session-scoped copy of ``adata`` with ``obsm["X_tsne"]``.
+    """
+    adata = adata.copy()
+    sc.tl.tsne(adata)
+    return adata
+
+
 @pytest.fixture
-def adata_tsne(adata):
+def adata_tsne(adata_tsne_session):
     """Provide a copy of the session ``adata`` with a precomputed t-SNE basis.
+
+    Depends on the session-scoped ``adata_tsne_session`` fixture and returns a
+    deep copy, so the t-SNE build runs once per session while each consuming
+    test still gets an isolated object it can mutate without leaking changes.
 
     Returns
     -------
     anndata.AnnData
         A function-scoped copy of the session ``adata`` with ``obsm["X_tsne"]``.
     """
-    adata = adata.copy()
-    sc.tl.tsne(adata)
-    return adata
+    return adata_tsne_session.copy()
 
 
 @pytest.fixture

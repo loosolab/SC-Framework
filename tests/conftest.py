@@ -209,13 +209,9 @@ def _load_adata_scsa_h5ad():
     return sc.read_h5ad(os.path.join(DATA_DIR, "scsa", "adata_scsa.h5ad"))
 
 
-@pytest.fixture(scope="function")
-def pbmc3k_processed(scanpy_datasetdir: str) -> sc.AnnData:
-    """Provide the shared processed PBMC3k dataset with function scope.
-
-    Function scope is used so that consumers cannot leak mutations across
-    tests; the equivalent (read-only) consumers depend on this fixture, while
-    mutating consumers build on their own copies.
+@pytest.fixture(scope="session")
+def pbmc3k_processed_raw(scanpy_datasetdir: str) -> sc.AnnData:
+    """Load and return the processed PBMC3k dataset once per session.
 
     Parameters
     ----------
@@ -225,10 +221,27 @@ def pbmc3k_processed(scanpy_datasetdir: str) -> sc.AnnData:
     Returns
     -------
     anndata.AnnData
-        A freshly loaded processed PBMC3k dataset from
-        ``scanpy.datasets.pbmc3k_processed``.
+        A processed PBMC3k dataset from ``scanpy.datasets.pbmc3k_processed``,
+        loaded from disk exactly once and shared across the session.
     """
     return _download_once(scanpy_datasetdir, "pbmc3k_processed", sc.datasets.pbmc3k_processed)
+
+
+@pytest.fixture(scope="function")
+def pbmc3k_processed(pbmc3k_processed_raw):
+    """Provide the shared processed PBMC3k dataset with function scope.
+
+    Depends on the session-scoped ``pbmc3k_processed_raw`` loader and returns a
+    deep copy (``AnnData.copy()``), so the dataset loads from disk once per
+    session while each consuming test still gets an isolated object it can
+    mutate without leaking changes across tests.
+
+    Returns
+    -------
+    anndata.AnnData
+        A deep copy of the session-loaded processed PBMC3k dataset.
+    """
+    return pbmc3k_processed_raw.copy()
 
 
 @pytest.fixture(scope="function")
