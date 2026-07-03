@@ -7,6 +7,92 @@ This section is intended for developers. It contains information about the recom
 
 **Want to implement something new?** Always check existing functions. The SC-Frameworks package (sctoolbox) contains a lot of functions maybe you are lucky and someone already implemented your desired functionality.
 
+Setup
+-----
+
+The recommended development setup is the same conda environment used to run the analysis notebooks, extended with the optional dependencies required for testing, linting, spellchecking and building the documentation.
+
+Environment and package
+~~~~~~~~~~~~~~~~~~~~~~~
+
+First clone the repository, create the ``sctoolbox`` conda environment and install the package into it. Using `mamba <https://mamba.readthedocs.io/>`_ is faster than ``conda`` but requires mamba to be installed.
+
+.. code-block:: bash
+
+  # clone and enter the repository
+  git clone https://gitlab.gwdg.de/loosolab/software/sc_framework.git
+  cd sc_framework
+
+  # create and activate the environment
+  mamba env create -f sctoolbox_env.yml
+  conda activate sctoolbox
+
+  # install sctoolbox with all optional dependencies in editable mode
+  pip install -e .[all]
+
+The ``[all]`` extra pulls in every optional dependency group (see the ``[project.optional-dependencies]`` section of ``pyproject.toml``). Install only a subset, e.g. ``pip install -e .[atac]``, if you do not need everything. The ``-e``/``--editable`` flag installs the package in *editable* mode so your changes to ``src/sctoolbox`` take effect without reinstalling.
+
+Development dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The tooling required to test and lint the project is declared as `dependency groups <https://packaging.python.org/en/latest/specifications/dependency-groups/>`_ in the ``[dependency-groups]`` section of ``pyproject.toml``. Unlike the optional dependencies above, these groups are **not** part of the distributed package and are installed separately with pip's ``--group`` flag (requires ``pip >= 25.1``):
+
+.. list-table::
+  :header-rows: 1
+  :widths: 20 30 50
+
+  * - Group
+    - Packages
+    - Purpose
+  * - ``test``
+    - pytest, pytest-mock, pytest-cov, pytest-html, openpyxl
+    - Run the unit tests and produce coverage/HTML reports.
+  * - ``lint``
+    - ruff
+    - Lint and check docstrings (the binding test command starts with ``ruff check``).
+  * - ``spellcheck``
+    - codespell[toml]
+    - Spellcheck the code and documentation.
+  * - ``docs``
+    - sphinx, sphinx-rtd-theme, sphinx-exec-code, nbsphinx, ...
+    - Build this documentation locally.
+
+Install the groups you need into the activated ``sctoolbox`` environment:
+
+.. code-block:: bash
+
+  # everything needed to develop, test and lint
+  pip install -e .[all] --group test --group lint --group spellcheck
+
+  # add the docs toolchain if you want to build the documentation
+  pip install --group docs
+
+The ``--group`` flag can be combined with a normal install target, so the package and its development dependencies can be installed in a single command. After installation you can run the test suite, the linter and the spellchecker:
+
+.. code-block:: bash
+
+  ruff check         # lint + docstring checks
+  pytest             # unit tests with coverage
+  codespell          # spellcheck (uses the config in pyproject.toml)
+
+One test dependency is **not** part of these groups: `scar <https://github.com/Novartis/scar.git>`_ is installed from git rather than PyPI and is deliberately left out of ``[all]`` and ``sctoolbox_env.yml`` because of its size. The CI test job installs it to exercise the scar-related functions. Install it if you want to run those tests locally:
+
+.. code-block:: bash
+
+  pip install git+https://github.com/Novartis/scar.git
+
+Verifying the environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To confirm an environment carries everything the workflow needs, run ``scripts/check_dev_env.py`` inside it. It reads the required packages from the ``[dependency-groups]`` table of ``pyproject.toml`` and reports anything missing or version-mismatched, alongside an editable ``sctoolbox`` install, the ``scar`` test dependency, and — for the docs build — the system ``pandoc`` binary:
+
+.. code-block:: bash
+
+  python scripts/check_dev_env.py                  # full dev environment
+  python scripts/check_dev_env.py --scope package  # just the package test/lint/spellcheck tooling
+
+A zero exit status means the environment is complete; otherwise the report lists the gaps and the command to install them.
+
 Git
 ---
 
@@ -442,7 +528,15 @@ Documentation is important for usability, that is why the SC-Framework requires 
 Example code and results
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-It is possible to add examples on how a function should be executed and show the expected output. This is shown in the :doc:`API-reference </API/index>`. Especially, plotting functions benefit from showing the output.
+Functions may carry an ``Examples`` section that shows how they are called and renders the expected output in the :doc:`API-reference </API/index>`. Two Sphinx directives are available:
+
+- ``.. plot::`` runs the example and embeds the resulting figure. Use it for **plotting functions**.
+- ``.. exec_code::`` runs the example and embeds its textual output. Use it for **non-plotting code**.
+
+Examples are best practice but never mandatory:
+
+- **Plotting functions** are **highly encouraged** to add a ``.. plot::`` example. Showing the produced figure is what makes the API reference useful for these functions.
+- **All other public functions** are **encouraged** to add an ``.. exec_code::`` example where running the function produces a result worth showing (a table, a printed summary). Skip it for functions whose output is not illustrative.
 
 To do so, add an example section to the doc-string of the respective function:
 
@@ -472,17 +566,43 @@ To do so, add an example section to the doc-string of the respective function:
           some_code()
       """
 
+Always pass ``:context: close-figs`` to a ``.. plot::`` directive. The ``:context:`` keeps the shared namespace (see below) alive across examples, and ``close-figs`` closes the previous figure so each example renders only its own plot.
+
 Where does the data come from?
 """"""""""""""""""""""""""""""
 
-For the plotting functions, we have a short script that is run before all examples. This script can be found in the repository (``/docs/source/plot_pre_code.py``). This script can be used to add any imports and input data preparation that should not be shown in the example.
+Each module page runs a short setup script **once at the top**, before any of that page's examples. These scripts live in the repository and provide the imports and input data the examples rely on (so the setup itself is not repeated in every example):
+
+- ``docs/source/plot_pre_code.py`` — runs before the examples on the ``plotting`` page.
+- ``docs/source/utils_pre_code.py`` — runs before the examples on the ``utils`` page.
+
+If your new example needs input data that the relevant pre-code script does not yet prepare (e.g. a new fixture, a different ``.obs`` column), **extend that script** so the variable exists for everyone. Keep additions minimal and reuse the existing ``adata`` where possible.
 
 What not to do!
 """""""""""""""
 
-Please do not overwrite any variables in your example code! All examples run after each other as they are in one script.
+Please do not overwrite any variables in your example code! All examples on a module page share a single namespace and run after each other in order — the pre-code script first, then every function's example.
 
 For example, the main example input is stored in the variable ``adata``. If you would overwrite it with something else all the following code that uses the input variable is likely to fail.
+
+Checking that an example renders
+""""""""""""""""""""""""""""""""
+
+The example directives only execute when the documentation is built; ``ruff`` and ``pytest`` do not run them. The authoritative check is the full Sphinx build (``make -C docs html``), which CI runs on the ``dev`` pipeline — this is what executes ``.. plot::`` examples and renders their figures.
+
+For a quick local check while iterating, build a single page with the ``dummy`` builder. It reads and validates the page without producing HTML, which avoids the notebook-finalisation step that makes a single-page ``html`` build fail:
+
+.. code-block:: bash
+
+  # validate the utils page and run its .. exec_code:: examples
+  sphinx-build -b dummy docs/source /tmp/scdocs docs/source/API/utils.rst
+
+What this does and does not catch:
+
+- ``.. exec_code::`` examples **are executed** — the build exits non-zero if one raises. This is a fast, offline smoke-test for examples on non-plotting pages.
+- ``.. plot::`` examples are **only parsed, not executed**, by the ``dummy`` builder (and the plotting pre-code even downloads data over the network). Their execution is verified by the full ``make -C docs html`` build on CI, not by this local check.
+
+The build also prints ``toctree`` / cross-reference warnings about the rest of the documentation that was not built — those are expected for a single-page build and do not fail it.
 
 Deprecation
 ~~~~~~~~~~~

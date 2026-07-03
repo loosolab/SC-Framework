@@ -194,6 +194,12 @@ test = [
     "pytest-html",
     "openpyxl"
 ]
+lint = [
+    "ruff"  # lint gate (CI lint job + local binding test command)
+]
+spellcheck = [
+    "codespell[toml]"  # spellcheck gate; [toml] enables --toml pyproject.toml (CI spellcheck job + local gate)
+]
 docs = [
     "sphinx",
     "sphinx-rtd-theme",
@@ -203,6 +209,14 @@ docs = [
     "myst-parser",
     "docutils<=0.21",  # pinned until https://github.com/vidartf/nbsphinx-link/issues/25 is fixed
     "sphinxcontrib-youtube"
+]
+dev = [
+    # Everything needed for local development: all gate tooling plus dev-only extras.
+    {include-group = "test"},
+    {include-group = "lint"},
+    {include-group = "spellcheck"},
+    {include-group = "docs"},
+    "python-gitlab[graphql]"  # GraphQL client for scripts/gitlab_query.py (notes are 401-gated on the REST API)
 ]
 
 [project.scripts]
