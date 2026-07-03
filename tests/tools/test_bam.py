@@ -167,8 +167,26 @@ def test_get_bam_reads(bam_handle):
 def test_bam_to_bigwig(atac_bam_file, tmp_path):
     """Test whether the bigwig is written."""
 
+    # Build a small single-chromosome BAM first: all reads in mm10_atac.bam map
+    # to chr1 below ~4 Mb, but the header declares the full mm10 genome (66
+    # contigs, ~2.7 Gb), which makes bedtools genomecov allocate coverage arrays
+    # over the whole genome and dominate the runtime. A truncated chr1 header
+    # keeps the conversion fast without weakening the output-exists assertion.
+    # Mate references are cleared as they are irrelevant to genomecov coverage.
+    small_bam = str(tmp_path / "mm10_atac_chr1.bam")
+    header = {"HD": {"VN": "1.6", "SO": "coordinate"},
+              "SQ": [{"SN": "chr1", "LN": 4_000_000}]}
+    with pysam.AlignmentFile(atac_bam_file, "rb") as inbam, \
+            pysam.AlignmentFile(small_bam, "wb", header=header) as outbam:
+        for read in inbam.fetch("chr1"):
+            read_dict = read.to_dict()
+            read_dict["next_ref_name"] = "*"
+            read_dict["next_ref_pos"] = "0"
+            outbam.write(pysam.AlignedSegment.from_dict(read_dict, outbam.header))
+    pysam.index(small_bam)
+
     bigwig_out = str(tmp_path / "mm10_atac.bw")
-    bigwig_f = stb.bam_to_bigwig(atac_bam_file, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
+    bigwig_f = stb.bam_to_bigwig(small_bam, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
 
     assert os.path.exists(bigwig_f)
 
