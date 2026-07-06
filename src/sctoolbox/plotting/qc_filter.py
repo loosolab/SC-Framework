@@ -803,17 +803,21 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
         ax = axes_list[i]
         slider_dict[column] = {}
 
-        # Plot data from table
+        # Plot data from table. seaborn deprecates passing `palette` without a
+        # `hue`; when there is no groupby the plot is a single violin, so colour
+        # it directly via `color` instead of `palette`.
+        violin_kwargs = {"cut": 0, "legend": False, **kwargs}
+        if groupby is not None:
+            violin_kwargs["palette"] = color_list
+        else:
+            violin_kwargs["color"] = color_list[0]
         sns.violinplot(data=table,
                        x=groupby,
                        hue=groupby,
                        y=column,
                        ax=ax,
                        order=groups,
-                       palette=color_list,
-                       cut=0,
-                       legend=False,
-                       **kwargs)
+                       **violin_kwargs)
         ax.set_xticks(ax.get_xticks())  # get rid of userwarning https://stackoverflow.com/a/68794383/19870975
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
         ax.set_ylabel("")
