@@ -9,6 +9,7 @@
 - fix gitlab_download: replace the broken throttler rate limiter with a basic time.sleep and remove the throttler dependency
 - reduce test-data size and mock S3 download to reduce runtime and size (#445)
 - enables parallel test execution (#445)
+- reduce test runtime hotspots, right-size fixture scopes, dedup fixtures/orphan data, and fix warnings (#445)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
