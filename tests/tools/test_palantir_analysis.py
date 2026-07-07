@@ -12,20 +12,34 @@ from anndata import AnnData
 
 import sctoolbox.tools.palantir_analysis as pla
 
+plt.switch_backend("Agg")
+
 
 # ------------------------- FIXTURES -------------------------#
 
 
 @pytest.fixture
 def adata_rna():
-    """Load the small RNA AnnData object used in the test suite."""
+    """Load the small RNA AnnData object used in the test suite.
+
+    Returns
+    -------
+    anndata.AnnData
+        The loaded test AnnData object.
+    """
     adata_f = os.path.join(os.path.dirname(__file__), "../data", "adata.h5ad")
     return sc.read_h5ad(adata_f)
 
 
 @pytest.fixture
 def simple_adata():
-    """Create a small AnnData object with cell type annotations."""
+    """Create a small AnnData object with cell type annotations.
+
+    Returns
+    -------
+    anndata.AnnData
+        Synthetic AnnData with sample annotations and float expression data.
+    """
     np.random.seed(42)
     n_obs = 100
     n_vars = 50
@@ -43,7 +57,13 @@ def simple_adata():
 
 @pytest.fixture
 def preprocessed_adata(simple_adata):
-    """Create a small AnnData object with PCA, UMAP and neighbors."""
+    """Create a small AnnData object with PCA, UMAP and neighbors.
+
+    Returns
+    -------
+    anndata.AnnData
+        Synthetic AnnData with PCA, UMAP embedding and neighbor graph.
+    """
     adata = simple_adata.copy()
 
     np.random.seed(42)
@@ -61,7 +81,13 @@ def preprocessed_adata(simple_adata):
 
 @pytest.fixture
 def raw_integer_adata():
-    """Create an AnnData object with raw integer counts."""
+    """Create an AnnData object with raw integer counts.
+
+    Returns
+    -------
+    anndata.AnnData
+        Synthetic AnnData with raw integer count values.
+    """
     np.random.seed(42)
     n_obs = 80
     n_vars = 40
@@ -76,7 +102,13 @@ def raw_integer_adata():
 
 @pytest.fixture
 def sparse_adata():
-    """Create an AnnData object with sparse expression data."""
+    """Create an AnnData object with sparse expression data.
+
+    Returns
+    -------
+    anndata.AnnData
+        Synthetic AnnData with sparse expression matrix and annotations.
+    """
     np.random.seed(42)
     n_obs = 120
     n_vars = 60
@@ -93,7 +125,13 @@ def sparse_adata():
 
 @pytest.fixture
 def branch_adata(preprocessed_adata):
-    """Create an AnnData object with pseudotime and branch masks."""
+    """Create an AnnData object with pseudotime and branch masks.
+
+    Returns
+    -------
+    anndata.AnnData
+        Synthetic AnnData with branch mask DataFrame and pseudotime values.
+    """
     adata = preprocessed_adata.copy()
     n_obs = adata.n_obs
 
@@ -695,13 +733,17 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
     )
     assert "MAGIC_imputed_data" in result.layers
 
-
     # ------------------------- tests -------------------------#
-
 
 @pytest.fixture
 def gene_trend_adata(preprocessed_adata):
-    """Create AnnData with small branch-specific gene trend tables."""
+    """Create AnnData with small branch-specific gene trend tables.
+
+    Returns
+    -------
+    anndata.AnnData
+        Synthetic AnnData with branch-specific trend tables and Palantir metadata.
+    """
     adata = preprocessed_adata.copy()
 
     genes = [f"Gene{i}" for i in range(8)]
