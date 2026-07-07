@@ -2209,7 +2209,7 @@ def plot_branch_gene_programs(  # noqa: C901
             )
             logger.info("Saved branch gene program tables to '%s'.", filename)
 
-        return results
+    return results
 
 
 @deco.log_anndata
