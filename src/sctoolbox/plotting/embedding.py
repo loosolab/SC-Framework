@@ -13,7 +13,7 @@ import seaborn as sns
 from matplotlib import __version__ as mpl_version, rcParams
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
-from matplotlib import cm, colors
+from matplotlib import cm, colors, colormaps
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from matplotlib.collections import PathCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -50,7 +50,7 @@ def sc_colormap() -> ListedColormap:
     """
 
     # Custom colormap for single cells
-    color_cmap = cm.get_cmap('Reds', 200)
+    color_cmap = colormaps['Reds'].resampled(200)
     newcolors = color_cmap(np.linspace(0.2, 0.9, 200))
     newcolors[0, :] = colors.to_rgba("lightgrey")  # count 0 = grey
     sc_cmap = ListedColormap(newcolors)
@@ -66,7 +66,7 @@ def grey_colormap() -> ListedColormap:
     cmap : ListedColormap
         Grey-scale colormap.
     """
-    color_cmap = cm.get_cmap('Greys', 200)
+    color_cmap = colormaps['Greys'].resampled(200)
     newcolors = color_cmap(np.linspace(0.2, 1, 200))
     cmap = ListedColormap(newcolors)
 

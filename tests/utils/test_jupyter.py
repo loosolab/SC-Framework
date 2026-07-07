@@ -1,7 +1,6 @@
 """Test jupyter.py functions."""
 
 import pytest
-import os
 import nbformat
 from sctoolbox.utils import jupyter
 from sctoolbox import __version__ as sc_version
@@ -10,7 +9,7 @@ from sctoolbox import __version__ as sc_version
 # --------------------------- TESTS --------------------------------- #
 
 
-def test_compare_versions():
+def test_compare_versions(tmp_path):
     """Test _compare_version function."""
 
     def change_version(nb_name, version):
@@ -20,7 +19,7 @@ def test_compare_versions():
         nb["metadata"]["sc_framework"]["version"] = version
         nbformat.write(nb, nb_name)
 
-    nb_path = "./test_notebook.ipynb"
+    nb_path = str(tmp_path / "test_notebook.ipynb")
     # Build new notebook
     nb = nbformat.v4.new_notebook()
     nbformat.write(nb, nb_path)
@@ -42,9 +41,6 @@ def test_compare_versions():
     change_version(nb_path, "0.0.0")
     with pytest.warns(match="The notebook has an older"):
         jupyter._compare_version(nb_path)
-
-    # Delete test notebook
-    os.remove(nb_path)
 
 
 def test_is_notebook():

@@ -1,78 +1,16 @@
 """Test the tsse_score related functions."""
-import pytest
 import numpy as np
-import scanpy as sc
 import sctoolbox.tools as tools
 import os
-
-
-# ------------------------------ FIXTURES -------------------------------- #
-
-
-@pytest.fixture
-def adata():
-    """Fixture for an AnnData object.
-
-    Returns
-    -------
-    sc.AnnData
-        ATAC-seq AnnData object.
-    """
-    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad'))
-    return adata
-
-
-@pytest.fixture
-def fragments():
-    """Fixture for a fragments object.
-
-    Returns
-    -------
-    str
-        Path to the fragments BED file.
-    """
-    fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_fragments.bed')
-    return fragments
-
-
-@pytest.fixture
-def gtf():
-    """Fixture for a gtf object.
-
-    Returns
-    -------
-    str
-        Path to the GTF annotation file.
-    """
-    gtf = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_genes.gtf')
-    return gtf
-
-
-@pytest.fixture
-def tss_file():
-    """Fixture for a tss_file object.
-
-    Returns
-    -------
-    str
-        Path to the TSS BED file.
-    """
-    tss_file = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_tss.bed')
-    return tss_file
 
 
 # ------------------------------ TESTS --------------------------------- #
 
 
-def test_write_TSS(gtf):
+def test_write_TSS(atac_gtf, tmp_path):
     """Test write_TSS function."""
-    # Build temporary TSS file path
-    temp_dir = os.path.join(os.path.dirname(__file__), '../data', 'atac')
-    tss_file = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_genes_tss.bed')
-    # Write TSS file
-    tss_list, tempfiles = tools.tsse.write_TSS_bed(gtf, tss_file, temp_dir=temp_dir)
-    # Add tss_file to tempfiles
-    tempfiles.append(tss_file)
+    tss_file = str(tmp_path / "mm10_genes_tss.bed")
+    tss_list, tempfiles = tools.tsse.write_TSS_bed(atac_gtf, tss_file, temp_dir=str(tmp_path))
 
     # Check if file exists
     assert os.path.exists(tss_file)
@@ -85,68 +23,56 @@ def test_write_TSS(gtf):
     assert type(tss_list[0][1]) is int
     assert type(tss_list[0][2]) is int
 
-    # Remove temporary files
-    for tempfile in tempfiles:
-        os.remove(tempfile)
 
-
-def test_overlap_and_aggregate(gtf, fragments):
+def test_overlap_and_aggregate(atac_gtf, atac_fragments, tmp_path):
     """Test overlap_and_aggregate function."""
-    # Build temporary TSS file path
-    temp_dir = tss_file = os.path.join(os.path.dirname(__file__), '../data', 'atac')
-    tss_file = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_genes_tss.bed')
-    overlap = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'overlap.bed')
+    tss_file = str(tmp_path / "mm10_genes_tss.bed")
+    overlap = str(tmp_path / "overlap.bed")
 
-    tempfiles = [tss_file, overlap]
     # Write TSS file
-    tss_list, temp = tools.tsse.write_TSS_bed(gtf, tss_file, temp_dir=temp_dir)
-    tempfiles.extend(temp)
+    tss_list, temp = tools.tsse.write_TSS_bed(atac_gtf, tss_file, temp_dir=str(tmp_path))
 
     # overlap_and_aggregate
-    agg, temp = tools.tsse.overlap_and_aggregate(fragments, tss_file, overlap, tss_list)
-    tempfiles.extend(temp)
+    agg, temp = tools.tsse.overlap_and_aggregate(atac_fragments, tss_file, overlap, tss_list)
 
     # Check if agg is a dictionary
-    assert type(agg) is dict
+    assert isinstance(agg, dict)
     # check if overlap file exists
     assert os.path.exists(overlap)
-    # Check if file is not empty
-    # assert os.path.getsize(overlap) > 0
-    # Check if file has 3 columns
+    # Check if file has 5 columns
     assert np.loadtxt(overlap, dtype=str).shape[1] == 5
 
-    # Remove temporary files
-    for tempfile in tempfiles:
-        os.remove(tempfile)
 
-
-def test_add_tsse_score(adata, fragments, gtf):
+def test_add_tsse_score(adata_atac, atac_fragments, atac_gtf, tmp_path):
     """Test add_tsse_score function."""
-    adata = tools.tsse.add_tsse_score(adata,
-                                      fragments,
-                                      gtf,
+    assert 'tsse_score' not in adata_atac.obs.columns
+
+    adata_atac = tools.tsse.add_tsse_score(adata_atac,
+                                            atac_fragments,
+                                            atac_gtf,
                                       negativ_shift=2000,
                                       positiv_shift=2000,
                                       edge_size_total=100,
                                       edge_size_per_base=50,
                                       min_bias=0.01,
                                       keep_tmp=False,
-                                      temp_dir="")
-    assert 'tsse_score' in adata.obs.columns
+                                      temp_dir=str(tmp_path))
+
+    assert 'tsse_score' in adata_atac.obs.columns
 
 
-def test_tsse_scoring(fragments, gtf):
+def test_tsse_scoring(atac_fragments, atac_gtf, tmp_path):
     """Test the tsse_scoring function."""
 
-    tSSe_df = tools.tsse.tsse_scoring(fragments,
-                                      gtf,
+    tSSe_df = tools.tsse.tsse_scoring(atac_fragments,
+                                      atac_gtf,
                                       negativ_shift=2000,
                                       positiv_shift=2000,
                                       edge_size_total=100,
                                       edge_size_per_base=50,
                                       min_bias=0.01,
                                       keep_tmp=False,
-                                      temp_dir="",
+                                      temp_dir=str(tmp_path),
                                       plot=True)
 
     assert all(tSSe_df.columns.isin(['TSS_agg', 'total_ov', 'tsse_score']))

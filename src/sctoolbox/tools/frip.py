@@ -84,7 +84,7 @@ def calc_frip_scores(adata: sc.AnnData,
 
     # overlap fragments with regions
     logger.info("overlapping bedfiles")
-    if ~utils.bioutils._bed_is_sorted(fragments):
+    if not utils.bioutils._bed_is_sorted(fragments):
         # sort fragments
         sorted_fragments = os.path.join(temp_dir, "sorted_fragments.bed")
         utils.bioutils._sort_bed(fragments, sorted_fragments)

@@ -570,11 +570,12 @@ def gsea_dot(adata: sc.AnnData,
     logger.info("Filtering enrichment table...")
     term_table = term_table[term_table[sig_col] <= cutoff]
     if top_term:
-        term_table = term_table.groupby(cluster_col).apply(
-            lambda y: y.sort_values(by=x, ascending=False)
+        term_table = (
+            term_table.sort_values(by=[cluster_col, x], ascending=[True, False])
+            .groupby(cluster_col, sort=False, group_keys=False)
             .head(top_term)
             .reset_index(drop=True)
-        ).reset_index(drop=True)
+        )
 
     # Calc percentage from overlap column
     term_table["% Genes in set"] = [

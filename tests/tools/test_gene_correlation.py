@@ -2,8 +2,6 @@
 import pytest
 import numpy as np
 import pandas as pd
-import os
-import scanpy as sc
 
 from sctoolbox.utils.adata import get_adata_subsets
 from sctoolbox.tools.gene_correlation import correlate_conditions, correlate_ref_vs_all, compare_two_conditons
@@ -13,16 +11,20 @@ from sctoolbox.tools.gene_correlation import correlate_conditions, correlate_ref
 
 
 @pytest.fixture
-def adata():
+def adata(adata_h5ad):
     """Fixture for simple adata to test with.
+
+    Parameters
+    ----------
+    adata_h5ad : anndata.AnnData
+        Shared ``adata.h5ad`` fixture from ``tests/conftest.py``.
 
     Returns
     -------
     anndata.AnnData
         RNA-seq AnnData object with gene names as index.
     """
-    h5ad = os.path.join(os.path.dirname(__file__), '..', 'data', 'adata.h5ad')
-    adata = sc.read_h5ad(h5ad)
+    adata = adata_h5ad
 
     adata.obs["condition"] = np.random.choice(["C1", "C2"], size=adata.shape[0])
 
@@ -40,8 +42,20 @@ def adata():
 
 @pytest.mark.parametrize("gene, save", [("Xkr4", None),
                                         ("Xkr4", "output.png")])
-def test_correlate_ref_vs_all(adata, gene, save):
+def test_correlate_ref_vs_all(adata, gene, save, tmp_path):
     """Test if correlation between a reference gene to other genes is calculated."""
+    if save is not None:
+        save = str(tmp_path / save)
+
+    # Subset locally to a small gene set (including the reference gene): the
+    # assertions are type- and column-name-level, so a handful of genes exercises
+    # the same code path while trimming the per-gene correlation loop and the
+    # umap_marker_overview render (which plots one UMAP per correlating gene).
+    genes = list(adata.var.index[:5])
+    if gene not in genes:
+        genes.append(gene)
+    adata = adata[:, genes].copy()
+
     results = correlate_ref_vs_all(adata, gene, save=save)
 
     # Test if dataframe is returned

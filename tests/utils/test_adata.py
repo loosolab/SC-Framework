@@ -37,20 +37,13 @@ def adata1():
 
 
 @pytest.fixture
-def adata2():
-    """Load scanpy processed pbmc3k adata.
-
-    Returns
-    -------
-    sc.AnnData
-        Processed PBMC3k dataset from scanpy.
-    """
-    return sc.datasets.pbmc3k_processed()
-
-
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
+def adata(random_adata):
     """Return adata object with 3 groups.
+
+    Parameters
+    ----------
+    random_adata : sc.AnnData
+        Shared synthetic-AnnData object from ``tests/conftest.py``.
 
     Returns
     -------
@@ -58,7 +51,7 @@ def adata():
         Random AnnData object with 3 groups (C1, C2, C3) and test layers.
     """
 
-    adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
+    adata = random_adata
     adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
 
     # add some layers for testing
@@ -82,9 +75,9 @@ def test_get_adata_subsets(adata):
 
 
 @pytest.mark.parametrize("raw", [True, False])
-def test_save_and_load_h5ad(adata, raw, caplog):
+def test_save_and_load_h5ad(adata, raw, caplog, tmp_path):
     """Test if h5ad file is saved correctly. Then test loading."""
-    path = "test.h5ad"
+    path = str(tmp_path / "test.h5ad")
 
     # add raw layer
     adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
@@ -93,22 +86,18 @@ def test_save_and_load_h5ad(adata, raw, caplog):
     else:
         adata.raw = None
 
-    try:
-        with add_logger_handler(utils.logger, caplog.handler):
-            utils.save_h5ad(adata, path)
+    with add_logger_handler(utils.logger, caplog.handler):
+        utils.save_h5ad(adata, path)
 
-            assert os.path.isfile(path)
+        assert os.path.isfile(path)
 
-            loaded = utils.load_h5ad(path)
+        loaded = utils.load_h5ad(path)
 
-            assert isinstance(loaded, sc.AnnData)
+        assert isinstance(loaded, sc.AnnData)
 
-            # assume the last record is the warning
-            log_rec = caplog.records[-1]
-            assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
-
-    finally:
-        os.remove(path)  # clean up after tests
+        # assume the last record is the warning
+        log_rec = caplog.records[-1]
+        assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
 
 
 @pytest.fixture(scope="session")

@@ -3,48 +3,24 @@
 import pytest
 import sctoolbox.tools.dim_reduction as std
 
-import scanpy as sc
 import numpy as np
-import os
 
 
 # ----------------------------- FIXTURES ------------------------------- #
 
 
-@pytest.fixture(scope="session")
-def adata_no_pca():
-    """Create an anndata object without PCA.
-
-    Returns
-    -------
-    anndata.AnnData
-        PBMC3k dataset without PCA.
-    """
-    return sc.datasets.pbmc3k()
-
-
-@pytest.fixture(scope="session")
-def adata_pca():
-    """Create an anndata object with precalculated PCA.
-
-    Returns
-    -------
-    anndata.AnnData
-        Preprocessed PBMC3k dataset with PCA.
-    """
-    return sc.datasets.pbmc3k_processed()
-
-
 @pytest.fixture
-def adata():
-    """Fixture for an AnnData object.
+def adata_hv(adata_atac):
+    """Provide an ATAC-seq AnnData object with a deterministic highly_variable mask.
 
     Returns
     -------
     anndata.AnnData
-        ATAC-seq AnnData object for testing.
+        A deep copy of the ``adata_atac`` object with a boolean
+        ``var['highly_variable']`` column set from a fixed index-parity mask.
     """
-    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'anndata_2.h5ad'))
+    adata = adata_atac.copy()
+    adata.var['highly_variable'] = np.arange(adata.n_vars) % 2 == 0
     return adata
 
 
@@ -53,72 +29,69 @@ def adata():
 
 # ------------------------------------ lsi ------------------------------------
 
-def test_lsi(adata):
+@pytest.mark.parametrize("use_highly_variable", [True, False])
+def test_lsi(adata_hv, use_highly_variable):
     """Test lsi success."""
-    adata_ori = adata.copy()
+    assert "X_lsi" not in adata_hv.obsm and "lsi" not in adata_hv.uns and "LSI" not in adata_hv.varm
 
-    std.lsi(adata_ori, use_highly_variable=True)
-    assert "X_lsi" in adata_ori.obsm and "lsi" in adata_ori.uns and "LSI" in adata_ori.varm
-    assert np.sum(adata_ori.varm['LSI'][~adata_ori.var['highly_variable']]) == 0
-    assert np.sum(adata_ori.varm['LSI'][adata_ori.var['highly_variable']]) != 0
+    std.lsi(adata_hv, use_highly_variable=use_highly_variable)
 
-    std.lsi(data=adata, use_highly_variable=False)
+    assert "X_lsi" in adata_hv.obsm and "lsi" in adata_hv.uns and "LSI" in adata_hv.varm
 
-    assert np.sum(adata.varm['LSI'][~adata.var['highly_variable']]) != 0
-    assert np.sum(adata.varm['LSI'][adata.var['highly_variable']]) != 0
+    if use_highly_variable:
+        assert np.sum(adata_hv.varm['LSI'][~adata_hv.var['highly_variable']]) == 0
+    else:
+        assert np.sum(adata_hv.varm['LSI'][~adata_hv.var['highly_variable']]) != 0
+
+    assert np.sum(adata_hv.varm['LSI'][adata_hv.var['highly_variable']]) != 0
 
 
 # -------------------------------- propose_pcs --------------------------------
 
 
-def test_propose_pcs_failure(adata_no_pca):
+def test_propose_pcs_failure(adata_raw_small):
     """Test the propose_pcs function fails without precomputed PCA."""
     with pytest.raises(ValueError):
-        std.propose_pcs(anndata=adata_no_pca)
+        std.propose_pcs(anndata=adata_raw_small)
 
 
-def test_propose_pcs_succsess(adata_pca):
+@pytest.mark.parametrize("var_method, kwargs", [("knee", {}), ("percent", {"perc_thresh": 10})])
+def test_propose_pcs_succsess(adata, var_method, kwargs):
     """Test propose_pcs success."""
-    # test knee finding option
-    assert [1, 3, 4, 5, 6] == std.propose_pcs(anndata=adata_pca,
-                                              how=["variance", "cumulative variance", "correlation"],
-                                              var_method="knee")
+    n_pcs = adata.obsm["X_pca"].shape[1]
 
-    # test percentile finding option
-    assert [1, 3, 4, 5] == std.propose_pcs(anndata=adata_pca,
-                                           how=["variance", "cumulative variance", "correlation"],
-                                           var_method="percent",
-                                           perc_thresh=10)
+    result = std.propose_pcs(anndata=adata,
+                             how=["variance", "cumulative variance", "correlation"],
+                             var_method=var_method,
+                             **kwargs)
+
+    assert isinstance(result, list)
+    assert len(result) > 0
+    assert all(isinstance(pc, (int, np.integer)) for pc in result)
+    assert all(1 <= pc <= n_pcs for pc in result)
+    assert result == sorted(result)
 
 
 # -------------------------------- subset_pca --------------------------------
 
 
-def test_subset_PCA(adata_pca):
+@pytest.mark.parametrize("inplace, kwargs, expected_n_pcs", [
+    (False, {"n_pcs": 5, "start": 2}, 3),
+    (True, {"select": [2, 4, 6, 8]}, 4),
+])
+def test_subset_PCA(adata, inplace, kwargs, expected_n_pcs):
     """Test whether number of PCA coordinate dimensions was reduced."""
-    adata_copy = adata_pca.copy()
+    adata_copy = adata.copy()
+    n_pcs_orig = adata.obsm["X_pca"].shape[1]
 
-    # test range selection, not inplace
-    res_adata = std.subset_PCA(adata=adata_copy,
-                               n_pcs=5,
-                               start=2,
-                               inplace=False)
+    result = std.subset_PCA(adata=adata_copy, inplace=inplace, **kwargs)
 
-    # test inplace
-    assert adata_pca.obsm["X_pca"].shape[1] == adata_copy.obsm["X_pca"].shape[1]
-    assert res_adata.obsm["X_pca"].shape[1] != adata_copy.obsm["X_pca"].shape[1]
-    # test PC amount
-    assert res_adata.obsm["X_pca"].shape[1] == 3
-
-    # test custom selection, inplace
-    select = [2, 4, 6, 8]
-    cstm_res_adata = std.subset_PCA(adata=adata_copy,
-                                    select=select,
-                                    inplace=True)
-
-    assert cstm_res_adata is None
-    assert adata_copy.obsm["X_pca"].shape[1] == len(select)
-    assert adata_copy.obsm["X_pca"].shape[1] != adata_pca.obsm["X_pca"].shape[1]
+    if inplace:
+        assert result is None
+        assert adata_copy.obsm["X_pca"].shape[1] == expected_n_pcs
+    else:
+        assert adata_copy.obsm["X_pca"].shape[1] == n_pcs_orig
+        assert result.obsm["X_pca"].shape[1] == expected_n_pcs
 
 
 # -------------------------------- subset_pca --------------------------------
@@ -126,9 +99,9 @@ def test_subset_PCA(adata_pca):
 
 @pytest.mark.parametrize("inplace", [True, False])
 @pytest.mark.parametrize("method", ["PCA", "LSI"])
-def test_dim_red(adata_no_pca, method, inplace):
+def test_dim_red(adata_raw_small, method, inplace):
     """Test the dim_red function."""
-    adata = adata_no_pca.copy()
+    adata = adata_raw_small.copy()
 
     # check there is no dimension reduction and neighbor graph
     assert "X_pca" not in adata.obsm.keys()

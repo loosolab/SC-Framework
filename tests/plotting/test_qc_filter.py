@@ -1,149 +1,21 @@
 """Test qc_filter plotting function."""
 
 import pytest
+import ipywidgets
 import sctoolbox.plotting.qc_filter as pl
 import sctoolbox.tools.insertsize as insertsize
 import os
-import scanpy as sc
 import shutil
 import numpy as np
 import glob
+import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import functools
-import ipywidgets as widgets
 
 from beartype.roar import BeartypeCallHintParamViolation
 
-
-# ------------------------------ FIXTURES --------------------------------- #
-
-
 quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
-
-
-@pytest.fixture
-def slider():
-    """Create a slider widget.
-
-    Returns
-    -------
-    ipywidgets.FloatRangeSlider
-        Slider widget with default range.
-    """
-    return widgets.FloatRangeSlider(value=[5, 7], min=0, max=10, step=1)
-
-
-@pytest.fixture
-def slider_list(slider):
-    """Create a list of slider widgets.
-
-    Returns
-    -------
-    list
-        List of slider widgets.
-    """
-    return [slider for _ in range(2)]
-
-
-@pytest.fixture
-def checkbox():
-    """Create a checkbox widget.
-
-    Returns
-    -------
-    ipywidgets.Checkbox
-        Checkbox widget.
-    """
-    return widgets.Checkbox()
-
-
-@pytest.fixture
-def slider_dict(slider):
-    """Create a dict of sliders.
-
-    Returns
-    -------
-    dict
-        Dictionary mapping column names to sliders.
-    """
-    return {c: slider for c in ['LISI_score_pca', 'qc_float']}
-
-
-@pytest.fixture
-def slider_dict_grouped(slider):
-    """Create a nested dict of slider widgets.
-
-    Returns
-    -------
-    dict
-        Nested dictionary mapping columns to groups to sliders.
-    """
-    return {c: {g: slider for g in ['C1', 'C2', 'C3']} for c in ['LISI_score_pca', 'qc_float']}
-
-
-@pytest.fixture
-def slider_dict_grouped_diff(slider):
-    """Create a nested dict of slider widgets with different selections.
-
-    Returns
-    -------
-    dict
-        Nested dictionary with varied slider configurations.
-    """
-    return {"A": {"1": slider, "2": widgets.FloatRangeSlider(value=[1, 5], min=0, max=10, step=1)},
-            "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
-
-
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
-    """Load and returns an anndata object.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with QC metrics.
-    """
-
-    np.random.seed(1)  # set seed for reproducibility
-
-    adata = sc.datasets.pbmc3k_processed()
-    adata.raw = None
-
-    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-    adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-    adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-    adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-    adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-    adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-    adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-    adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-    # sc.pp.normalize_total(adata, target_sum=None)
-    # sc.pp.log1p(adata)
-
-    # sc.tl.umap(adata, n_components=3)  # to have more than two components available
-    # sc.tl.tsne(adata)
-    # sc.tl.pca(adata)
-    # sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-    # sc.tl.dendrogram(adata, groupby='clustering')
-
-    return adata
-
-
-@pytest.fixture
-def atac_adata():
-    """Fixture for an AnnData object.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object.
-    """
-    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
-    return adata
 
 
 # ------------------------------ TESTS --------------------------------- #
@@ -157,14 +29,14 @@ def test_plot_starsolo_quality(order):
     assert isinstance(res, np.ndarray)
 
 
-def test_plot_starsolo_quality_failure():
+@pytest.mark.parametrize("folder,kwargs,exception,match", [
+    ("invalid", {}, ValueError, "No STARsolo summary files found in folder*"),
+    (quant_folder, {"measures": ["invalid"]}, KeyError, "Measure .* not found in summary table"),
+])
+def test_plot_starsolo_quality_failure(folder, kwargs, exception, match):
     """Test plot_starsolo_quality failure with invalid input."""
-
-    with pytest.raises(ValueError, match="No STARsolo summary files found in folder*"):
-        pl.plot_starsolo_quality("invalid")
-
-    with pytest.raises(KeyError, match="Measure .* not found in summary table"):
-        pl.plot_starsolo_quality(quant_folder, measures=["invalid"])
+    with pytest.raises(exception, match=match):
+        pl.plot_starsolo_quality(folder, **kwargs)
 
 
 def test_plot_starsolo_UMI():
@@ -174,21 +46,17 @@ def test_plot_starsolo_UMI():
     assert isinstance(res, np.ndarray)
 
 
-def test_plot_starsolo_UMI_failure():
+def test_plot_starsolo_UMI_failure(tmp_path):
     """Test plot_starsolo_UMI failure with invalid input."""
 
     # Create a quant folder without UMI files
-    shutil.copytree(quant_folder, "quant_without_UMI", dirs_exist_ok=True)
-    UMI_files = glob.glob("quant_without_UMI/*/solo/Gene/UMI*")
-    for file in UMI_files:
+    quant_without_UMI = str(tmp_path / "quant_without_UMI")
+    shutil.copytree(quant_folder, quant_without_UMI, dirs_exist_ok=True)
+    for file in glob.glob(f"{quant_without_UMI}/*/solo/Gene/UMI*"):
         os.remove(file)
 
-    # Test that valueerror is raised
     with pytest.raises(ValueError, match="No UMI files found in folder*"):
-        pl.plot_starsolo_UMI("quant_without_UMI")
-
-    # remove folder
-    shutil.rmtree("quant_without_UMI")
+        pl.plot_starsolo_UMI(quant_without_UMI)
 
 
 @pytest.mark.parametrize("groupby", [None, "condition"])
@@ -196,7 +64,7 @@ def test_plot_starsolo_UMI_failure():
 def test_n_cells_barplot(adata, groupby, add_labels):
     """Test n_cells_barplot success."""
 
-    axarr = pl.n_cells_barplot(adata, "clustering", groupby=groupby, add_labels=add_labels)
+    axarr = pl.n_cells_barplot(adata, "louvain", groupby=groupby, add_labels=add_labels)
 
     if groupby is None:
         assert len(axarr) == 1
@@ -204,35 +72,28 @@ def test_n_cells_barplot(adata, groupby, add_labels):
         assert len(axarr) == 2
 
 
-def test_group_correlation(adata):
+def test_group_correlation(adata, tmp_path):
     """Test if plot is written to pdf."""
-
-    # Run group correlation
-    pl.group_correlation(adata, groupby="condition", save="group_correlation.pdf")
-
-    # Assert creation of file
-    assert os.path.isfile("group_correlation.pdf")
-    os.remove("group_correlation.pdf")
+    save_path = tmp_path / "group_correlation.pdf"
+    pl.group_correlation(adata, groupby="condition", save=str(save_path))
+    assert save_path.is_file()
 
 
-def test_insertsize_plotting(atac_adata):
+def test_insertsize_plotting(adata_atac, atac_fragments):
     """Test if insertsize plotting works."""
 
-    adata = atac_adata.copy()
-    fragments = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac_fragments.bed')
-    insertsize.add_insertsize(adata, fragments=fragments)
+    insertsize.add_insertsize(adata_atac, fragments=atac_fragments)
 
-    ax = pl.plot_insertsize(adata)
+    ax = pl.plot_insertsize(adata_atac)
 
-    ax_type = type(ax).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
 def test_link_sliders(slider_list):
     """Test _link_sliders success."""
     linkage_list = pl._link_sliders(slider_list)
     assert isinstance(linkage_list, list)
-    assert type(linkage_list[0]).__name__ == 'link'
+    assert isinstance(linkage_list[0], ipywidgets.link)
 
 
 @pytest.mark.parametrize("global_threshold", [True, False])
@@ -242,14 +103,12 @@ def test_toggle_linkage(checkbox, slider_list, global_threshold):
     linkage_dict = dict()
     linkage_dict[column] = pl._link_sliders(slider_list) if global_threshold is True else None
     checkbox.observe(functools.partial(pl._toggle_linkage, linkage_dict=linkage_dict, slider_list=slider_list, key=column), names=["value"])
-    assert True
 
 
 def test_update_threshold(slider):
     """Test if update_threshold runs without error."""
     fig, _ = plt.subplots()
     slider.observe(functools.partial(pl._update_thresholds, fig=fig, min_line=1, min_shade=1, max_line=1, max_shade=1), names=["value"])
-    assert True
 
 
 @pytest.mark.parametrize("columns, which, groupby", [(['qc_float', 'LISI_score_pca'], "obs", "condition"),
@@ -261,20 +120,20 @@ def test_quality_violin(adata, groupby, columns, which, title, color_list):
     """Test quality_violin success."""
     figure, slider = pl.quality_violin(adata, columns=columns, groupby=groupby,
                                        which=which, title=title, color_list=color_list)
-    assert type(figure).__name__ == "Figure"
+    assert isinstance(figure, matplotlib.figure.Figure)
     assert isinstance(slider, dict)
 
 
-def test_quality_violin_fail(adata):
+@pytest.mark.parametrize("kwargs,exception,match", [
+    ({"columns": ["qc_float"], "which": "Invalid"}, BeartypeCallHintParamViolation, None),
+    ({"groupby": "condition", "columns": ["qc_float"], "color_list": sns.color_palette("Set1", 1)}, ValueError, "Increase the color_list variable"),
+    ({"groupby": "condition", "columns": ["qc_float"], "header": []}, ValueError, "Length of header does not match"),
+    ({"columns": ["Invalid"]}, ValueError, "The following columns from 'columns' were not found"),
+])
+def test_quality_violin_fail(adata, kwargs, exception, match):
     """Test quality_violin failure."""
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.quality_violin(adata, columns=["qc_float"], which="Invalid")
-    with pytest.raises(ValueError, match="Increase the color_list variable"):
-        pl.quality_violin(adata, groupby="condition", columns=["qc_float"], color_list=sns.color_palette("Set1", 1))
-    with pytest.raises(ValueError, match="Length of header does not match"):
-        pl.quality_violin(adata, groupby="condition", columns=["qc_float"], header=[])
-    with pytest.raises(ValueError, match="The following columns from 'columns' were not found"):
-        pl.quality_violin(adata, columns=["Invalid"])
+    with pytest.raises(exception, match=match):
+        pl.quality_violin(adata, **kwargs)
 
 
 def test_get_slider_thresholds_dict(slider_dict):
@@ -327,7 +186,11 @@ def test_upset_select_cells(adata, thresholds, expected):
     assert expected == (sample_selection == global_selection).all().all()
 
 
-def test_upset_select_cells_fail(adata):
+@pytest.mark.parametrize("groupby,match", [
+    (None, "Parameter groupby is set to None while threshold*"),
+    ("louvain", "Wrong group selection.*"),
+])
+def test_upset_select_cells_fail(adata, groupby, match):
     """Test upset_select_cells fail."""
     grouped_thresholds = {
         'qcvar1': {'C1': {'min': 0.1, 'max': 0.9},
@@ -337,14 +200,11 @@ def test_upset_select_cells_fail(adata):
                    'C2': {'min': 0.2, 'max': 0.8},
                    'C3': {'min': 0.2, 'max': 0.8}}
     }
-
-    with pytest.raises(ValueError, match="Parameter groupby is set to None while threshold*"):
-        pl._upset_select_cells(adata, grouped_thresholds, groupby=None)
-
-    with pytest.raises(ValueError, match="Wrong group selection.*"):
-        pl._upset_select_cells(adata, grouped_thresholds, groupby="clustering")
+    with pytest.raises(ValueError, match=match):
+        pl._upset_select_cells(adata, grouped_thresholds, groupby=groupby)
 
 
+@pytest.mark.parametrize("limit_combinations", [None, 2])
 @pytest.mark.parametrize("thresholds, groupby", [({'qcvar1': {'min': 0.1, 'max': 0.9},
                                                    'qcvar2': {'min': 0.2, 'max': 0.8}}, None),
                                                  ({'qcvar1': {'C1': {'min': 0.1, 'max': 0.9},
@@ -354,26 +214,13 @@ def test_upset_select_cells_fail(adata):
                                                               'C2': {'min': 0.2, 'max': 0.8},
                                                               'C3': {'min': 0.2, 'max': 0.8}}
                                                    }, 'condition')])
-def test_upset_plot_filter_impacts(adata, thresholds, groupby):
+def test_upset_plot_filter_impacts(adata, thresholds, groupby, limit_combinations):
     """Test upset_plot_filter_impacts success."""
-    plot_result = pl.upset_plot_filter_impacts(adata, thresholds=thresholds, groupby=groupby)
+    plot_result = pl.upset_plot_filter_impacts(adata, thresholds=thresholds, groupby=groupby,
+                                               limit_combinations=limit_combinations)
 
     assert isinstance(plot_result, dict)
     assert list(plot_result.keys()) == ['matrix', 'shading', 'totals', 'intersections']
-    ax_type = type(plot_result['matrix']).__name__
-    assert ax_type.startswith("Axes")
-    ax_type = type(plot_result['shading']).__name__
-    assert ax_type.startswith("Axes")
-    ax_type = type(plot_result['intersections']).__name__
-    assert ax_type.startswith("Axes")
-
-    plot_result = pl.upset_plot_filter_impacts(adata, thresholds=thresholds, groupby=groupby, limit_combinations=2)
-
-    assert isinstance(plot_result, dict)
-    assert list(plot_result.keys()) == ['matrix', 'shading', 'totals', 'intersections']
-    ax_type = type(plot_result['matrix']).__name__
-    assert ax_type.startswith("Axes")
-    ax_type = type(plot_result['shading']).__name__
-    assert ax_type.startswith("Axes")
-    ax_type = type(plot_result['intersections']).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(plot_result['matrix'], matplotlib.axes.Axes)
+    assert isinstance(plot_result['shading'], matplotlib.axes.Axes)
+    assert isinstance(plot_result['intersections'], matplotlib.axes.Axes)

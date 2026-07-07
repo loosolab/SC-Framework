@@ -199,8 +199,10 @@ def fc_fragments_in_regions(adata: sc.AnnData,  # noqa: C901
     column_name = f'fold_change_{regions_name}_fragments'  # name of the new column
     merged_df[column_name] = merged_df['count_ov'] / merged_df['count_all']  # calculate fold change (Maybe better to use log2 fold change?)
 
-    # fill NaN with 0 as NaN means no fragments in that cell
-    merged_df = merged_df.fillna(0)
+    # fill NaN with 0 as NaN means no fragments in that cell (opt in to the
+    # future no-silent-downcasting behaviour to avoid the pandas FutureWarning)
+    with pd.option_context("future.no_silent_downcasting", True):
+        merged_df = merged_df.fillna(0).infer_objects(copy=False)
 
     # add to adata.obs
     logger.info('Adding results to adata object...')

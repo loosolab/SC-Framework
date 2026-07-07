@@ -1,7 +1,6 @@
 """Test norm correct functions."""
 
 import pytest
-import os
 import scanpy as sc
 import numpy as np
 import anndata as ad
@@ -12,39 +11,21 @@ import sctoolbox.utils as utils
 # ------------------------- Fixtures -------------------------#
 
 
-@pytest.fixture(scope="session")
-def adata():
-    """Load and returns an anndata object.
-
-    Returns
-    -------
-    anndata.AnnData
-        RNA-seq AnnData object with batch annotation and highly variable genes.
-    """
-
-    f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
-    adata = sc.read_h5ad(f)
-
-    # Add batch column
-    adata.obs['batch'] = ["a", "b"] * 100
-    adata.obs['batch2'] = (["c", "d", "e"] * 100)[:len(adata.obs)]
-
-    sc.pp.highly_variable_genes(adata)
-
-    return adata
-
-
 @pytest.fixture
-def adata_mm10():
-    """Fixture for an AnnData object.
+def adata_with_batch(adata_fun_scope):
+    """Return an AnnData with batch annotation and highly variable genes.
 
     Returns
     -------
     anndata.AnnData
-        ATAC-seq AnnData object.
+        AnnData object with batch annotation and highly variable genes.
     """
-    adata_mm10 = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad'))
-    return adata_mm10
+    adata_fun_scope.obs['batch'] = (["a", "b"] * ((len(adata_fun_scope) // 2) + 1))[:len(adata_fun_scope)]
+    adata_fun_scope.obs['batch2'] = (["c", "d", "e"] * ((len(adata_fun_scope) // 3) + 1))[:len(adata_fun_scope)]
+
+    sc.pp.highly_variable_genes(adata_fun_scope)
+
+    return adata_fun_scope
 
 
 # adapted from muon package
@@ -64,7 +45,7 @@ def tfidf_x():
 
 
 @pytest.fixture
-def adata_batch_dict(adata):
+def adata_batch_dict(adata_with_batch):
     """Create dict containing adata with a batch column in obs.
 
     Returns
@@ -72,7 +53,7 @@ def adata_batch_dict(adata):
     dict
         Dictionary with AnnData object containing batch information.
     """
-    anndata_batch_dict = adata.copy()
+    anndata_batch_dict = adata_with_batch.copy()
 
     return {'adata': anndata_batch_dict}
 
@@ -81,9 +62,13 @@ def adata_batch_dict(adata):
 
 
 @pytest.mark.parametrize("method", ["tfidf", "total"])
-def test_normalize_adata_success(adata_mm10, method):
+def test_normalize_adata_success(adata_atac, method):
     """Test normalize_adata success."""
-    adata_norm = tools.norm_correct.normalize_adata(adata_mm10, method=method, target_sum=1e6)  # return from function is a dict
+    # The assertions only check for presence of the dim-reduction keys, so a small
+    # subset suffices. Both dimensions stay > the default n_comps (50) so the
+    # LSI/SVD (svds k < min(shape)) and PCA paths remain valid.
+    adata_sub = adata_atac[:100, :200].copy()
+    adata_norm = tools.norm_correct.normalize_adata(adata_sub, method=method, target_sum=1e6)  # return from function is a dict
 
     if method == "tfidf":
         assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
@@ -92,8 +77,9 @@ def test_normalize_adata_success(adata_mm10, method):
 
 
 @pytest.mark.parametrize("method, keep_layer", [(["total", "tfidf"], "raw"), ("total", None), ("tfidf", "test")])
-def test_normalize_adata(adata, method, keep_layer):
+def test_normalize_adata(adata_raw_small, method, keep_layer):
     """Test that data was normalized."""
+    adata = adata_raw_small.copy()
     # Execute function
     result = tools.norm_correct.normalize_adata(adata, method=method, keep_layer=keep_layer, target_sum=1e6)
     # If method is a list, get the first element of the resulting dictionary
@@ -132,11 +118,11 @@ def test_tfidf(tfidf_x):
     assert str("%.3f" % tfidf_x.layers["test"][3, 0]) == "4.770"
 
 
-def test_wrap_corrections(adata):
+def test_wrap_corrections(adata_with_batch):
     """Test if wrapper returns a dict, and that the keys contains the given methods."""
 
     methods = ["mnn", "scanorama"]  # two fastest methods
-    adata_dict = tools.norm_correct.wrap_corrections(adata, batch_key="batch", methods=methods, keep_layer="test")
+    adata_dict = tools.norm_correct.wrap_corrections(adata_with_batch, batch_key="batch", methods=methods, keep_layer="test")
 
     assert isinstance(adata_dict, dict)
 
@@ -148,20 +134,20 @@ def test_wrap_corrections(adata):
 
 
 @pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])  # TODO excluded "scvi" due to runtime; may be mocked in the future
-def test_batch_correction(adata, method):
+def test_batch_correction(adata_with_batch, method):
     """Test if batch correction returns an anndata."""
 
-    adata_corrected = tools.norm_correct.batch_correction(adata, batch_key="batch", method=method)
+    adata_corrected = tools.norm_correct.batch_correction(adata_with_batch, batch_key="batch", method=method)
     assert isinstance(adata_corrected, sc.AnnData)
     # assert the returned adata is a different object
     # this is a workaround to test if the original adata was modified
-    assert adata is not adata_corrected
+    assert adata_with_batch is not adata_corrected
 
 
 @pytest.mark.parametrize("key", ["batch", ["batch", "batch2"]])
-def test_evaluate_batch_effect(adata, key):
+def test_evaluate_batch_effect(adata_with_batch, key):
     """Test if AnnData containing LISI column in .obs is returned."""
-    ad = tools.norm_correct.evaluate_batch_effect(adata, batch_key=key)
+    ad = tools.norm_correct.evaluate_batch_effect(adata_with_batch, batch_key=key)
 
     ad_type = type(ad).__name__
     assert ad_type == "AnnData"
@@ -169,21 +155,18 @@ def test_evaluate_batch_effect(adata, key):
 
 
 @pytest.mark.parametrize("key", ["a", "b"])
-def test_evaluate_batch_effect_keyerror(adata, key):
+def test_evaluate_batch_effect_keyerror(adata_with_batch, key):
     """Test evaluate_batch_effect failure."""
     with pytest.raises(KeyError, match="adata.obsm .*"):
-        tools.norm_correct.evaluate_batch_effect(adata, batch_key='batch', obsm_key=key)
+        tools.norm_correct.evaluate_batch_effect(adata_with_batch, batch_key='batch', obsm_key=key)
 
     with pytest.raises(KeyError, match="adata.obs .*"):
-        tools.norm_correct.evaluate_batch_effect(adata, batch_key=key)
+        tools.norm_correct.evaluate_batch_effect(adata_with_batch, batch_key=key)
 
 
 @pytest.mark.parametrize("key", ["batch", ["batch", "batch2"]])
 def test_wrap_batch_evaluation(adata_batch_dict, key):
     """Test if DataFrame containing LISI column in .obs is returned."""
     adata_dict = tools.norm_correct.wrap_batch_evaluation(adata_batch_dict, key, inplace=False)
-    adata_dict_type = type(adata_dict).__name__
-    adata_type = type(adata_dict['adata']).__name__
-
-    assert adata_dict_type == "dict"
-    assert adata_type == "AnnData"
+    assert isinstance(adata_dict, dict)
+    assert isinstance(adata_dict['adata'], sc.AnnData)

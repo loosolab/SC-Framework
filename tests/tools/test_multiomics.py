@@ -1,31 +1,16 @@
 """Test multiomics functions."""
 
 import pytest
-import os
 import anndata
-import scanpy as sc
 import numpy as np
 import muon as mu
 import pandas as pd
+import scanpy as sc
 
 import sctoolbox.tools.multiomics as multi
 
 
 # ------------------------- FIXTURES -------------------------#
-
-
-@pytest.fixture
-def adata():
-    """Load and returns an anndata object.
-
-    Returns
-    -------
-    anndata.AnnData
-        RNA-seq AnnData object.
-    """
-    f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
-
-    return sc.read_h5ad(f)
 
 
 @pytest.fixture
@@ -38,8 +23,9 @@ def adata2(adata):
         Copy of AnnData object with mock PCA and UMAP embeddings.
     """
     adata2 = adata.copy()
-    adata2.obsm['X_pca'] = np.random.uniform(low=-3, high=3, size=(200, 50))
-    adata2.obsm['X_umap'] = np.random.uniform(low=-30, high=70, size=(200, 3))
+    n_obs = adata2.n_obs
+    adata2.obsm['X_pca'] = np.random.uniform(low=-3, high=3, size=(n_obs, 50))
+    adata2.obsm['X_umap'] = np.random.uniform(low=-30, high=70, size=(n_obs, 3))
     return adata2
 
 
@@ -149,11 +135,9 @@ def test_deep_merge_anndata(adata, adata2):
         m_index = list(merged_adata.obs.index).index(cell_id)
         r_index = list(adata.obs.index).index(cell_id)
         c_index = list(adata2.obs.index).index(cell_id)
-        m = merged_adata.X.tocsr()[m_index, :].todense().tolist()[0]
-        r = adata.X.tocsr()[r_index, :].todense().tolist()[0]
-        c = adata2.X.tocsr()[c_index, :].todense().tolist()[0]
-
-        adata2.obsm["X_umap"][c_index]
+        m = np.asarray(merged_adata.X[m_index, :]).flatten().tolist()
+        r = np.asarray(adata.X[r_index, :]).flatten().tolist()
+        c = np.asarray(adata2.X[c_index, :]).flatten().tolist()
 
         assert (list(merged_adata.obsm["X_1_umap"][m_index]) == list(adata.obsm["X_umap"][r_index]))
         assert (list(merged_adata.obsm["X_2_umap"][m_index]) == list(adata2.obsm["X_umap"][c_index]))
