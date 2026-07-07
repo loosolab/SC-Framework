@@ -2,15 +2,15 @@
 
 import pytest
 import os
-import shutil
 import glob
 import logging
-import scanpy as sc
 import random
 import re
 from contextlib import contextmanager
 
+import pysam
 import sctoolbox.tools.bam as stb
+from tests.conftest import ATAC_DATA_DIR
 
 # ---------------------------- HELPER ------------------------------- #
 
@@ -28,19 +28,7 @@ def add_logger_handler(logger, handler):
 
 
 @pytest.fixture
-def bam_file():
-    """Fixture pointing to test bam.
-
-    Returns
-    -------
-    str
-        Path to test BAM file.
-    """
-    return os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.bam')
-
-
-@pytest.fixture
-def bam_handle(bam_file):
+def bam_handle(atac_bam_file):
     """Fixture for a bam file handle.
 
     Returns
@@ -48,13 +36,11 @@ def bam_handle(bam_file):
     pysam.AlignmentFile
         BAM file handle.
     """
-    handle = stb.open_bam(bam_file, "rb")
-
-    return handle
+    return stb.open_bam(atac_bam_file, "rb")
 
 
 @pytest.fixture
-def barcodes(bam_file, bam_handle):
+def barcodes(atac_bam_file, bam_handle):
     """Return 100 randomly selected barcodes.
 
     Returns
@@ -63,7 +49,7 @@ def barcodes(bam_file, bam_handle):
         List of 100 randomly selected cell barcodes.
     """
     # bam_handle is not used to avoid consuming the iterator
-    read_count = stb.open_bam(bam_file, "rb").count()
+    read_count = stb.open_bam(atac_bam_file, "rb").count()
 
     # select random indexes
     indices = random.sample(range(0, read_count), k=100)
@@ -71,89 +57,46 @@ def barcodes(bam_file, bam_handle):
     return [read.get_tag("CB") for index, read in enumerate(bam_handle) if index in indices]
 
 
-@pytest.fixture(scope="session")
-def adata():
-    """Load and returns an anndata object.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object.
-    """
-
-    # has .X of type numpy.array
-    obj = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
-
-    return obj
-
-
-@pytest.fixture
-def adata_atac():
-    """Load atac adata.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object.
-    """
-    adata_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad')
-    return sc.read_h5ad(adata_f)
-
-
-@pytest.fixture
-def adata_atac_emptyvar(adata_atac):
-    """Create adata with empty adata.var.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object with empty var DataFrame.
-    """
-    adata = adata_atac.copy()
-    adata.var = adata.var.drop(columns=adata.var.columns)
-    return adata
-
-
 # ------------------------------ TESTS --------------------------------- #
 
 
-def test_bam_adata_ov(adata_atac, bam_file):
+def test_bam_adata_ov(adata_atac, atac_bam_file):
     """Test bam_adata_ov success."""
-    hitrate = stb.bam_adata_ov(adata_atac, bam_file, cb_tag='CB')
+    hitrate = stb.bam_adata_ov(adata_atac, atac_bam_file, cb_tag='CB')
     assert hitrate >= 0.10
 
 
-def test_check_barcode_tag(adata, bam_file, mocker, caplog):
+def test_check_barcode_tag(adata_atac, atac_bam_file, mocker, caplog):
     """Tests the barcode overlap amount between adata and bam file."""
     with caplog.at_level(logging.INFO), add_logger_handler(stb.logger, caplog.handler):
         # test overlap == 0%
         mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0)
-        stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+        stb.check_barcode_tag(adata=adata_atac, bamfile=atac_bam_file, cb_tag="CB")
         assert 'None of the barcodes from the bamfile found in the .obs table.\nConsider if you are using the wrong column cb-tag or bamfile.' in caplog.text
 
         # test overlap <= 5%
         mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.05)
-        stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+        stb.check_barcode_tag(adata=adata_atac, bamfile=atac_bam_file, cb_tag="CB")
         assert 'Only 5% or less of the barcodes from the bamfile found in the .obs table.\nConsider if you are using the wrong column for cb-tag or bamfile.' in caplog.text
 
         # test overlap > 5%
         mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.8)
-        stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+        stb.check_barcode_tag(adata=adata_atac, bamfile=atac_bam_file, cb_tag="CB")
         assert 'Barcode tag: OK' in caplog.text
 
         # test overlap error (TODO don't know how this could be triggered)
         with pytest.raises(ValueError):
             mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=float("nan"))
-            stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+            stb.check_barcode_tag(adata=adata_atac, bamfile=atac_bam_file, cb_tag="CB")
 
 
-def test_subset_bam(bam_file, barcodes, caplog, tmpdir):
+def test_subset_bam(atac_bam_file, barcodes, caplog, tmpdir):
     """Check the subset_bam function."""
     outfile = tmpdir / "subset.bam"
 
     with add_logger_handler(stb.logger, caplog.handler):
         # check success
-        stb.subset_bam(bam_in=bam_file,
+        stb.subset_bam(bam_in=atac_bam_file,
                        bam_out=str(outfile),
                        barcodes=barcodes,
                        read_tag="CB",
@@ -164,7 +107,7 @@ def test_subset_bam(bam_file, barcodes, caplog, tmpdir):
         assert outfile.isfile()
 
         # check overwrite warning
-        stb.subset_bam(bam_in=bam_file,
+        stb.subset_bam(bam_in=atac_bam_file,
                        bam_out=str(outfile),
                        barcodes=barcodes,
                        read_tag="CB",
@@ -175,45 +118,42 @@ def test_subset_bam(bam_file, barcodes, caplog, tmpdir):
 
 
 @pytest.mark.parametrize("parallel,sort_bams,index_bams", [(True, True, True), (False, False, False)])
-def test_split_bam_clusters(bam_handle, bam_file, adata, parallel, sort_bams, index_bams):
+def test_split_bam_clusters(bam_handle, atac_bam_file, adata_atac, parallel, sort_bams, index_bams, tmp_path):
     """Test split_bam_clusters success."""
     # Get input reads
     n_reads_input = stb.get_bam_reads(bam_handle)
 
     # Split bam
-    stb.split_bam_clusters(adata, bam_file, groupby="Sample", parallel=parallel, sort_bams=sort_bams, index_bams=index_bams, writer_threads=len(set(adata.obs["Sample"])) + 1)
+    output_prefix = str(tmp_path / "split_")
+    stb.split_bam_clusters(adata_atac, atac_bam_file, groupby="Sample", parallel=parallel, sort_bams=sort_bams, index_bams=index_bams, writer_threads=len(set(adata_atac.obs["Sample"])) + 1, output_prefix=output_prefix)
 
     # Check if the bam file is split and the right size
-    output_bams = glob.glob("split_Sample*.bam")
+    output_bams = glob.glob(str(tmp_path / "split_Sample*.bam"))
     handles = [stb.open_bam(f, "rb") for f in output_bams]
     n_reads_output = sum([stb.get_bam_reads(handle) for handle in handles])
 
     assert n_reads_input == n_reads_output  # this is true because all groups are represented in the bam
 
-    # Clean up
-    for bam in output_bams:
-        os.remove(bam)
 
-
-def test_failure_split_bam_clusters(bam_file, adata):
+def test_failure_split_bam_clusters(atac_bam_file, adata_atac):
     """Test split_bam_clusters failure."""
     # test groupby
     with pytest.raises(ValueError):
-        stb.split_bam_clusters(adata, bam_file, groupby="SOME_NONEXISTENT_COLUMN_NAME")
+        stb.split_bam_clusters(adata_atac, atac_bam_file, groupby="SOME_NONEXISTENT_COLUMN_NAME")
 
     # test barcode_col
     with pytest.raises(ValueError):
-        stb.split_bam_clusters(adata, bam_file, groupby="Sample", barcode_col="SOME_NONEXISTENT_TAG")
+        stb.split_bam_clusters(adata_atac, atac_bam_file, groupby="Sample", barcode_col="SOME_NONEXISTENT_TAG")
 
     # test sort_bam/index_bam
     with pytest.raises(ValueError):
-        stb.split_bam_clusters(adata, bam_file, groupby="Sample", sort_bams=False, index_bams=True)
+        stb.split_bam_clusters(adata_atac, atac_bam_file, groupby="Sample", sort_bams=False, index_bams=True)
 
 
 def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.bam.open_bam
     """Test open_bam success."""
 
-    assert type(bam_handle).__name__ == "AlignmentFile"
+    assert isinstance(bam_handle, pysam.AlignmentFile)
 
 
 def test_get_bam_reads(bam_handle):
@@ -224,31 +164,47 @@ def test_get_bam_reads(bam_handle):
     assert total == 10000
 
 
-def test_bam_to_bigwig():
+def test_bam_to_bigwig(atac_bam_file, tmp_path):
     """Test whether the bigwig is written."""
 
-    bigwig_out = "mm10_atac.bw"
+    # Build a small single-chromosome BAM first: all reads in mm10_atac.bam map
+    # to chr1 below ~4 Mb, but the header declares the full mm10 genome (66
+    # contigs, ~2.7 Gb), which makes bedtools genomecov allocate coverage arrays
+    # over the whole genome and dominate the runtime. A truncated chr1 header
+    # keeps the conversion fast without weakening the output-exists assertion.
+    # Mate references are cleared as they are irrelevant to genomecov coverage.
+    small_bam = str(tmp_path / "mm10_atac_chr1.bam")
+    header = {"HD": {"VN": "1.6", "SO": "coordinate"},
+              "SQ": [{"SN": "chr1", "LN": 4_000_000}]}
+    with pysam.AlignmentFile(atac_bam_file, "rb") as inbam, \
+            pysam.AlignmentFile(small_bam, "wb", header=header) as outbam:
+        for read in inbam.fetch("chr1"):
+            read_dict = read.to_dict()
+            read_dict["next_ref_name"] = "*"
+            read_dict["next_ref_pos"] = "0"
+            outbam.write(pysam.AlignedSegment.from_dict(read_dict, outbam.header))
+    pysam.index(small_bam)
 
-    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.bam')
-    bigwig_f = stb.bam_to_bigwig(bam_f, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
+    bigwig_out = str(tmp_path / "mm10_atac.bw")
+    bigwig_f = stb.bam_to_bigwig(small_bam, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
 
     assert os.path.exists(bigwig_f)
 
-    os.remove(bigwig_out)
 
-
-@pytest.mark.parametrize("bam_name, outdir, barcode_regex",
-                         [('mm10_atac', None, None),
-                          ('homo_sapiens_liver', 'fragment_file_output', "[^.]*"),
-                          ('homo_sapiens_liver_sorted', None, "[^.]*")])
-def test_create_fragment_file(bam_name, outdir, barcode_regex):
+@pytest.mark.parametrize("bam_name, use_outdir, barcode_regex",
+                         [('mm10_atac', False, None),
+                          ('homo_sapiens_liver', True, "[^.]*"),
+                          ('homo_sapiens_liver_sorted', False, "[^.]*")])
+def test_create_fragment_file(bam_name, use_outdir, barcode_regex, tmp_path):
     """Test create_fragment_file success."""
 
     barcode_tag = "CB"
     if barcode_regex:
         barcode_tag = None
 
-    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', bam_name + ".bam")
+    outdir = str(tmp_path / "fragment_file_output") if use_outdir else str(tmp_path)
+
+    bam_f = os.path.join(ATAC_DATA_DIR, bam_name + ".bam")
     fragments_f = stb.create_fragment_file(bam=bam_f,
                                            nproc=1,
                                            outdir=outdir,
@@ -256,27 +212,19 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
                                            barcode_regex=barcode_regex,  # homo_sapiens_liver has the barcode in the read name
                                            index=True)  # requires bgzip and tabix
 
-    outdir_fmt = os.path.dirname(bam_f) if outdir is None else outdir
-    expected = os.path.join(outdir_fmt, bam_name + "_fragments.tsv")
+    expected = os.path.join(outdir, bam_name + "_fragments.tsv")
 
     assert fragments_f == expected and os.path.isfile(fragments_f) and os.stat(fragments_f).st_size > 0
 
-    # Clean up framgnets and output folder (if created)
-    os.remove(fragments_f)
-    if outdir is not None:
-        shutil.rmtree(outdir)
 
-
-def test_create_fragment_file_multiprocessing():
+def test_create_fragment_file_multiprocessing(tmp_path):
     """Assert that the result is the same regardless of number of cores used."""
 
-    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'homo_sapiens_liver_sorted.bam')
+    bam_f = os.path.join(ATAC_DATA_DIR, 'homo_sapiens_liver_sorted.bam')
 
     n_fragments = []
     for nproc in [1, 4]:
-        fragments_f = stb.create_fragment_file(bam=bam_f, nproc=nproc, barcode_tag=None, barcode_regex="[^.]*")  # homo_sapiens_liver has the barcode in the read name
+        fragments_f = stb.create_fragment_file(bam=bam_f, nproc=nproc, outdir=str(tmp_path), barcode_tag=None, barcode_regex="[^.]*")  # homo_sapiens_liver has the barcode in the read name
         n_fragments.append(len(open(fragments_f).readlines()))
 
     assert len(set(n_fragments)) == 1
-
-    os.remove(fragments_f)

@@ -3,37 +3,32 @@
 import sctoolbox.utils as utils
 import os
 import pathlib
-import shutil
 
 
 # --------------------------- TESTS --------------------------------- #
 
 
-def test_create_dir():
+def test_create_dir(tmp_path):
     """Test if the directory is created."""
 
-    # Ensure that testdir is not already existing
-    if os.path.isdir("testdir"):
-        shutil.rmtree("testdir")
+    testdir = str(tmp_path / "testdir")
 
     # create the dir with the utils function
-    utils.io.create_dir("testdir")
-    assert os.path.isdir("testdir")
-
-    shutil.rmtree("testdir")  # clean up after tests
+    utils.io.create_dir(testdir)
+    assert os.path.isdir(testdir)
 
 
-def test_rm_tmp():
+def test_rm_tmp(tmp_path):
     """Test create_dir and rm_tmp success."""
 
-    temp_dir = "tempdir"
+    temp_dir = str(tmp_path / "tempdir")
     utils.io.create_dir(temp_dir)
-    pathlib.Path("tempdir/a_file.gtf").touch(exist_ok=True)
-    pathlib.Path("tempdir/tempfile1.txt").touch(exist_ok=True)
-    pathlib.Path("tempdir/tempfile2.txt").touch(exist_ok=True)
+    pathlib.Path(temp_dir, "a_file.gtf").touch(exist_ok=True)
+    pathlib.Path(temp_dir, "tempfile1.txt").touch(exist_ok=True)
+    pathlib.Path(temp_dir, "tempfile2.txt").touch(exist_ok=True)
 
     # Remove tempfile in tempdir (but tempdir should still exist)
-    tempfiles = ["tempdir/tempfile1.txt", "tempdir/tempfile2.txt"]
+    tempfiles = [os.path.join(temp_dir, "tempfile1.txt"), os.path.join(temp_dir, "tempfile2.txt")]
     utils.io.rm_tmp(temp_dir=temp_dir, temp_files=tempfiles, rm_dir=False)
 
     dir_exists = os.path.exists(temp_dir)

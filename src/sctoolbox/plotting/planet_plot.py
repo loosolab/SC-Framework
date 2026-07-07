@@ -262,7 +262,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,  # noqa: C901
 
     # get the count of the obs exceeding the threshold per cluster for genes as well as other obs columns
     # here x is an entry in the groupby object corresponding to each (x_col, y_col) group. Now, for each x we have a dataframe containing the df_values entries corresponding to the group. Now, in this dataframe of x, for each column in the all_columns, we count the number of entries exceeding the given threshold for that column.
-    df_exceedance_counts = df_values.groupby([x_col, y_col], observed=False).apply(lambda x: pd.Series({all_columns[i]: _count_greater_than_threshold(x[all_columns[i]], all_thresholds[i]) for i in range(len(all_columns))})).reset_index()
+    df_exceedance_counts = df_values.groupby([x_col, y_col], observed=False).apply(lambda x: pd.Series({all_columns[i]: _count_greater_than_threshold(x[all_columns[i]], all_thresholds[i]) for i in range(len(all_columns))}), include_groups=False).reset_index()
 
     # get aggregate values per cluster for genes as well as other obs columns
     if obs_aggregator_array is not None and len(obs_aggregator_array) != len(obs_columns):
@@ -928,7 +928,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                 secondary_y = row['y_steps'] + offset_y
                 if planet_color_schemas is not None:
                     if color_value == 'value':
-                        sc_array[p] = ax.scatter(secondary_x, secondary_y, s=row[planet_column + '_dot_area'], c=row[planet_column + PLANET_COLOR_VALUE_SUFFIX], cmap=planet_color_schemas[p], vmin=vmin_array[p], vmax=vmax_array[p])
+                        sc_array[p] = ax.scatter(secondary_x, secondary_y, s=row[planet_column + '_dot_area'], c=row[planet_column + PLANET_COLOR_VALUE_SUFFIX], cmap=planet_color_schemas[p], vmin=vmin_array.iloc[p], vmax=vmax_array.iloc[p])
                     if color_value == 'percentage_max':
                         sc_array[p] = ax.scatter(secondary_x, secondary_y, s=row[planet_column + '_dot_area'], c=row[planet_column + PLANET_COLOR_PERCENTAGE_MAX_VALUE_SUFFIX], cmap=planet_color_schemas[p], vmin=0, vmax=100)
                 else:

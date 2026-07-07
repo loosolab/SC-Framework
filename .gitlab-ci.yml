@@ -287,13 +287,16 @@ test coverage:
     image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
     needs: [get-container-tag]
     coverage: '/TOTAL.*\s(\d*.\d*\%)/'
+    variables:
+      KUBERNETES_CPU_REQUEST: "4"
+      KUBERNETES_CPU_LIMIT: "4"
     before_script:
       - pip install .[all] --group test
       - pip install git+https://github.com/Novartis/scar.git  # install scar here to test related functions. Should be removed if scar is available on conda and PyPI
     script:
       - echo $DYNAMIC_IMAGE_TAG
       - chmod +x scripts/bedGraphToBigWig  # make script executable
-      - pytest tests
+      - pytest tests -n "$KUBERNETES_CPU_REQUEST"  # workers == requested CPUs
     artifacts:
       when: always
       paths:

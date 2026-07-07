@@ -1431,9 +1431,9 @@ def _filter_object(adata: sc.AnnData,  # noqa: C901
             adata._inplace_subset_var(boolean)
     else:
         if which == "obs":
-            adata = adata[boolean]
+            adata = adata[boolean].copy()
         elif which == "var":
-            adata = adata[:, boolean]
+            adata = adata[:, boolean].copy()
 
     n_after = adata.shape[0] if which == "obs" else adata.shape[1]
     filtered = n_before - n_after

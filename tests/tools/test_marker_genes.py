@@ -6,12 +6,13 @@ import scanpy as sc
 import numpy as np
 import pandas as pd
 import sctoolbox.tools.marker_genes as mg
+from tests.conftest import DATA_DIR
 
 
 # ---------------------------- FIXTURES -------------------------------- #
 
 @pytest.fixture
-def adata():
+def adata(adata_h5ad):
     """Create testing adata.
 
     Returns
@@ -22,8 +23,7 @@ def adata():
 
     np.random.seed(1)  # set seed for reproducibility
 
-    h5ad = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
-    adata = sc.read_h5ad(h5ad)
+    adata = adata_h5ad
 
     sample_names = ["C1_1", "C1_2", "C2_1", "C2_2", "C3_1", "C3_2"]
     adata.obs["samples"] = np.random.choice(sample_names, size=adata.shape[0])
@@ -38,26 +38,7 @@ def adata():
 
 
 @pytest.fixture
-def adata_score(adata):
-    """Prepare adata for scoring/ cell cycle test.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with gene names as index for scoring tests.
-    """
-
-    # set gene names as index instead of ensemble ids
-    adata.var.reset_index(inplace=True)
-    adata.var['gene'] = adata.var['gene'].astype('str')
-    adata.var.set_index('gene', inplace=True)
-    adata.var_names_make_unique()
-
-    return adata
-
-
-@pytest.fixture
-def gene_set(adata_score):
+def gene_set(adata):
     """Return subset of adata genes.
 
     Returns
@@ -65,7 +46,7 @@ def gene_set(adata_score):
     list
         List of 50 gene names.
     """
-    return adata_score.var.index.to_list()[:50]
+    return adata.var.index.to_list()[:50]
 
 
 # ------------------------------ TESTS --------------------------------- #
@@ -74,7 +55,7 @@ def gene_set(adata_score):
 def test_get_chromosome_genes():
     """Test if get_chromosome_genes get the right genes from the gtf."""
 
-    gtf = os.path.join(os.path.dirname(__file__), '../data', 'genes.gtf')
+    gtf = os.path.join(DATA_DIR, 'genes.gtf')
 
     with pytest.raises(Exception):
         mg.get_chromosome_genes(gtf, "NA")
@@ -126,31 +107,29 @@ def test_add_gene_expression(adata):
         mg.add_gene_expression(adata=adata, gene="INVALID")
 
 
-def test_get_rank_genes_tables(adata):
+def test_get_rank_genes_tables(adata, tmp_path):
     """Test if rank gene tables are created and saved to excel file."""
 
     sc.tl.rank_genes_groups(adata, groupby="condition")
 
-    tables = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx")
+    save_path = str(tmp_path / "rank_genes.xlsx")
+    tables = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel=save_path)
 
     assert len(tables) == 3
-    assert os.path.exists("rank_genes.xlsx")
-
-    os.remove("rank_genes.xlsx")
+    assert os.path.exists(save_path)
 
 
 @pytest.mark.parametrize("alt_name", [{}, {"Tooooooooo_loooooong_duplicate_1": "Grp_1", "Tooooooooo_loooooong_duplicate_2": "Grp_2"}])
-def test_get_rank_genes_tables_duplicates(adata, alt_name):
+def test_get_rank_genes_tables_duplicates(adata, alt_name, tmp_path):
     """Test the handling of duplicated group names during excel write."""
     sc.tl.rank_genes_groups(adata, groupby="long_condition")
 
+    save_path = str(tmp_path / "rank_genes.xlsx")
     if alt_name == {}:
         with pytest.raises(ValueError):
-            _ = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx", alt_name=alt_name)
+            _ = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel=save_path, alt_name=alt_name)
     else:
-        _ = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx", alt_name=alt_name)
-
-        os.remove("rank_genes.xlsx")
+        _ = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel=save_path, alt_name=alt_name)
 
 
 @pytest.mark.parametrize("kwargs", [{"var_columns": ["invalid", "columns"]}])  # save_excel must be str
@@ -212,18 +191,18 @@ def test_run_deseq2(adata, condition_col, error, contrast):
     ],
     indirect=["gene_set"]
 )
-def test_score_genes(adata_score, score_name, gene_set, inplace):
+def test_score_genes(adata, score_name, gene_set, inplace):
     """Test if genes are scored and added to adata.obs."""
 
-    assert score_name not in adata_score.obs.columns
+    assert score_name not in adata.obs.columns
 
-    out = mg.score_genes(adata_score, gene_set, score_name=score_name, inplace=inplace)
+    out = mg.score_genes(adata, gene_set, score_name=score_name, inplace=inplace)
 
     if inplace:
         assert out is None
-        assert score_name in adata_score.obs.columns
+        assert score_name in adata.obs.columns
     else:
-        assert score_name not in adata_score.obs.columns
+        assert score_name not in adata.obs.columns
         assert score_name in out.obs.columns
 
 

@@ -2,7 +2,6 @@
 
 import pytest
 import sctoolbox.utils.checker as ch
-import scanpy as sc
 import numpy as np
 import os
 import re
@@ -13,103 +12,17 @@ import sys
 
 
 @pytest.fixture
-def named_var_adata():
-    """Return a adata object with a prefix attached to the .var index.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with a prefix attached to the .var index.
-    """
-
-    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_named_var.h5ad')
-
-    return sc.read(f)
-
-
-@pytest.fixture
-def atac_adata():
-    """Return a adata object from ATAC-seq.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object from ATAC-seq.
-    """
-
-    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
-
-    return sc.read(f)
-
-
-@pytest.fixture
-def adata_atac_emptyvar(atac_adata):
-    """Create adata with empty adata.var.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with empty var table.
-    """
-    adata = atac_adata.copy()
-    adata.var = adata.var.drop(columns=adata.var.columns)
-    return adata
-
-
-@pytest.fixture
-def adata_atac_invalid(atac_adata):
-    """Create adata with invalid index.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with invalid index.
-    """
-    adata = atac_adata.copy()
-    adata.var.iloc[0, 1] = 500  # start
-    adata.var.iloc[0, 2] = 100  # end
-    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-stop index
-    return adata
-
-
-@pytest.fixture
-def adata_rna():
-    """Load rna adata.
-
-    Returns
-    -------
-    anndata.AnnData
-        RNA AnnData object.
-    """
-    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
-    return sc.read_h5ad(adata_f)
-
-
-@pytest.fixture
-def adata2():
-    """Load and return an anndata object.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object.
-    """
-    f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
-
-    return sc.read_h5ad(f)
-
-
-@pytest.fixture
-def marker_dict():
-    """Return a dict of cell type markers.
+def marker_dict(adata):
+    """Return a dict of cell type markers using genes from the shared adata.
 
     Returns
     -------
     dict
         Dictionary of cell type markers.
     """
-    return {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
-            "Celltype B": ['ENSMUSG00000102272', 'invalid_gene'],
+    genes = adata.var_names.tolist()
+    return {"Celltype A": [genes[0], genes[1]],
+            "Celltype B": [genes[2], 'invalid_gene'],
             "Celltype C": ['invalid_gene_1', 'invalid_gene_2']}
 
 
@@ -159,13 +72,14 @@ def test_is_integer_array(arr, boolean):
     assert result == boolean
 
 
-def test_check_marker_lists(adata2, marker_dict):
+def test_check_marker_lists(adata, marker_dict):
     """Test that check_marker_lists intersects lists correctly."""
+    genes = adata.var_names.tolist()
 
-    filtered_marker = ch.check_marker_lists(adata2, marker_dict)
+    filtered_marker = ch.check_marker_lists(adata, marker_dict)
 
-    assert filtered_marker == {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
-                               "Celltype B": ['ENSMUSG00000102272']}
+    assert filtered_marker == {"Celltype A": [genes[0], genes[1]],
+                               "Celltype B": [genes[2]]}
 
 
 def test_in_range() -> object:
@@ -189,12 +103,12 @@ def test_var_index_from_single_col(named_var_adata):
     assert match
 
 
-def test_var_column_to_index_coordinate_cols(atac_adata):
+def test_var_column_to_index_coordinate_cols(adata_atac):
     """Test if var_column_to_index works correctly with coordinate columns."""
     # regex pattern to match the var coordinate
     coordinate_pattern = r"^(chr[0-9XYM]+)[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+$"
 
-    adata = atac_adata.copy()
+    adata = adata_atac.copy()
     adata.var = adata.var.reset_index(drop=True)
 
     # test if the function formats the var index correctly from the coordinate columns
@@ -204,9 +118,9 @@ def test_var_column_to_index_coordinate_cols(atac_adata):
     assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))
 
 
-def test_var_column_to_index(atac_adata):
+def test_var_column_to_index(adata_atac):
     """Test if var_column_to_index works correctly."""
-    adata = atac_adata.copy()
+    adata = adata_atac.copy()
     # add string to var index
     adata.var.index = 'name_' + adata.var.index
     # test if the function formats the var index correctly
@@ -231,10 +145,10 @@ def test_var_column_to_index(atac_adata):
 
 @pytest.mark.parametrize("coordinate_columns, expected", [(['chr', 'start', 'stop'], True),  # expects var tables to be unchanged
                                                           (['chr', 'stop', 'start'], False)])  # expects a valueerror due to format of columns
-def test_validate_regions(atac_adata, coordinate_columns, expected):
+def test_validate_regions(adata_atac, coordinate_columns, expected):
     """Test if validate_regions works correctly."""
 
-    assert ch.validate_regions(atac_adata, coordinate_columns=coordinate_columns) == expected
+    assert ch.validate_regions(adata_atac, coordinate_columns=coordinate_columns) == expected
 
 
 def test_get_index_type():
@@ -245,24 +159,24 @@ def test_get_index_type():
     assert ch._get_index_type(start_with_name_index, regex) == 'prefix'
 
 
-def test_check_columns(atac_adata, adata_atac_invalid):
+def test_check_columns(adata_atac, adata_atac_invalid):
     """Test if check_columns works correctly."""
-    assert ch.check_columns(atac_adata.var, ['chr', 'start', 'stop'], error=False)
-    assert ch.check_columns(atac_adata.var, 'chr', error=False)
+    assert ch.check_columns(adata_atac.var, ['chr', 'start', 'stop'], error=False)
+    assert ch.check_columns(adata_atac.var, 'chr', error=False)
 
     assert ch.validate_regions(adata_atac_invalid, ['chr', 'start', 'stop']) is False
 
     with pytest.raises(KeyError):
-        ch.check_columns(atac_adata.var, ['chr', 'start', 'stop', 'name'], error=True)
+        ch.check_columns(adata_atac.var, ['chr', 'start', 'stop', 'name'], error=True)
 
     with pytest.raises(KeyError):
-        ch.check_columns(atac_adata.var, 'name', error=True)
+        ch.check_columns(adata_atac.var, 'name', error=True)
 
 
-@pytest.mark.parametrize("fixture, expected", [("atac_adata", True),  # expects var tables to be unchanged
+@pytest.mark.parametrize("fixture, expected", [("adata_atac", True),  # expects var tables to be unchanged
                                                ("adata_atac_emptyvar", False),
                                                # expects var tables to be changed
-                                               ("adata_rna", ValueError),
+                                               ("adata", ValueError),
                                                # expects a valueerror due to missing columns
                                                ("adata_atac_invalid",
                                                 ValueError)])  # expects a valueerror due to format of columns

@@ -79,7 +79,10 @@ def fill_na(df: pd.DataFrame,
         elif col_type == "object":
             value_set = list({x for x in set(df[nan_col]) if x == x})
             o_type = type(value_set[0]).__name__ if value_set else "str"
-            df[nan_col] = df[nan_col].fillna(replace[o_type])
+            # opt into the future no-silent-downcast behaviour so fillna does not warn,
+            # then reproduce the historical downcast explicitly via infer_objects
+            with pd.option_context("future.no_silent_downcasting", True):
+                df[nan_col] = df[nan_col].fillna(replace[o_type]).infer_objects(copy=False)
     if not inplace:
         return df
 

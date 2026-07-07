@@ -4,111 +4,14 @@ import pytest
 import sctoolbox.plotting.embedding as pl
 import scanpy as sc
 import os
-import tempfile
-import shutil
-import pandas as pd
-import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 
 from beartype.roar import BeartypeCallHintParamViolation
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
-
-
-# ------------------------------ FIXTURES --------------------------------- #
-
-
-def _make_adata():
-    """Load and returns an anndata object.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with processed data and clustering results.
-    """
-
-    np.random.seed(1)  # set seed for reproducibility
-
-    adata = sc.datasets.pbmc3k_processed()
-    adata.raw = None
-
-    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-    adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-    adata.obs["cat"] = adata.obs["condition"].astype("category")
-
-    adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
-    adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
-    adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
-
-    adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
-    adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
-
-    # sc.pp.normalize_total(adata, target_sum=None)
-    # sc.pp.log1p(adata)
-
-    sc.tl.umap(adata, n_components=3)  # to have more than two components available
-    # sc.tl.tsne(adata)
-    # sc.tl.pca(adata)
-    sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-    # sc.tl.dendrogram(adata, groupby='clustering')
-
-    return adata
-
-
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
-    """Create a fixture of the adata with session scope.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with session scope.
-    """
-    return _make_adata()
-
-
-@pytest.fixture(scope="function")  # create a new fixture for each test
-def adata_fun_scope():
-    """Create a fixture of the adata with function scope.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with function scope.
-    """
-    return _make_adata()
-
-
-@pytest.fixture
-def df():
-    """Create and return a pandas dataframe.
-
-    Returns
-    -------
-    pd.DataFrame
-        Simple dataframe with two columns.
-    """
-    return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
-                              'col2': [3, 4, 5, 6, 7]})
-
-
-@pytest.fixture
-def tmp_file():
-    """
-    Return path for a temporary file.
-
-    Yields
-    ------
-    A temporary file path
-    """
-    tmpdir = tempfile.mkdtemp()
-
-    yield os.path.join(tmpdir, "output.pdf")
-
-    # clean up directory and contents
-    shutil.rmtree(tmpdir)
 
 
 # ------------------------------ TESTS --------------------------------- #
@@ -118,33 +21,34 @@ def test_sc_colormap():
     """Test whether sc_colormap returns a colormap."""
 
     cmap = pl.sc_colormap()
-    assert type(cmap).__name__ == "ListedColormap"
+    assert isinstance(cmap, matplotlib.colors.ListedColormap)
 
 
 @pytest.mark.parametrize("how", ["vertical", "horizontal"])
-def test_flip_embedding(adata, how):
+def test_flip_embedding(adata_fun_scope, how):
     """Test flip_embedding success."""
-    tmp = adata.copy()
+    tmp = adata_fun_scope.copy()
     key = "X_umap"
-    pl.flip_embedding(adata, key=key, how=how)
+    pl.flip_embedding(adata_fun_scope, key=key, how=how)
 
     if how == "vertical":
-        assert all(adata.obsm[key][:, 1] == -tmp.obsm[key][:, 1])
+        assert all(adata_fun_scope.obsm[key][:, 1] == -tmp.obsm[key][:, 1])
     elif how == "horizontal":
-        assert all(adata.obsm[key][:, 0] == -tmp.obsm[key][:, 0])
+        assert all(adata_fun_scope.obsm[key][:, 0] == -tmp.obsm[key][:, 0])
 
 
-def test_invalid_flip_embedding(adata):
+@pytest.mark.parametrize("kwargs,exception", [
+    ({"how": "invalid"}, BeartypeCallHintParamViolation),
+    ({"key": "invalid"}, KeyError),
+])
+def test_invalid_flip_embedding(adata, kwargs, exception):
     """Test flip_embedding failure."""
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.flip_embedding(adata, how="invalid")
-
-    with pytest.raises(KeyError):
-        pl.flip_embedding(adata, key="invalid")
+    with pytest.raises(exception):
+        pl.flip_embedding(adata, **kwargs)
 
 
 @pytest.mark.parametrize("color, label", [
-    ("clustering", "clust_label"),  # categorical -> has legend
+    ("louvain", "clust_label"),  # categorical -> has legend
     ("qc_float", "label")  # sequential -> no legend (colorbar instead)
 ])
 def test_add_legend_ax(adata, color, label):
@@ -164,7 +68,7 @@ def test_add_legend_ax(adata, color, label):
 @pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True, "components": "1,2"},
                                     {"show_title": False, "show_contour": False, "components": ["1,2", "2,3"]}])
 @pytest.mark.parametrize("style", ["dots", "density", "hexbin"])
-def test_embedding(adata, style, kwargs):
+def test_embedding(adata, style, kwargs, assert_axes_array):
     """Assert embedding works and returns Axes object."""
 
     # Collect test colors
@@ -172,9 +76,9 @@ def test_embedding(adata, style, kwargs):
     colors.append(adata.var.index[0])  # continuous gene variable
     colors.append(None)          # no color / density plot
     if style != "hexbin":
-        colors.append("clustering")  # categorical obs variable; only available for dots/density
+        colors.append("louvain")  # categorical obs variable; only available for dots/density
 
-# call plot_embedding
+    # call plot_embedding
     axes_list = pl.plot_embedding(adata, color=colors, style=style, **kwargs)
 
     # Assert number of plots
@@ -182,17 +86,14 @@ def test_embedding(adata, style, kwargs):
     n_components = 1 if isinstance(components, str) else len(components)
     assert len(axes_list) == len(colors) * n_components
 
-    # Assert type of output
-    ax_type = type(axes_list[0]).__name__
-    assert ax_type.startswith("Axes")
+    assert_axes_array(axes_list)
 
 
-def test_embedding_single(adata):
+def test_embedding_single(adata, assert_axes_array):
     """Test that embedding works with single color."""
     axarr = pl.plot_embedding(adata, color="qcvar1")
 
-    ax_type = type(axarr[0]).__name__
-    assert ax_type.startswith("Axes")
+    assert_axes_array(axarr)
 
 
 def test_embedding_error(adata):
@@ -202,19 +103,18 @@ def test_embedding_error(adata):
 
 
 @pytest.mark.parametrize("top_n, x, style", [(None, True, "dots"), (3, None, "hexbin")])
-def test_feature_per_group(adata, x, top_n, style):
+def test_feature_per_group(adata, x, top_n, style, assert_axes_array):
     """Test the feature_per_group plot."""
     if x:
         x = adata.var.index[:3].tolist()
 
     axs = pl.feature_per_group(adata=adata,
-                               y="clustering",
+                               y="louvain",
                                x=x,
                                top_n=top_n,
                                style=style)
 
-    # Assert type of output
-    assert isinstance(axs.flatten()[0], matplotlib.axes.Axes)
+    assert_axes_array(axs.flatten())
 
 
 @pytest.mark.parametrize("top_n, x, y", [
@@ -267,7 +167,7 @@ def test_search_umap_parameters(adata):
     axarr = pl.search_umap_parameters(adata, color="condition",
                                       min_dist_range=(0.1, 0.3, 0.1),
                                       spread_range=(2.0, 3.0, 0.5))
-    assert type(axarr).__name__ == "ndarray"
+    assert isinstance(axarr, np.ndarray)
     assert axarr.shape == (2, 2)
 
 
@@ -277,7 +177,7 @@ def test_search_tsne_parameters(adata):
     axarr = pl.search_tsne_parameters(adata, color="condition",
                                       learning_rate_range=(100, 300, 100),
                                       perplexity_range=(20, 30, 5))
-    assert type(axarr).__name__ == "ndarray"
+    assert isinstance(axarr, np.ndarray)
     assert axarr.shape == (2, 2)
 
 
@@ -288,26 +188,28 @@ def test_invalid_method_search_dim_red_parameter(adata):
                                       method="invalid")
 
 
-@pytest.mark.parametrize("range", [(0.1, 0.2, 0.1, 0.1), (0.1, 0.2, 0.3)])
-def test_search_dim_red_parameters_ranges(adata, range):
+@pytest.mark.parametrize("min_dist_range,spread_range", [
+    ((0.1, 0.2, 0.1, 0.1), (2.0, 3.0, 0.5)),  # invalid min_dist_range: wrong tuple length
+    ((0.1, 0.2, 0.3), (2.0, 3.0, 0.5)),        # invalid min_dist_range: step > max-min
+    ((0.1, 0.3, 0.1), (0.1, 0.2, 0.1, 0.1)),  # invalid spread_range: wrong tuple length
+    ((0.1, 0.3, 0.1), (0.1, 0.2, 0.3)),        # invalid spread_range: step > max-min
+])
+def test_search_dim_red_parameters_ranges(adata, min_dist_range, spread_range):
     """Test that invalid ranges raise ValueError."""
-
     with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl._search_dim_red_parameters(adata, method="umap",
                                       color="condition",
-                                      min_dist_range=range,
-                                      spread_range=(2.0, 3.0, 0.5))
-
-    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
-        pl._search_dim_red_parameters(adata, method="umap",
-                                      color="condition",
-                                      spread_range=range,
-                                      min_dist_range=(0.1, 0.3, 0.1))
+                                      min_dist_range=min_dist_range,
+                                      spread_range=spread_range)
 
 
 @pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
-def test_plot_group_embeddings(adata, embedding):
+def test_plot_group_embeddings(request, adata, embedding):
     """Test if plot_group_embeddings runs through."""
+
+    # plot_group_embeddings uses sc.pl.tsne, which needs a precomputed X_tsne
+    if embedding == "tsne":
+        adata = request.getfixturevalue("adata_tsne")
 
     axarr = pl.plot_group_embeddings(adata, groupby="condition",
                                      embedding=embedding, ncols=2)
@@ -318,8 +220,12 @@ def test_plot_group_embeddings(adata, embedding):
 @pytest.mark.parametrize("embedding, var_list", [("pca", "list"),
                                                  ("umap", "condition"),
                                                  ("tsne", "list")])
-def test_compare_embeddings(adata, embedding, var_list):
+def test_compare_embeddings(request, adata, embedding, var_list):
     """Test if compare_embeddings runs through."""
+
+    # compare_embeddings uses sc.pl.tsne, which needs a precomputed X_tsne
+    if embedding == "tsne":
+        adata = request.getfixturevalue("adata_tsne")
 
     adata_cp = adata.copy()
 
@@ -354,16 +260,13 @@ def test_get_3d_dotsize(n, res):
     assert pl._get_3d_dotsize(int(n)) == res
 
 
-@pytest.mark.parametrize("color", ["C1orf86", "clustering", "qc_float"])
-def test_plot_3D_UMAP(adata, color):
+@pytest.mark.parametrize("color", ["<GENE_0>", "louvain", "qc_float"])
+def test_plot_3D_UMAP(adata, color, tmp_path):
     """Test if 3d plot is written to html."""
-
-    # Run 3d plotting
-    pl.plot_3D_UMAP(adata, color=color, save="3D_test")
-
-    # Assert creation of file
-    assert os.path.isfile("3D_test.html")
-    os.remove("3D_test.html")
+    color = adata.var_names[0] if color == "<GENE_0>" else color
+    save_path = tmp_path / "3D_test"
+    pl.plot_3D_UMAP(adata, color=color, save=str(save_path))
+    assert save_path.with_suffix(".html").is_file()
 
 
 def test_invalid_color_plot_3D_UMAP(adata):
@@ -372,20 +275,23 @@ def test_invalid_color_plot_3D_UMAP(adata):
         pl.plot_3D_UMAP(adata, color="invalid", save="3D_test")
 
 
-@pytest.mark.parametrize("marker", ["TNFRSF1B",
-                                    ["TNFRSF1B", 'PRDM2']])
-def test_umap_marker_overview(adata, marker):
+@pytest.mark.parametrize("n_markers", [1, 2])
+def test_umap_marker_overview(adata, n_markers):
     """Test umap_marker_overview."""
+    genes = adata.var_names[:n_markers].tolist()
+    marker = genes[0] if len(genes) == 1 else genes
     axes_list = pl.umap_marker_overview(adata, marker)
 
     assert isinstance(axes_list, list)
-    ax_type = type(axes_list[0]).__name__
-    assert ax_type.startswith("Axes")
+    assert isinstance(axes_list[0], matplotlib.axes.Axes)
 
 
-def test_anndata_overview(adata, tmp_file):
+def test_anndata_overview(adata_tsne, tmp_path):
     """Test anndata_overview success and file generation."""
+    # requires data with precomputed tsne and umap
+    adata = adata_tsne
     adatas = {"raw": adata, "corrected": adata}
+    tmp_file = str(tmp_path / "output.pdf")
 
     assert not os.path.exists(tmp_file)
 
@@ -412,40 +318,27 @@ def test_anndata_overview(adata, tmp_file):
     assert os.path.exists(tmp_file)
 
 
-def test_anndata_overview_fail_color_by(adata):
-    """Test invalid parameter inputs."""
+@pytest.mark.parametrize("color_by,exception,match", [
+    (None, BeartypeCallHintParamViolation, None),  # no input
+    ("<INVALID_COL>", ValueError, "Couldn't find column"),  # wrong input
+])
+def test_anndata_overview_fail_color_by(adata, color_by, exception, match):
+    """Test invalid color_by inputs."""
     adatas = {"raw": adata}
 
-    # invalid color_by
-    # no input
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.anndata_overview(
-            adatas=adatas,
-            color_by=None,
-            plots=["PCA"],
-            figsize=None,
-            output=None,
-            dpi=300
-        )
+    if color_by == "<INVALID_COL>":
+        color_by = "-".join(list(adata.obs.columns)) + "-invalid"
 
-    # wrong input
-    with pytest.raises(ValueError, match="Couldn't find column"):
-        pl.anndata_overview(
-            adatas=adatas,
-            color_by="-".join(list(adata.obs.columns)) + "-invalid",
-            plots=["PCA"],
-            figsize=None,
-            output=None,
-            dpi=300
-        )
+    with pytest.raises(exception, match=match):
+        pl.anndata_overview(adatas=adatas, color_by=color_by, plots=["PCA"],
+                            figsize=None, output=None, dpi=300)
 
 
-def test_anndata_overview_fail(adata):
+def test_anndata_overview_fail(adata, adata_fun_scope):
     """Test invalid parameter inputs."""
     adatas_invalid = {"raw": adata, "invalid": "Not an anndata"}
-    adata_cp = adata.copy()
-    adata_cp.obs = adata_cp.obs.drop(["LISI_score_pca"], axis=1)
-    adatas = {"raw": adata_cp}
+    adata_fun_scope.obs = adata_fun_scope.obs.drop(["LISI_score_pca"], axis=1)
+    adatas = {"raw": adata_fun_scope}
 
     # invalid datatype
     with pytest.raises(ValueError, match="All items in 'adatas'"):
@@ -462,7 +355,7 @@ def test_anndata_overview_fail(adata):
     with pytest.raises(ValueError, match="No LISI scores found"):
         pl.anndata_overview(
             adatas=adatas,
-            color_by=list(adata_cp.obs.columns) + [adata_cp.var_names.tolist()[0]],
+            color_by=list(adata_fun_scope.obs.columns) + [adata_fun_scope.var_names.tolist()[0]],
             plots=["LISI"],
             figsize=None,
             output=None,
@@ -470,51 +363,34 @@ def test_anndata_overview_fail(adata):
         )
 
 
-def test_anndata_overview_fail_plots(adata):
-    """Test invalid parameter inputs."""
+@pytest.mark.parametrize("plots,exception", [
+    (None, BeartypeCallHintParamViolation),  # no input
+    (["PCA", "invalid"], (BeartypeCallHintParamViolation, ValueError)),  # wrong input
+])
+def test_anndata_overview_fail_plots(adata, plots, exception):
+    """Test invalid plots inputs."""
     adatas = {"raw": adata}
 
-    # invalid plots
-    # no input
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.anndata_overview(
-            adatas=adatas,
-            color_by=list(adata.obs.columns),
-            plots=None,
-            figsize=None,
-            output=None,
-            dpi=300
-        )
-
-    # wrong input
-    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
-        pl.anndata_overview(
-            adatas=adatas,
-            color_by=list(adata.obs.columns),
-            plots=["PCA", "invalid"],
-            figsize=None,
-            output=None,
-            dpi=300
-        )
+    with pytest.raises(exception):
+        pl.anndata_overview(adatas=adatas, color_by=list(adata.obs.columns),
+                            plots=plots, figsize=None, output=None, dpi=300)
 
 
 @pytest.mark.parametrize("selected", [None, [1, 2, 3], [2, 4, 6]])
 def test_plot_pca_variance(adata, selected):
     """Test if Axes object is returned."""
     ax = pl.plot_pca_variance(adata, selected=selected)
-    ax_type = type(ax).__name__
-
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
-def test_plot_pca_variance_fail(adata):
+@pytest.mark.parametrize("kwargs,exception,match", [
+    ({"method": "invalid"}, KeyError, "The given method"),
+    ({"ax": "invalid"}, BeartypeCallHintParamViolation, None),
+])
+def test_plot_pca_variance_fail(adata, kwargs, exception, match):
     """Test if function fails on invalid parameters."""
-
-    with pytest.raises(KeyError, match="The given method"):
-        pl.plot_pca_variance(adata, method="invalid")
-
-    with pytest.raises(BeartypeCallHintParamViolation):
-        pl.plot_pca_variance(adata, ax="invalid")
+    with pytest.raises(exception, match=match):
+        pl.plot_pca_variance(adata, **kwargs)
 
 
 @pytest.mark.parametrize("kwargs", [{"which": "var", "method": "spearmanr"},
@@ -524,9 +400,7 @@ def test_plot_pca_correlation(adata, kwargs):
     """Test if Axes object is returned without error."""
 
     ax = pl.plot_pca_correlation(adata, title="Title", **kwargs)
-    ax_type = type(ax).__name__
-
-    assert ax_type.startswith("Axes")
+    assert isinstance(ax, matplotlib.axes.Axes)
 
 
 @pytest.mark.parametrize("kwargs", [{"basis": "umap", "which": "var"},  # var is only available for pca coordinates
