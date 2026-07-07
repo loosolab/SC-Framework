@@ -571,6 +571,8 @@ def detect_and_plot_terminal_states(  # noqa: C901
     seed: int = 42,
     title: str | None = None,
     show_excluded_boundaries: bool = True,
+    save: str | None = None,
+    report_save: str | None = None,
 ) -> pd.Series:
     """Determine terminal states, plot them, and return the Series for ``run_palantir``.
 
@@ -614,6 +616,10 @@ def detect_and_plot_terminal_states(  # noqa: C901
         Plot title. If ``None``, a default title is used.
     show_excluded_boundaries : bool, default=True
         Whether to show excluded boundary cells from automatic detection as QC markers.
+    save : str | None, default=None
+        Filename used to save the terminal-state plot to the regular figure directory.
+    report_save : str | None, default=None
+        Relative path used to save the terminal-state plot to the report directory.
 
     Returns
     -------
@@ -782,6 +788,13 @@ def detect_and_plot_terminal_states(  # noqa: C901
 
     plt.title("Terminal state identification" if title is None else title)
     plt.tight_layout()
+
+    if save is not None:
+        _save_figure(path=save, bbox_inches="tight")
+
+    if report_save is not None:
+        _save_figure(path=report_save, report=True, bbox_inches="tight")
+
     plt.show()
 
     return terminal_state_series
