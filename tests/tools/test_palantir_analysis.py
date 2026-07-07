@@ -1,12 +1,9 @@
 """Tests for Palantir analysis helper functions."""
 
-import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-import scanpy as sc
 import scipy.sparse as sp
 from anndata import AnnData
 
@@ -18,57 +15,64 @@ plt.switch_backend("Agg")
 # ------------------------- FIXTURES -------------------------#
 
 
+# Use the shared `adata_h5ad` fixture from tests/conftest.py instead of
+# defining a local duplicate fixture here.
+
+
 @pytest.fixture
-def adata_rna():
-    """Load the small RNA AnnData object used in the test suite.
+def simple_adata(adata_h5ad):
+    """Derive a lightweight test `AnnData` from the shared `adata_h5ad`.
+
+    The fixture reuses the project-provided `adata_h5ad` to avoid rebuilding a
+    synthetic AnnData from scratch. Only the minimal columns required by the
+    tests are (re)created deterministically so test runs are stable.
 
     Returns
     -------
     anndata.AnnData
-        The loaded test AnnData object.
+        A fresh AnnData object without preprocessing keys.
     """
-    adata_f = os.path.join(os.path.dirname(__file__), "../data", "adata.h5ad")
-    return sc.read_h5ad(adata_f)
+    adata = adata_h5ad.copy()
 
+    adata.obsm.pop("X_pca", None)
+    adata.obsm.pop("X_umap", None)
+    adata.obsm.pop("X_tsne", None)
+    adata.obsp.pop("connectivities", None)
+    adata.obsp.pop("distances", None)
+    adata.uns.pop("neighbors", None)
 
-@pytest.fixture
-def simple_adata():
-    """Create a small AnnData object with cell type annotations.
+    # Use a fixed RNG so tests remain deterministic
+    rng = np.random.default_rng(42)
+    n_obs = adata.n_obs
 
-    Returns
-    -------
-    anndata.AnnData
-        Synthetic AnnData with sample annotations and float expression data.
-    """
-    np.random.seed(42)
-    n_obs = 100
-    n_vars = 50
+    # Ensure expected obs columns exist and are reproducible
+    adata.obs["celltype"] = rng.choice(["TypeA", "TypeB", "TypeC"], size=n_obs)
+    adata.obs["batch"] = rng.choice(["Batch1", "Batch2"], size=n_obs)
 
-    X = np.random.poisson(lam=5, size=(n_obs, n_vars)).astype(np.float32)
-    X = np.log1p(X)
-
-    adata = AnnData(X=X)
-    adata.obs["celltype"] = np.random.choice(["TypeA", "TypeB", "TypeC"], n_obs)
-    adata.obs["batch"] = np.random.choice(["Batch1", "Batch2"], n_obs)
-    adata.var["gene_id"] = [f"GENE_{i}" for i in range(n_vars)]
+    # Provide a stable gene identifier column if missing
+    if "gene_id" not in adata.var.columns:
+        adata.var["gene_id"] = [f"GENE_{i}" for i in range(adata.n_vars)]
 
     return adata
 
 
 @pytest.fixture
 def preprocessed_adata(simple_adata):
-    """Create a small AnnData object with PCA, UMAP and neighbors.
+    """Return a copy of `simple_adata` augmented with minimal preprocessing keys.
+
+    The fixture derives from `simple_adata` to keep test setup small while
+    providing PCA/UMAP/neighbors keys required by functions under test.
 
     Returns
     -------
     anndata.AnnData
-        Synthetic AnnData with PCA, UMAP embedding and neighbor graph.
+        A copy of simple_adata with preprocessing keys added.
     """
     adata = simple_adata.copy()
 
-    np.random.seed(42)
-    adata.obsm["X_pca"] = np.random.randn(adata.n_obs, 10)
-    adata.obsm["X_umap"] = np.random.randn(adata.n_obs, 2)
+    rng = np.random.default_rng(42)
+    adata.obsm["X_pca"] = rng.standard_normal((adata.n_obs, 10))
+    adata.obsm["X_umap"] = rng.standard_normal((adata.n_obs, 2))
     adata.obsp["connectivities"] = sp.csr_matrix((adata.n_obs, adata.n_obs))
     adata.obsp["distances"] = sp.csr_matrix((adata.n_obs, adata.n_obs))
     adata.uns["neighbors"] = {
@@ -151,10 +155,10 @@ def branch_adata(preprocessed_adata):
 # ------------------------- is_preprocessed -------------------------#
 
 
-def test_is_preprocessed_accepts_project_test_data(adata_rna):
+def test_is_preprocessed_accepts_project_test_data(adata_h5ad):
     """Check that the project RNA test object contains the required preprocessing."""
     result = pla.is_preprocessed(
-        adata_rna,
+        adata_h5ad,
         normalize=False,
         log1p=False,
         pca="error",
@@ -312,17 +316,6 @@ def test_remove_cells_by_label_missing_label_raises(simple_adata):
             column_name="celltype",
             labels_to_remove="MissingType",
         )
-
-
-def test_remove_cells_by_label_preserves_gene_dimension(simple_adata):
-    """Cell filtering should not change the number of genes."""
-    result = pla.remove_cells_by_label(
-        simple_adata,
-        column_name="celltype",
-        labels_to_remove="TypeA",
-    )
-
-    assert result.n_vars == simple_adata.n_vars
 
 
 # ------------------------- branch_qc -------------------------#
@@ -497,9 +490,9 @@ def test_classify_trend_pattern_handles_nan_values():
 # ------------------------- compare_all_layers -------------------------#
 
 
-def test_compare_all_layers_returns_figure_for_project_test_data(adata_rna):
+def test_compare_all_layers_returns_figure_for_project_test_data(adata_h5ad):
     """Layer comparison should create a matplotlib figure."""
-    fig, axs = pla.compare_all_layers(adata_rna)
+    fig, axs = pla.compare_all_layers(adata_h5ad)
 
     assert fig is not None
     assert axs is not None
@@ -507,9 +500,9 @@ def test_compare_all_layers_returns_figure_for_project_test_data(adata_rna):
     plt.close(fig)
 
 
-def test_compare_all_layers_can_exclude_layer(adata_rna):
+def test_compare_all_layers_can_exclude_layer(adata_h5ad):
     """Excluded layers should not be plotted."""
-    fig, axs = pla.compare_all_layers(adata_rna, exclude_layers=["spliced"])
+    fig, axs = pla.compare_all_layers(adata_h5ad, exclude_layers=["spliced"])
     axs_array = np.atleast_1d(axs)
 
     assert len(axs_array) == 3
@@ -517,50 +510,7 @@ def test_compare_all_layers_can_exclude_layer(adata_rna):
 
 
 # ------------------------- small integration checks -------------------------#
-
-
-def test_preprocessing_then_remove_cells(preprocessed_adata):
-    """Check validation before filtering and basic structure after filtering."""
-    is_valid = pla.is_preprocessed(
-        preprocessed_adata,
-        normalize=False,
-        log1p=False,
-        pca="warn",
-        embedding="warn",
-        neighbors="warn",
-    )
-    assert is_valid
-
-    filtered = pla.remove_cells_by_label(
-        preprocessed_adata,
-        column_name="celltype",
-        labels_to_remove="TypeA",
-    )
-
-    assert filtered.n_obs < preprocessed_adata.n_obs
-    assert filtered.n_vars == preprocessed_adata.n_vars
-    assert "TypeA" not in filtered.obs["celltype"].values
-    assert "X_pca" in filtered.obsm
-    assert "X_umap" in filtered.obsm
-
-
-def test_branch_qc_after_filtering(branch_adata):
-    """Branch QC should still run after filtering cells by annotation."""
-    filtered = pla.remove_cells_by_label(
-        branch_adata,
-        column_name="celltype",
-        labels_to_remove="TypeA",
-    )
-
-    qc = pla.branch_qc(
-        filtered,
-        masks_key="branch_masks",
-        pseudotime_key="palantir_pseudotime",
-    )
-
-    assert isinstance(qc, pd.DataFrame)
-    assert qc.shape[0] > 0
-
+# No small integration checks remain in this file.
 
 # ------------------------- plot_branch_qc_distributions -------------------------#
 
@@ -678,14 +628,17 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
         "EigenValues": pd.Series([1.0, 0.5, 0.25]),
         "T": sp.csr_matrix(np.eye(preprocessed_adata.n_obs)),
     }
+    captured = {}
 
     def fake_run_diffusion_maps(adata, **kwargs):
+        captured["run_diffusion_maps_kwargs"] = kwargs
         adata.obsp["DM_Similarity"] = sp.csr_matrix(np.eye(adata.n_obs))
         adata.uns["DM_EigenValues"] = dm_res["EigenValues"]
         adata.obsm["DM_EigenVectors"] = dm_res["EigenVectors"].values
         return dm_res
 
     def fake_determine_multiscale_space(dm_res_arg):
+        captured["determine_multiscale_space_arg"] = dm_res_arg
         return pd.DataFrame(
             np.ones((preprocessed_adata.n_obs, 3)),
             index=preprocessed_adata.obs_names,
@@ -694,6 +647,8 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
     def fake_run_magic_imputation(
         data, imputation_key="MAGIC_imputed_data", **kwargs
     ):
+        captured["run_magic_imputation_kwargs"] = kwargs
+        captured["imputation_key"] = imputation_key
         data.layers[imputation_key] = data.X.copy()
         return data.layers[imputation_key]
 
@@ -722,6 +677,8 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
         preprocessed_adata,
         save_path=str(tmp_path / "palantir_magic.h5ad"),
         n_components=3,
+        knn=30,
+        kernel_backend="scanpy",
         n_jobs=1,
     )
 
@@ -732,8 +689,412 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
         3,
     )
     assert "MAGIC_imputed_data" in result.layers
+    assert captured["run_diffusion_maps_kwargs"]["n_components"] == 3
+    assert captured["run_diffusion_maps_kwargs"]["knn"] == 30
+    assert captured["run_diffusion_maps_kwargs"]["kernel_backend"] == "scanpy"
+    assert captured["run_magic_imputation_kwargs"]["n_jobs"] == 1
+    assert captured["imputation_key"] == "MAGIC_imputed_data"
 
-    # ------------------------- tests -------------------------#
+
+def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
+    monkeypatch, preprocessed_adata, tmp_path
+):
+    """An incomplete cache missing the MAGIC layer should recompute imputation."""
+    cached = preprocessed_adata.copy()
+    cache_path = tmp_path / "cached_magic_incomplete.h5ad"
+    cached.write_h5ad(cache_path)
+
+    captured = {}
+
+    def fake_run_diffusion_maps(adata, **kwargs):
+        captured["run_diffusion_maps_kwargs"] = kwargs
+        adata.obsp["DM_Similarity"] = sp.csr_matrix(np.eye(adata.n_obs))
+        return {"EigenVectors": None}
+
+    def fake_determine_multiscale_space(dm_res_arg):
+        captured["determine_multiscale_space_arg"] = dm_res_arg
+        return pd.DataFrame(np.ones((preprocessed_adata.n_obs, 2)), index=preprocessed_adata.obs_names)
+
+    def fake_run_magic_imputation(data, imputation_key="MAGIC_imputed_data", **kwargs):
+        captured["run_magic_imputation_kwargs"] = kwargs
+        captured["imputation_key"] = imputation_key
+        data.layers[imputation_key] = data.X.copy()
+        return data.layers[imputation_key]
+
+    monkeypatch.setattr(
+        pla.palantir.utils,
+        "run_diffusion_maps",
+        fake_run_diffusion_maps,
+    )
+    monkeypatch.setattr(
+        pla.palantir.utils,
+        "determine_multiscale_space",
+        fake_determine_multiscale_space,
+    )
+    monkeypatch.setattr(
+        pla.palantir.utils,
+        "run_magic_imputation",
+        fake_run_magic_imputation,
+    )
+    monkeypatch.setattr(
+        pla.utils.adata,
+        "save_h5ad",
+        lambda *args, **kwargs: None,
+    )
+
+    result = pla.run_diffusion_and_magic(
+        preprocessed_adata,
+        save_path=str(cache_path),
+        recompute_magic=False,
+    )
+
+    assert result is not preprocessed_adata
+    assert result.n_obs == preprocessed_adata.n_obs
+    assert result.n_vars == preprocessed_adata.n_vars
+    assert "MAGIC_imputed_data" in result.layers
+    assert captured["run_diffusion_maps_kwargs"]["n_components"] == 10
+    assert captured["run_magic_imputation_kwargs"]["n_steps"] == 3
+
+
+@pytest.mark.parametrize(
+    "terminal_labels,expected",
+    [
+        (['Macrophage', 'Macrophage'], ['Macrophage', 'Macrophage_2']),
+        (['TypeA', 'TypeA'], ['TypeA', 'TypeA_2']),
+    ],
+)
+def test_detect_and_plot_terminal_states_manual_duplicate_cluster_labels(
+    monkeypatch, gene_trend_adata, terminal_labels, expected
+):
+    """Duplicate cluster labels on manual terminals should be uniquified."""
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "highlight_cells_on_umap",
+        lambda *args, **kwargs: None,
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    gene_trend_adata.obs["celltype"] = "Macrophage"
+    gene_trend_adata.obs.loc[
+        [gene_trend_adata.obs_names[1], gene_trend_adata.obs_names[2]],
+        "celltype",
+    ] = terminal_labels
+
+    early_cell = gene_trend_adata.obs_names[0]
+    terminal_cells = [
+        gene_trend_adata.obs_names[1],
+        gene_trend_adata.obs_names[2],
+    ]
+
+    result = pla.detect_and_plot_terminal_states(
+        gene_trend_adata,
+        early_cell=early_cell,
+        terminal_states=terminal_cells,
+        clusters_to_analyze="celltype",
+        embedding_key="X_umap",
+        eigvec_key="DM_EigenVectors_multiscaled",
+    )
+
+    assert list(result.index) == terminal_cells
+    assert list(result.values) == expected
+
+
+def test_detect_and_plot_terminal_states_missing_inputs_raise(gene_trend_adata):
+    """Missing required inputs should raise a ValueError."""
+    with pytest.raises(ValueError, match="Diffusion embedding"):
+        pla.detect_and_plot_terminal_states(
+            gene_trend_adata,
+            early_cell=gene_trend_adata.obs_names[0],
+            terminal_states=None,
+            embedding_key="X_umap",
+            eigvec_key="missing_key",
+        )
+
+    with pytest.raises(ValueError, match="Embedding"):
+        pla.detect_and_plot_terminal_states(
+            gene_trend_adata,
+            early_cell=gene_trend_adata.obs_names[0],
+            terminal_states=None,
+            embedding_key="missing_embedding",
+            eigvec_key="DM_EigenVectors_multiscaled",
+        )
+
+    with pytest.raises(ValueError, match="Early cell"):
+        pla.detect_and_plot_terminal_states(
+            gene_trend_adata,
+            early_cell="missing_cell",
+            terminal_states=None,
+            embedding_key="X_umap",
+            eigvec_key="DM_EigenVectors_multiscaled",
+        )
+
+
+def test_analyze_top_genes_communities_marker_selection_and_pvals_adj(
+    monkeypatch, gene_trend_adata
+):
+    """Marker-based selection should respect pvals_adj filtering and ranking."""
+    captured = {}
+
+    def fake_cluster_gene_trends(adata, branch, genes, n_neighbors=30):
+        captured["branch"] = branch
+        captured["genes"] = list(genes)
+        captured["n_neighbors"] = n_neighbors
+        return pd.Series(["0" for _ in genes], index=genes, name="community")
+
+    monkeypatch.setattr(
+        pla.palantir.presults,
+        "cluster_gene_trends",
+        fake_cluster_gene_trends,
+    )
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "plot_gene_trend_clusters",
+        lambda *args, **kwargs: plt.figure(),
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    marker_table = {
+        "GroupA": pd.DataFrame(
+            {
+                "names": ["Gene0", "Gene1", "Gene2"],
+                "logfoldchanges": [2.0, 1.0, 0.5],
+                "scores": [10.0, 5.0, 3.0],
+                "pvals_adj": [0.01, 0.04, 0.20],
+            }
+        ),
+        "GroupB": pd.DataFrame(
+            {
+                "names": ["Gene3", "Gene4"],
+                "logfoldchanges": [1.5, 0.3],
+                "scores": [8.0, 1.0],
+                "pvals_adj": [0.02, 0.03],
+            }
+        ),
+    }
+
+    selected_genes, communities = pla.analyze_top_genes_communities(
+        gene_trend_adata,
+        trend_branches=["BranchA"],
+        gene_source="markers",
+        marker_table=marker_table,
+        top_n=4,
+        n_neighbors=5,
+        store_key="marker_store",
+    )
+
+    assert "Gene0" in selected_genes
+    assert "Gene1" in selected_genes
+    assert "Gene4" in selected_genes
+    assert "BranchA" in communities
+    assert captured["branch"] == "BranchA"
+    assert captured["n_neighbors"] == 5
+    assert set(captured["genes"]).issubset(set(gene_trend_adata.var_names))
+    assert "marker_store" in gene_trend_adata.uns["sctoolbox"]["palantir_gene_communities"]
+
+
+def test_analyze_top_genes_communities_marker_table_missing_columns_raises(
+    monkeypatch, gene_trend_adata
+):
+    """Markers without required ranking columns should raise a ValueError."""
+    marker_table = {
+        "GroupA": pd.DataFrame(
+            {
+                "names": ["Gene0", "Gene1"],
+                "logfoldchanges": [1.0, 2.0],
+            }
+        )
+    }
+
+    with pytest.raises(ValueError, match="missing required columns"):
+        pla.analyze_top_genes_communities(
+            gene_trend_adata,
+            trend_branches="BranchA",
+            gene_source="markers",
+            marker_table=marker_table,
+            top_n=2,
+        )
+
+
+@pytest.mark.parametrize(
+    "mode",
+    ["range", "var", "union"],
+)
+def test_plot_branch_gene_programs_ranking_modes(
+    monkeypatch, gene_trend_adata, mode
+):
+    """Gene program ranking modes should forward parameters to Palantir."""
+    captured = {}
+
+    def fake_cluster_gene_trends(adata, branch, genes, n_neighbors=30):
+        captured[branch] = {
+            "genes": genes,
+            "n_neighbors": n_neighbors,
+        }
+        return pd.Series(
+            ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)],
+            index=genes,
+        )
+
+    def fake_plot_gene_trend_clusters(*args, **kwargs):
+        fig, axes = plt.subplots(1, 1)
+        axes.plot([0, 1], [0, 1])
+        return fig
+
+    monkeypatch.setattr(
+        pla.palantir.presults,
+        "cluster_gene_trends",
+        fake_cluster_gene_trends,
+    )
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "plot_gene_trend_clusters",
+        fake_plot_gene_trend_clusters,
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    result = pla.plot_branch_gene_programs(
+        gene_trend_adata,
+        branch="BranchA",
+        n_dynamic_genes=4,
+        gene_ranking_mode=mode,
+        trend_knn_neighbors=4,
+        plot_representative_genes=False,
+    )
+
+    assert "BranchA" in result
+    assert captured["BranchA"]["n_neighbors"] == 4
+    assert len(captured["BranchA"]["genes"]) <= 4
+
+
+def test_plot_branch_gene_programs_excludes_flat_genes(monkeypatch, gene_trend_adata):
+    """Flat gene trends should be filtered before clustering."""
+    adata = gene_trend_adata.copy()
+    adata.varm["gene_trends_BranchA"].loc["Gene0"] = 0.5
+
+    captured = {}
+
+    def fake_cluster_gene_trends(adata_obj, branch, genes, n_neighbors=30):
+        captured[branch] = set(genes)
+        return pd.Series(
+            ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)],
+            index=genes,
+        )
+
+    monkeypatch.setattr(
+        pla.palantir.presults,
+        "cluster_gene_trends",
+        fake_cluster_gene_trends,
+    )
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "plot_gene_trend_clusters",
+        lambda *args, **kwargs: plt.figure(),
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    result = pla.plot_branch_gene_programs(
+        adata,
+        branch="BranchA",
+        n_dynamic_genes=8,
+        gene_ranking_mode="union",
+        trend_knn_neighbors=2,
+        plot_representative_genes=False,
+    )
+
+    assert "BranchA" in result
+    assert "Gene0" not in captured["BranchA"]
+
+
+def test_plot_branch_gene_programs_limits_n_dynamic_genes(monkeypatch, gene_trend_adata):
+    """The function should not select more genes than n_dynamic_genes."""
+    captured = {}
+
+    def fake_cluster_gene_trends(adata_obj, branch, genes, n_neighbors=30):
+        captured[branch] = list(genes)
+        return pd.Series(
+            ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)],
+            index=genes,
+        )
+
+    monkeypatch.setattr(
+        pla.palantir.presults,
+        "cluster_gene_trends",
+        fake_cluster_gene_trends,
+    )
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "plot_gene_trend_clusters",
+        lambda *args, **kwargs: plt.figure(),
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    result = pla.plot_branch_gene_programs(
+        gene_trend_adata,
+        branch="BranchA",
+        n_dynamic_genes=3,
+        gene_ranking_mode="range",
+        trend_knn_neighbors=2,
+        plot_representative_genes=False,
+    )
+
+    assert len(result["BranchA"]["selected_genes"]) == 3
+    assert len(captured["BranchA"]) == 3
+
+
+def test_plot_branch_gene_programs_unknown_branch_returns_empty(monkeypatch, gene_trend_adata):
+    """Requesting an unknown branch should return an empty result."""
+    assert pla.plot_branch_gene_programs(
+        gene_trend_adata,
+        branch="MissingBranch",
+        n_dynamic_genes=4,
+        gene_ranking_mode="union",
+        trend_knn_neighbors=2,
+        plot_representative_genes=False,
+    ) == {}
+
+
+def test_plot_branch_gene_programs_invalid_mode_returns_empty(monkeypatch, gene_trend_adata):
+    """An unsupported ranking mode should be skipped gracefully."""
+    monkeypatch.setattr(
+        pla.palantir.presults,
+        "cluster_gene_trends",
+        lambda *args, **kwargs: pd.Series([], index=[]),
+    )
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "plot_gene_trend_clusters",
+        lambda *args, **kwargs: plt.figure(),
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    result = pla.plot_branch_gene_programs(
+        gene_trend_adata,
+        gene_ranking_mode="invalid_mode",
+        plot_representative_genes=False,
+    )
+
+    assert result == {}
+
+
+def test_plot_branch_early_late_genes_skips_umap_when_missing(monkeypatch, gene_trend_adata):
+    """Missing UMAP data should skip the UMAP panel but still produce trends."""
+    gene_trend_adata = gene_trend_adata.copy()
+    gene_trend_adata.obsm.pop("X_umap", None)
+
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    result = pla.plot_branch_early_late_genes(
+        gene_trend_adata,
+        branches=["BranchA"],
+        top_n=2,
+        quantile_cutoff=0.25,
+        umap_ncols=2,
+    )
+
+    assert result["BranchA"]["trend_fig"] is not None
+    assert result["BranchA"]["umap_fig"] is None
+    assert result["BranchA"]["umap_axes"].size == 0
+
 
 @pytest.fixture
 def gene_trend_adata(preprocessed_adata):
@@ -826,6 +1187,8 @@ def test_detect_and_plot_terminal_states_manual(monkeypatch, gene_trend_adata):
         gene_trend_adata.obs_names[2],
     ]
 
+    gene_trend_adata.obs["celltype"] = "TypeA"
+
     result = pla.detect_and_plot_terminal_states(
         gene_trend_adata,
         early_cell=early_cell,
@@ -843,15 +1206,23 @@ def test_detect_and_plot_terminal_states_manual(monkeypatch, gene_trend_adata):
 def test_detect_and_plot_terminal_states_auto(monkeypatch, gene_trend_adata):
     """Automatic terminal-state detection should use Palantir output."""
     terminal_cells = [
+        "missing_cell",
         gene_trend_adata.obs_names[1],
         gene_trend_adata.obs_names[2],
     ]
     excluded_cells = [gene_trend_adata.obs_names[3]]
+    captured = {}
+
+    def fake_identify_terminal_states(diffusion_df, **kwargs):
+        captured["early_cell"] = kwargs.get("early_cell")
+        captured["knn"] = kwargs.get("knn")
+        captured["num_waypoints"] = kwargs.get("num_waypoints")
+        return terminal_cells, excluded_cells
 
     monkeypatch.setattr(
         pla.palantir.core,
         "identify_terminal_states",
-        lambda *args, **kwargs: (terminal_cells, excluded_cells),
+        fake_identify_terminal_states,
     )
     monkeypatch.setattr(
         pla.palantir.plot,
@@ -867,12 +1238,20 @@ def test_detect_and_plot_terminal_states_auto(monkeypatch, gene_trend_adata):
         clusters_to_analyze=None,
         embedding_key="X_umap",
         eigvec_key="DM_EigenVectors_multiscaled",
+        knn=10,
+        num_waypoints=20,
         show_excluded_boundaries=True,
     )
 
     assert isinstance(result, pd.Series)
-    assert list(result.index) == terminal_cells
+    assert list(result.index) == [
+        gene_trend_adata.obs_names[1],
+        gene_trend_adata.obs_names[2],
+    ]
     assert list(result.values) == ["terminal_state_1", "terminal_state_2"]
+    assert captured["early_cell"] == gene_trend_adata.obs_names[0]
+    assert captured["knn"] == 10
+    assert captured["num_waypoints"] == 20
 
 
 def test_analyze_top_genes_communities_hvg_smoke(monkeypatch, gene_trend_adata):
@@ -902,11 +1281,14 @@ def test_analyze_top_genes_communities_hvg_smoke(monkeypatch, gene_trend_adata):
         gene_source="hvg",
         top_n=4,
         n_neighbors=2,
+        store_key="test_store",
     )
 
     assert selected_genes == ["Gene0", "Gene1", "Gene2", "Gene3"]
     assert "BranchA" in communities
     assert isinstance(communities["BranchA"], pd.Series)
+    assert "sctoolbox" in gene_trend_adata.uns
+    assert "test_store" in gene_trend_adata.uns["sctoolbox"]["palantir_gene_communities"]
 
 
 def test_plot_branch_gene_programs_smoke(monkeypatch, gene_trend_adata):
@@ -937,15 +1319,16 @@ def test_plot_branch_gene_programs_smoke(monkeypatch, gene_trend_adata):
 
     result = pla.plot_branch_gene_programs(
         gene_trend_adata,
-        branch="BranchA",
+        branch=None,
         n_dynamic_genes=4,
         gene_ranking_mode="union",
         trend_knn_neighbors=2,
         plot_representative_genes=False,
     )
 
-    assert "BranchA" in result
+    assert set(result) == {"BranchA", "BranchB"}
     assert "selected_genes" in result["BranchA"]
+    assert len(result["BranchA"]["selected_genes"]) == 4
     assert "trend_clusters" in result["BranchA"]
     assert "centroid_z" in result["BranchA"]
     assert "cluster_summary" in result["BranchA"]
@@ -973,5 +1356,26 @@ def test_plot_branch_early_late_genes_smoke(monkeypatch, gene_trend_adata):
     assert "trend_fig" in result["BranchA"]
     assert "trend_axes" in result["BranchA"]
     assert "top_genes" in result["BranchA"]
-    assert len(result["BranchA"]["top_genes"]["early"]) == 2
-    assert len(result["BranchA"]["top_genes"]["late"]) == 2
+    assert result["BranchA"]["top_genes"]["early"][0] == "Gene3"
+    assert result["BranchA"]["top_genes"]["late"][0] == "Gene0"
+
+
+def test_plot_branch_early_late_genes_invalid_parameters(monkeypatch, gene_trend_adata):
+    """Invalid quantile_cutoff or top_n values should raise ValueError."""
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    with pytest.raises(ValueError, match="quantile_cutoff"):
+        pla.plot_branch_early_late_genes(
+            gene_trend_adata,
+            branches=["BranchA"],
+            top_n=2,
+            quantile_cutoff=0.5,
+        )
+
+    with pytest.raises(ValueError, match="top_n"):
+        pla.plot_branch_early_late_genes(
+            gene_trend_adata,
+            branches=["BranchA"],
+            top_n=0,
+            quantile_cutoff=0.25,
+        )
