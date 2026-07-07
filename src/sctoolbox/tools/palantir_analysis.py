@@ -526,9 +526,6 @@ def plot_interactive_embedding_cell_ids(
     if embedding_key not in adata.obsm:
         raise ValueError(f"Embedding '{embedding_key}' not found in adata.obsm.")
 
-    if embedding_key not in adata.obsm:
-        raise ValueError(f"Embedding '{embedding_key}' not found in adata.obsm.")
-
     embedding = adata.obsm[embedding_key]
     if embedding.shape[1] != 2:
         raise ValueError(f"Embedding '{embedding_key}' must be 2D.")
