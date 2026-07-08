@@ -839,7 +839,7 @@ def automatic_thresholds(adata: sc.AnnData,
     for col in columns:
 
         if groupby is None:
-            data = table[col].values
+            data = table[col].to_numpy(copy=True)
             data[np.isnan(data)] = 0
             d = FUN(data, **FUN_kwargs)
             thresholds[col] = d
@@ -847,7 +847,7 @@ def automatic_thresholds(adata: sc.AnnData,
         else:
             thresholds[col] = {}  # initialize to fill in per group
             for group, subtable in table.groupby(groupby):
-                data = subtable[col].values
+                data = subtable[col].to_numpy(copy=True)
                 data[np.isnan(data)] = 0
                 d = FUN(data, **FUN_kwargs)
                 thresholds[col][group] = d
