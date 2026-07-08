@@ -453,7 +453,10 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
     df_sankey = df_tmp.reset_index()
 
     # Group by cluster names of modality 1 clusters
-    df_final = df_heatmap.groupby(index, observed=False).agg(list)
+    # Cast the categorical modality 2 cluster column to object first: pandas 3 tries to cast
+    # the list-valued .agg(list) result back into the categorical dtype, which fails as a list
+    # is not a valid (hashable) category. object works identically on pandas 2 and 3.
+    df_final = df_heatmap.astype({clustercols[1]: object}).groupby(index, observed=False).agg(list)
     # Generate column with modality 2 cluster names as keys and number of cells per modality 2 cluster as values in dictionary
     df_final.insert(3, clusters_mod2,
                     df_final.apply(lambda x: dict(zip(x[clustercols[1]], x["Cells_per_cluster"])), axis=1))
