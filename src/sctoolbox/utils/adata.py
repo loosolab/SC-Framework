@@ -214,13 +214,15 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
 
     # generate report
     if settings.report_dir and report:
+        # filter out a None key: anndata>=0.13 exposes .X as a spurious None-keyed layer (absent on anndata 0.12)
+        real_layers = [key for key in adata.layers.keys() if key is not None]
         with open(Path(settings.report_dir) / report[0], "w") as f:
             f.write("\n".join([
                 "## Dataset",
                 f"{adata.shape[0]} observations x {adata.shape[1]} variables",
                 f"Observation information: {', '.join(adata.obs.columns)}",
                 f"Variable information: {', '.join(adata.var.columns)}",
-                f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
+                f"Additional data layers: {', '.join(real_layers)}" if real_layers else ""
             ]))
 
         # method
@@ -553,7 +555,10 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
         If ``layer`` is set but no layer with that name exists.
     """
     if layer and layer not in adata.layers:
-        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
+        # filter out a None key: anndata>=0.13 exposes .X as a spurious None-keyed layer
+        # (absent on anndata 0.12); listing only real (str) layer names keeps the message correct
+        available = ','.join(key for key in adata.layers.keys() if key is not None)
+        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {available}.")
 
     def clean_section(obj: sc.AnnData, axis: str = "obs", keep: Optional[list[str]] = None, delete: Optional[list[str]] = None, rename: Optional[dict[str, str]] = None) -> None:  # noqa: C901
         """
