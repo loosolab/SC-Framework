@@ -803,12 +803,13 @@ def tidy_layers(  # noqa: C901
         if replace_X in adata.layers:
             adata.X = adata.layers[replace_X].copy()
         else:
-            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({list(adata.layers.keys())}).")
+            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({[key for key in adata.layers.keys() if key is not None]}).")
 
     # ----- keep ----- #
     if keep != "all":
         for layer in list(adata.layers.keys()):
-            if layer not in keep:
+            # skip a None key: anndata>=0.13 exposes .X as a None-keyed layer; deleting it would drop .X
+            if layer is not None and layer not in keep:
                 del adata.layers[layer]
 
     if not inplace:
