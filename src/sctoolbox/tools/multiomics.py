@@ -298,13 +298,18 @@ def join_modalities(adata_list: List[sc.AnnData],
         adata.obs.index.name = None
         adata.var.index.name = None
 
-    # Create mudata object from anndata objects for modality 1 and modality 2
-    mdata = mu.MuData(dict(zip(modality_list, adata_list)))
-
     # Check if cells that are not present in both modalities are to be kept or filtered out
     if not keep_outer:
-        # Filter to keep only cells that exist in both modalities
-        mu.pp.intersect_obs(mdata)
+        # Keep only cells that exist in all modalities. This reimplements
+        # mu.pp.intersect_obs, which reads anndata's removed private ._X attribute
+        # and therefore fails on newer anndata versions. The intersection of obs_names
+        # (np.intersect1d, matching muon) is used to subset each modality before the
+        # MuData is built; the .isin mask preserves each modality's own cell order.
+        common_obs = reduce(np.intersect1d, [adata.obs_names for adata in adata_list])
+        adata_list = [adata[adata.obs_names.isin(common_obs)].copy() for adata in adata_list]
+
+    # Create mudata object from anndata objects for modality 1 and modality 2
+    mdata = mu.MuData(dict(zip(modality_list, adata_list)))
 
     return mdata
 
