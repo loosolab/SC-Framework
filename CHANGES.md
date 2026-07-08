@@ -12,6 +12,7 @@
 - reduce test runtime hotspots, right-size fixture scopes, dedup fixtures/orphan data, and fix warnings (#445)
 - pin the conda environment to Python >=3.9,<3.13 (#460)
 - fix SCSA for Python >= 3.13
+- add compatibility with pandas 3 and anndata 0.13 (!531)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
