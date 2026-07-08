@@ -76,7 +76,8 @@ def fill_na(df: pd.DataFrame,
             df[nan_col] = df[nan_col].fillna(replace["float"])
         elif col_type.startswith("int"):
             df[nan_col] = df[nan_col].fillna(replace["int"])
-        elif col_type == "object":
+        elif col_type == "object" or col_type == "str" or col_type.startswith("string"):
+            # pandas 3 infers pure-string columns as dtype "str"/"string" rather than "object"
             value_set = list({x for x in set(df[nan_col]) if x == x})
             o_type = type(value_set[0]).__name__ if value_set else "str"
             # opt into the future no-silent-downcast behaviour so fillna does not warn,
