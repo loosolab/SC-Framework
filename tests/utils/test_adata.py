@@ -70,7 +70,7 @@ def test_get_adata_subsets(adata):
     subsets = utils.get_adata_subsets(adata, "group")
 
     for group, sub_adata in subsets.items():
-        assert sub_adata.obs["group"][0] == group
+        assert sub_adata.obs["group"].iloc[0] == group
         assert sub_adata.obs["group"].nunique() == 1
 
 
