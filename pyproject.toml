@@ -147,7 +147,7 @@ gsea = [
     'gseapy>=1.2.1'  # https://github.com/zqfang/GSEApy/issues/353
 ]
 deseq2 = [
-    'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
+    'pydeseq2>=0.5.4'  # https://github.com/scverse/PyDESeq2/pull/436
 ]
 annotation = [
     'markerRepo>=0.1.5'
