@@ -80,7 +80,7 @@ dependencies = [
         'matplotlib>=3.8.4',  # to speed up installation
         'matplotlib_venn>=1.1.2',  # to speed up installation
         'scanpy[leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (leiden)
-        'anndata>=0.8',  # anndata 0.7 is not upward compatible
+        'anndata>=0.8,!=0.13.0',  # anndata 0.7 is not upward compatible; 0.13.0 under-pins typing_extensions and is broken (scverse/anndata#2537)
         'numba>=0.57.1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy>=2',
         'kneed',
@@ -103,7 +103,6 @@ dependencies = [
         'pyyaml',
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'packaging',
-        'typing_extensions>=4.16.0',  # workaround for https://github.com/scverse/anndata/issues/2537 (anndata 0.13.0 under-pins it); remove once fixed in anndata 0.13.1
         'upsetplot',
         'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
