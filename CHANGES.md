@@ -12,7 +12,9 @@
 - reduce test runtime hotspots, right-size fixture scopes, dedup fixtures/orphan data, and fix warnings (#445)
 - pin the conda environment to Python >=3.9,<3.13 (#460)
 - fix SCSA for Python >= 3.13
-- add compatibility with pandas 3 and anndata 0.13 (!531)
+- add compatibility with pandas 3 and anndata 0.13 (!533)
+- make pygenometracks an optional 'genometracks' extra to resolve the matplotlib conflict in .[all] (!533)
+- drop the typing_extensions pin and exclude anndata 0.13.0 (!533)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
