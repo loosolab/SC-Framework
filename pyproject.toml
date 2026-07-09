@@ -124,7 +124,7 @@ atac = [
     'pyranges'
 ]
 genometracks = [
-    'pygenometracks>=3.9'
+    'pygenometracks>=3.9'  # add back to atac group once this is resolved: https://github.com/deeptools/pyGenomeTracks/issues/494
 ]
 interactive = [
     'click'
