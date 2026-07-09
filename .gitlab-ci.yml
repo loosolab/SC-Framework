@@ -293,7 +293,7 @@ test coverage:
     before_script:
       - pip install .[all] --group test
       - pip install git+https://github.com/Novartis/scar.git  # install scar here to test related functions. Should be removed if scar is available on conda and PyPI
-      - pip install intervaltree pyBigWig future hicmatrix gffutils bx-python pyfaidx
+      - pip install 'matplotlib>=3.9,<3.11' intervaltree pyBigWig future hicmatrix gffutils bx-python pyfaidx  # <3.11 keeps matplotlib.cm.get_cmap for pygenometracks; >=3.9 keeps pydeseq2 happy
       - pip install --no-deps pygenometracks
     script:
       - echo $DYNAMIC_IMAGE_TAG
@@ -511,7 +511,7 @@ build-pages:
   stage: deploy
   before_script:
     - pip install .[all] --group docs
-    - pip install intervaltree pyBigWig future hicmatrix gffutils bx-python pyfaidx
+    - pip install 'matplotlib>=3.9,<3.11' intervaltree pyBigWig future hicmatrix gffutils bx-python pyfaidx  # <3.11 keeps matplotlib.cm.get_cmap for pygenometracks; >=3.9 keeps pydeseq2 happy
     - pip install --no-deps pygenometracks
     - git submodule init
     - git submodule update
