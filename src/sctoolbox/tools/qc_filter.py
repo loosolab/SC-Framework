@@ -318,7 +318,8 @@ def estimate_doublets(adata: sc.AnnData,  # noqa: C901
         all_groups = adata.obs[groupby].astype("category").cat.categories.tolist()
         if threads > 1:
             ctx_in_main = mp.get_context('forkserver')
-            with ctx_in_main.Pool(processes=threads, maxtasksperchild=1) as pool:
+            n_processes = min(threads, len(all_groups))
+            with ctx_in_main.Pool(processes=n_processes, maxtasksperchild=1) as pool:
                 # Run scrublet for each sub data
                 logger.info("Sending {0} batches to {1} threads".format(len(all_groups), threads))
                 jobs = []
