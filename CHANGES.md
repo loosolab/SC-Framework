@@ -17,6 +17,7 @@
 - drop the typing_extensions pin and exclude anndata 0.13.0 (!533)
 - bump tqdm floor to >=4.68.4 for pandas 3 compatibility (!533)
 - fix get_variable_features subsampling for pandas 3 (Series positional access via .iloc) and expose subsample_target (!533)
+- fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
