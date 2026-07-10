@@ -326,7 +326,10 @@ def estimate_doublets(adata: sc.AnnData,  # noqa: C901
 
                     # Clean up adata before sending to thread
                     sub.uns = {}
-                    sub.layers = None
+                    # delete only real layers; anndata>=0.13 backs .X with a None-keyed
+                    # layer entry, so `sub.layers = None` would also drop .X
+                    for layer in [key for key in sub.layers.keys() if key is not None]:
+                        del sub.layers[layer]
 
                     job = pool.apply_async(_run_scrublet, (sub, use_native, threshold), {"verbose": False, **kwargs})
                     jobs.append(job)
