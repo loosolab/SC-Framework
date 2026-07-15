@@ -491,23 +491,40 @@ def test_classify_trend_pattern_handles_nan_values():
 
 
 def test_compare_all_layers_returns_figure_for_project_test_data(adata_h5ad):
-    """Layer comparison should create a matplotlib figure."""
+    """Layer comparison should create one subplot for adata.X and each layer."""
     fig, axs = pla.compare_all_layers(adata_h5ad)
+    axs_array = np.atleast_1d(axs)
+
+    expected_axes = 1 + len(adata_h5ad.layers)
 
     assert fig is not None
     assert axs is not None
-    assert len(np.atleast_1d(axs)) >= 1
+    assert len(axs_array) == expected_axes
+
     plt.close(fig)
 
 
 def test_compare_all_layers_can_exclude_layer(adata_h5ad):
     """Excluded layers should not be plotted."""
-    fig, axs = pla.compare_all_layers(adata_h5ad, exclude_layers=["spliced"])
+    excluded_layers = ["spliced"]
+
+    fig, axs = pla.compare_all_layers(
+        adata_h5ad,
+        exclude_layers=excluded_layers,
+    )
     axs_array = np.atleast_1d(axs)
 
-    assert len(axs_array) == 3
-    plt.close(fig)
+    expected_axes = 1 + sum(
+        layer_name not in excluded_layers
+        for layer_name in adata_h5ad.layers.keys()
+    )
 
+    titles = [ax.get_title() for ax in axs_array]
+
+    assert len(axs_array) == expected_axes
+    assert not any("layers['spliced']" in title for title in titles)
+
+    plt.close(fig)
 
 # ------------------------- small integration checks -------------------------#
 # No small integration checks remain in this file.
