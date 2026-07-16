@@ -1,5 +1,7 @@
 """Helper functions for Palantir."""
 
+import contextlib
+import functools
 import os
 from pathlib import Path
 
@@ -30,11 +32,79 @@ from sctoolbox.tools import marker_genes
 
 # Type hints / decorators
 from beartype import beartype
-from beartype.typing import Any, Iterable, Literal, Optional, Union
+from beartype.typing import Any, Iterable, Iterator, Literal, Optional, Union
 
 
 logger = settings.logger
 Severity = Literal[False, "warn", "error"]
+
+
+# ---------------------------------------------------------------------------
+# Temporary Palantir <-> pandas>=3 compatibility patch
+# ---------------------------------------------------------------------------
+# palantir's ``core._differentiation_entropy`` sets a DataFrame diagonal via
+# ``bp.values[...] = 1``. Under pandas>=3 the array returned by
+# ``DataFrame.values`` is read-only (copy-on-write is mandatory), so this raises
+# ``ValueError: assignment destination is read-only``.
+# ``.values`` for the duration of that single function.
+# TODO: remove once palantir is compatible with pandas>=3.
+# TODO add a link to the palantir issue
+if int(pd.__version__.split(".")[0]) >= 3:
+
+    _orig_dataframe_values = pd.DataFrame.values
+
+    def _writable_values(self: pd.DataFrame) -> np.ndarray:
+        """Return ``DataFrame.values`` as a writable array (pandas<3 behaviour).
+
+        Parameters
+        ----------
+        self : pd.DataFrame
+            DataFrame whose ``values`` array is requested.
+
+        Returns
+        -------
+        np.ndarray
+            The values array with its writable flag restored (a writable copy
+            as a fallback when the flag cannot be flipped in place).
+        """
+        arr = _orig_dataframe_values.fget(self)
+        if not arr.flags.writeable:
+            try:
+                arr.flags.writeable = True
+            except ValueError:
+                arr = arr.copy()
+        return arr
+
+    @contextlib.contextmanager
+    def _writable_dataframe_values() -> Iterator[None]:
+        """Temporarily make ``DataFrame.values`` return a writable array.
+
+        Yields
+        ------
+        None
+            Control while the patched ``DataFrame.values`` property is active.
+        """
+        pd.DataFrame.values = property(_writable_values)
+        try:
+            yield
+        finally:
+            pd.DataFrame.values = _orig_dataframe_values
+
+    _orig_differentiation_entropy = palantir.core._differentiation_entropy
+
+    @functools.wraps(_orig_differentiation_entropy)
+    def _differentiation_entropy_pandas3_compat(*args: Any, **kwargs: Any) -> Any:
+        """Call palantir's ``_differentiation_entropy`` with writable ``.values``.
+
+        Returns
+        -------
+        Any
+            The ``(entropy, branch_probs)`` result returned by palantir.
+        """
+        with _writable_dataframe_values():
+            return _orig_differentiation_entropy(*args, **kwargs)
+
+    palantir.core._differentiation_entropy = _differentiation_entropy_pandas3_compat
 
 
 @deco.log_anndata
