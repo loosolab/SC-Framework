@@ -19,7 +19,7 @@
 - bump tqdm floor to >=4.68.4 for pandas 3 compatibility (!533)
 - fix get_variable_features subsampling for pandas 3 (Series positional access via .iloc) and expose subsample_target (!533)
 - fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
-- temporary patch for palantir's read-only `.values` diagonal assignment under pandas 3 (!533)
+- temporary patch for palantir's read-only in-place array writes under pandas 3 (`_differentiation_entropy`, `_validate_obsm_key`) (!533)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
