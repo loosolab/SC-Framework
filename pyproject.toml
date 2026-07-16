@@ -161,14 +161,14 @@ velocity = [
     'scvelo>=0.3.4'
 ]
 palantir = [
-    'palantir>=1.4.4'  # to speed up installation
+    'palantir>=1.4.5'  # https://github.com/dpeerlab/Palantir/issues/180
 ]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
 pilot = [
 #   'pilotpy @ git+https://github.com/loosolab/PILOT_scframework.git',  # PyPI doesn't accept git packages
-    'palantir>=1.4.4'
+    'palantir>=1.4.5'
 ]
 multiome = [
     'muon>=0.1.7',
