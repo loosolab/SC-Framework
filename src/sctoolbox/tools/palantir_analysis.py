@@ -2,6 +2,7 @@
 
 import contextlib
 import functools
+import inspect
 import os
 from pathlib import Path
 
@@ -143,6 +144,60 @@ if int(pd.__version__.split(".")[0]) >= 3:
     # rebind each reference, not only the definition in ``validation``.
     for _module in (palantir.validation, palantir.presults, palantir.utils, palantir.plot):
         _module._validate_obsm_key = _validate_obsm_key_pandas3_compat
+
+
+# ---------------------------------------------------------------------------
+# Temporary Palantir <-> anndata>=0.13 compatibility patch
+# ---------------------------------------------------------------------------
+# palantir's ``presults.cluster_gene_trends`` constructs ``AnnData(..., dtype=...)``.
+# anndata>=0.13 removed the ``dtype`` constructor argument, so this raises
+# ``TypeError: AnnData.__init__() got an unexpected keyword argument 'dtype'``.
+# Until palantir ships a fix, tolerate the removed kwarg for the duration of that
+# function by dropping it and reproducing its effect (casting ``X``). The class
+# object itself is left untouched so palantir's ``isinstance(data, AnnData)`` checks
+# still work; only ``__init__`` is patched, and only while the function runs.
+# TODO: remove once palantir is compatible with anndata>=0.13.
+# TODO: add a link to the palantir issue.
+if "dtype" not in inspect.signature(AnnData).parameters:
+
+    @contextlib.contextmanager
+    def _anndata_init_accepts_dtype() -> Iterator[None]:
+        """Temporarily let ``AnnData(...)`` accept the removed ``dtype`` argument.
+
+        Yields
+        ------
+        None
+            Control while ``AnnData.__init__`` drops ``dtype`` and casts ``X`` instead.
+        """
+        orig_init = AnnData.__init__
+
+        def _init(self: AnnData, *args: Any, **kwargs: Any) -> None:
+            dtype = kwargs.pop("dtype", None)
+            orig_init(self, *args, **kwargs)
+            if dtype is not None and self.X is not None:
+                self.X = self.X.astype(dtype)
+
+        AnnData.__init__ = _init
+        try:
+            yield
+        finally:
+            AnnData.__init__ = orig_init
+
+    _orig_cluster_gene_trends = palantir.presults.cluster_gene_trends
+
+    @functools.wraps(_orig_cluster_gene_trends)
+    def _cluster_gene_trends_anndata_compat(*args: Any, **kwargs: Any) -> Any:
+        """Call palantir's ``cluster_gene_trends`` tolerating the removed ``dtype`` kwarg.
+
+        Returns
+        -------
+        Any
+            The gene-trend communities returned by palantir.
+        """
+        with _anndata_init_accepts_dtype():
+            return _orig_cluster_gene_trends(*args, **kwargs)
+
+    palantir.presults.cluster_gene_trends = _cluster_gene_trends_anndata_compat
 
 
 @deco.log_anndata
