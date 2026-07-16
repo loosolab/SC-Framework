@@ -42,14 +42,39 @@ Severity = Literal[False, "warn", "error"]
 # ---------------------------------------------------------------------------
 # Temporary Palantir <-> pandas>=3 compatibility patch
 # ---------------------------------------------------------------------------
-# palantir's ``core._differentiation_entropy`` sets a DataFrame diagonal via
-# ``bp.values[...] = 1``. Under pandas>=3 the array returned by
-# ``DataFrame.values`` is read-only (copy-on-write is mandatory), so this raises
-# ``ValueError: assignment destination is read-only``.
-# ``.values`` for the duration of that single function.
+# Several palantir functions mutate, in place, arrays they obtain from
+# pandas/anndata — either ``DataFrame.values`` directly (``core._differentiation_entropy``)
+# or the numpy array returned by ``validation._validate_obsm_key(..., as_df=False)``
+# (``presults.select_branch_cells`` and friends). Under pandas>=3 those arrays are
+# read-only (copy-on-write is mandatory), so the writes raise
+# ``ValueError: assignment destination is read-only``. Until palantir ships a fix,
+# restore the pandas<3 behaviour of writable arrays. Both spots go through a single-block numeric frame, so flipping the flag in
+# place mutates the underlying frame exactly as pandas<3 did.
 # TODO: remove once palantir is compatible with pandas>=3.
-# TODO add a link to the palantir issue
+# TODO: add a link to the palantir issue.
 if int(pd.__version__.split(".")[0]) >= 3:
+
+    def _make_writable(arr: Any) -> Any:
+        """Restore the writable flag of a read-only numpy array (pandas<3 behaviour).
+
+        Parameters
+        ----------
+        arr : Any
+            Any value; only a read-only :class:`numpy.ndarray` is altered, everything
+            else is returned unchanged.
+
+        Returns
+        -------
+        Any
+            ``arr`` made writable in place, a writable copy as a fallback when the flag
+            cannot be flipped, or the input unchanged when it is not a read-only array.
+        """
+        if isinstance(arr, np.ndarray) and not arr.flags.writeable:
+            try:
+                arr.flags.writeable = True
+            except ValueError:
+                arr = arr.copy()
+        return arr
 
     _orig_dataframe_values = pd.DataFrame.values
 
@@ -64,16 +89,9 @@ if int(pd.__version__.split(".")[0]) >= 3:
         Returns
         -------
         np.ndarray
-            The values array with its writable flag restored (a writable copy
-            as a fallback when the flag cannot be flipped in place).
+            The values array with its writable flag restored.
         """
-        arr = _orig_dataframe_values.fget(self)
-        if not arr.flags.writeable:
-            try:
-                arr.flags.writeable = True
-            except ValueError:
-                arr = arr.copy()
-        return arr
+        return _make_writable(_orig_dataframe_values.fget(self))
 
     @contextlib.contextmanager
     def _writable_dataframe_values() -> Iterator[None]:
@@ -105,6 +123,26 @@ if int(pd.__version__.split(".")[0]) >= 3:
             return _orig_differentiation_entropy(*args, **kwargs)
 
     palantir.core._differentiation_entropy = _differentiation_entropy_pandas3_compat
+
+    _orig_validate_obsm_key = palantir.validation._validate_obsm_key
+
+    @functools.wraps(_orig_validate_obsm_key)
+    def _validate_obsm_key_pandas3_compat(*args: Any, **kwargs: Any) -> Any:
+        """Return palantir's ``_validate_obsm_key`` output with a writable array.
+
+        Returns
+        -------
+        Any
+            The ``(data, names)`` pair from palantir, with a read-only ``data`` array
+            (from ``DataFrame.values`` when ``as_df=False``) made writable.
+        """
+        data, names = _orig_validate_obsm_key(*args, **kwargs)
+        return _make_writable(data), names
+
+    # ``_validate_obsm_key`` is imported by name into several palantir modules, so
+    # rebind each reference, not only the definition in ``validation``.
+    for _module in (palantir.validation, palantir.presults, palantir.utils, palantir.plot):
+        _module._validate_obsm_key = _validate_obsm_key_pandas3_compat
 
 
 @deco.log_anndata
