@@ -14,13 +14,25 @@ import sctoolbox.utils.general as general
 
 @pytest.fixture
 def berries():
-    """Return list of berries."""
+    """Return list of berries.
+
+    Returns
+    -------
+    list
+        List of berry names.
+    """
     return ["blueberry", "strawberry", "blackberry"]
 
 
 @pytest.fixture
 def na_dataframe():
-    """Return DataFrame with columns of multiple types containing NA."""
+    """Return DataFrame with columns of multiple types containing NA.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with columns of multiple types containing NA.
+    """
     data = {'int': [3, 2, 1, np.nan],
             'float': [1.2, 3.4, 5.6, np.nan],
             'string': ['a', 'b', 'c', np.nan],

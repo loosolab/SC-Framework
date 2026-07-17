@@ -40,7 +40,7 @@ def test_invalid_keys():
         settings.invalid_key = "value"
 
     for key in ["full_adata_input_prefix", "full_adata_output_prefix", "full_figure_prefix"]:
-        with pytest.raises(KeyError):
+        with pytest.raises(ValueError):
             setattr(settings, key, "value")
 
 
@@ -95,7 +95,7 @@ def test_settings_from_config(key, path):
 
 
 def test_invalid_key_settings_from_config():
-    """Test that apropriate Error is returned if the given key is not found in the yaml."""
+    """Test that appropriate Error is returned if the given key is not found in the yaml."""
     with pytest.raises(KeyError, match="Key 01 not found in config file"):
         settings.settings_from_config(config_path_nokey, key="01")
     settings.reset()

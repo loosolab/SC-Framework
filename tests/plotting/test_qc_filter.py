@@ -24,44 +24,86 @@ quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
 
 @pytest.fixture
 def slider():
-    """Create a slider widget."""
+    """Create a slider widget.
+
+    Returns
+    -------
+    ipywidgets.FloatRangeSlider
+        Slider widget with default range.
+    """
     return widgets.FloatRangeSlider(value=[5, 7], min=0, max=10, step=1)
 
 
 @pytest.fixture
 def slider_list(slider):
-    """Create a list of slider widgets."""
+    """Create a list of slider widgets.
+
+    Returns
+    -------
+    list
+        List of slider widgets.
+    """
     return [slider for _ in range(2)]
 
 
 @pytest.fixture
 def checkbox():
-    """Create a checkbox widget."""
+    """Create a checkbox widget.
+
+    Returns
+    -------
+    ipywidgets.Checkbox
+        Checkbox widget.
+    """
     return widgets.Checkbox()
 
 
 @pytest.fixture
 def slider_dict(slider):
-    """Create a dict of sliders."""
+    """Create a dict of sliders.
+
+    Returns
+    -------
+    dict
+        Dictionary mapping column names to sliders.
+    """
     return {c: slider for c in ['LISI_score_pca', 'qc_float']}
 
 
 @pytest.fixture
 def slider_dict_grouped(slider):
-    """Create a nested dict of slider widgets."""
+    """Create a nested dict of slider widgets.
+
+    Returns
+    -------
+    dict
+        Nested dictionary mapping columns to groups to sliders.
+    """
     return {c: {g: slider for g in ['C1', 'C2', 'C3']} for c in ['LISI_score_pca', 'qc_float']}
 
 
 @pytest.fixture
 def slider_dict_grouped_diff(slider):
-    """Create a nested dict of slider widgets with different selections."""
+    """Create a nested dict of slider widgets with different selections.
+
+    Returns
+    -------
+    dict
+        Nested dictionary with varied slider configurations.
+    """
     return {"A": {"1": slider, "2": widgets.FloatRangeSlider(value=[1, 5], min=0, max=10, step=1)},
             "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with QC metrics.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 
@@ -93,7 +135,13 @@ def adata():
 
 @pytest.fixture
 def atac_adata():
-    """Fixture for an AnnData object."""
+    """Fixture for an AnnData object.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object.
+    """
     adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
     return adata
 
@@ -198,7 +246,7 @@ def test_toggle_linkage(checkbox, slider_list, global_threshold):
 
 
 def test_update_threshold(slider):
-    """Test if update_threshold runs wihtout error."""
+    """Test if update_threshold runs without error."""
     fig, _ = plt.subplots()
     slider.observe(functools.partial(pl._update_thresholds, fig=fig, min_line=1, min_shade=1, max_line=1, max_shade=1), names=["value"])
     assert True
@@ -277,6 +325,24 @@ def test_upset_select_cells(adata, thresholds, expected):
     global_selection = pl._upset_select_cells(adata, global_thresholds, groupby=None)
 
     assert expected == (sample_selection == global_selection).all().all()
+
+
+def test_upset_select_cells_fail(adata):
+    """Test upset_select_cells fail."""
+    grouped_thresholds = {
+        'qcvar1': {'C1': {'min': 0.1, 'max': 0.9},
+                   'C2': {'min': 0.1, 'max': 0.9},
+                   'C3': {'min': 0.1, 'max': 0.9}},
+        'qcvar2': {'C1': {'min': 0.2, 'max': 0.8},
+                   'C2': {'min': 0.2, 'max': 0.8},
+                   'C3': {'min': 0.2, 'max': 0.8}}
+    }
+
+    with pytest.raises(ValueError, match="Parameter groupby is set to None while threshold*"):
+        pl._upset_select_cells(adata, grouped_thresholds, groupby=None)
+
+    with pytest.raises(ValueError, match="Wrong group selection.*"):
+        pl._upset_select_cells(adata, grouped_thresholds, groupby="clustering")
 
 
 @pytest.mark.parametrize("thresholds, groupby", [({'qcvar1': {'min': 0.1, 'max': 0.9},

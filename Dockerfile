@@ -8,7 +8,7 @@ COPY scripts /scripts/
 # Set the time zone (before installing any packages)
 RUN echo 'Europe/Berlin' > apt-get install -y tzdata
 
-# make scripts executeable
+# make scripts executable
 RUN chmod +x scripts/bedGraphToBigWig 
 
 # Clear the local repository of retrieved package files
@@ -33,18 +33,23 @@ RUN apt-get install bedtools && \
 RUN mamba update -n base mamba && \
     mamba --version 
 
-# install enviroment
+# install environment
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
-# prevent "Build failed for the C core of igraph." #400
-RUN mamba install -y "louvain>=0.8.2"
+# Install Jupyter extensions
+RUN jupyter contrib nbextension install --sys-prefix && \
+    jupyter nbextension enable scratchpad/main --sys-prefix && \
+    jupyter nbextension enable runtools/main --sys-prefix && \
+    jupyter nbextension enable init_cell/main --sys-prefix && \
+    jupyter nbextension enable execute_time/ExecuteTime --sys-prefix && \
+    jupyter nbextension enable scroll_down/main --sys-prefix
 
 # install sctoolbox
-RUN pip install "/home/sc_framework/[core,downstream]" && \
-    pip install pytest && \
-    pip install pytest-html && \
-    pip install pytest-cov && \
-    pip install pytest-mock
+RUN pip install "/home/sc_framework/[all]" --group "/home/sc_framework/pyproject.toml:test"
+
+# clean cache files
+RUN mamba clean --all -y && \
+    pip cache purge
 
 # Generate an ssh key
 RUN apt-get install -y openssh-client && \

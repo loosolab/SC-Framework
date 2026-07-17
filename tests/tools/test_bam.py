@@ -29,13 +29,25 @@ def add_logger_handler(logger, handler):
 
 @pytest.fixture
 def bam_file():
-    """Fixture pointing to test bam."""
+    """Fixture pointing to test bam.
+
+    Returns
+    -------
+    str
+        Path to test BAM file.
+    """
     return os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.bam')
 
 
 @pytest.fixture
 def bam_handle(bam_file):
-    """Fixture for a bam file handle."""
+    """Fixture for a bam file handle.
+
+    Returns
+    -------
+    pysam.AlignmentFile
+        BAM file handle.
+    """
     handle = stb.open_bam(bam_file, "rb")
 
     return handle
@@ -43,7 +55,13 @@ def bam_handle(bam_file):
 
 @pytest.fixture
 def barcodes(bam_file, bam_handle):
-    """Return 100 randomly selected barcodes."""
+    """Return 100 randomly selected barcodes.
+
+    Returns
+    -------
+    list
+        List of 100 randomly selected cell barcodes.
+    """
     # bam_handle is not used to avoid consuming the iterator
     read_count = stb.open_bam(bam_file, "rb").count()
 
@@ -55,7 +73,13 @@ def barcodes(bam_file, bam_handle):
 
 @pytest.fixture(scope="session")
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object.
+    """
 
     # has .X of type numpy.array
     obj = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
@@ -65,14 +89,26 @@ def adata():
 
 @pytest.fixture
 def adata_atac():
-    """Load atac adata."""
+    """Load atac adata.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object.
+    """
     adata_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
 
 
 @pytest.fixture
 def adata_atac_emptyvar(adata_atac):
-    """Create adata with empty adata.var."""
+    """Create adata with empty adata.var.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object with empty var DataFrame.
+    """
     adata = adata_atac.copy()
     adata.var = adata.var.drop(columns=adata.var.columns)
     return adata

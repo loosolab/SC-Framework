@@ -60,3 +60,74 @@ def test_setup_experiment():
 def test_build_notebooks_regex(starts, regex):
     """Test build notebook regex function."""
     assert creator.build_notebooks_regex(starts) == regex
+
+
+def test_add_analysis_FNF(tmp_path):
+    """Test the add_analysis FileNotFoundError."""
+    path = tmp_path / "not_existing"
+
+    assert not path.exists()
+
+    with pytest.raises(FileNotFoundError):
+        creator.add_analysis(dest=str(path), analysis_name="FNF")
+
+
+def test_add_analysis_FE(tmp_path):
+    """Test the add_analysis FileExistsError."""
+    name = "existing_analysis"
+    path = tmp_path / name
+
+    path.mkdir()
+
+    assert path.exists()
+
+    with pytest.raises(FileExistsError):
+        creator.add_analysis(dest=str(path.parent), analysis_name=name)
+
+
+def test_add_analysis(mocker, tmp_path):
+    """Test the add_analysis function."""
+    mock_ghd = mocker.patch("sctoolbox.utils.creators.github_download")
+
+    creator.add_analysis(dest=str(tmp_path), analysis_name="new_analysis")
+
+    assert mock_ghd.call_count == 2
+
+
+def test_github_download(tmp_path, mocker):
+    """Test the github_download function."""
+    # mock key functions used within github_download
+    class mockGitHub:
+        class mockRepo:
+            class mockContent:
+                def __init__(self, name, path, decoded_content) -> None:
+                    self.name = name
+                    self.path = path
+                    self.decoded_content = decoded_content
+                    self.type = "file"
+
+            def get_contents(self, *args, **kwargs):
+                return [
+                    self.mockContent(name="fileA.txt", path="path/to/fileA.txt", decoded_content=b"caf\xc3\xa9"),  # codespell:ignore caf
+                    self.mockContent(name="fileB.txt", path="fileB.txt", decoded_content="milk")
+                ]
+
+        def get_repo(self, *args, **kwargs):
+            return self.mockRepo()
+
+        # to enable context manager usage
+        def __enter__(self):
+            return self
+
+        def __exit__(self, type, value, traceback):
+            pass
+
+    mocker.patch("sctoolbox.utils.creators.Github", return_value=mockGitHub())
+
+    # the directory is empty
+    assert not any(tmp_path.iterdir())
+
+    creator.github_download(path=str(tmp_path), outpath=str(tmp_path))
+
+    # the directory contains "downloaded" files
+    assert any(tmp_path.iterdir())

@@ -14,9 +14,15 @@ plt.switch_backend("Agg")
 # ------------------------------ FIXTURES --------------------------------- #
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with processed data.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 

@@ -1,8 +1,9 @@
-# collect all changes associated with the given version
+"""Collect and print all changes associated with the given version.
 
-# Args:
-# 1: path to changelog file (CHANGES.md)
-# 2: version to search for (e.g. 0.1.2)
+Args:
+    sys.argv[1]: path to changelog file (CHANGES.md)
+    sys.argv[2]: version to search for (e.g. 0.1.2)
+"""
 
 import sys
 

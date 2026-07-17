@@ -15,7 +15,13 @@ uropa_config = {"queries": [{"distance": [10000, 1000]}]}
 
 @pytest.fixture
 def adata_atac():
-    """Load atac anndata."""
+    """Load atac anndata.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object.
+    """
     adata_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
 
@@ -69,7 +75,14 @@ gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), '..', 'data', '
 # indirect test of gtf_integrity as well
 @pytest.mark.parametrize("key, gtf", [(key, gtf_files[key]) for key in gtf_files])
 def test_prepare_gtf(key, gtf):
-    """Test _prepare_gtf success and failure."""
+    """
+    Test _prepare_gtf success and failure.
+
+    Raises
+    ------
+    ValueError
+        On invalid key, i.e., the file is neither correctly prepared nor one of the expected error messages is given.
+    """
 
     if key in ["noheader", "header", "unsorted", "gtf_gz"]:  # these gtfs are valid and can be read
         gtf_out, tempfiles = anno._prepare_gtf(gtf, "")

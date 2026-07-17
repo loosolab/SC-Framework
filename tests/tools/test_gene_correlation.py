@@ -14,7 +14,13 @@ from sctoolbox.tools.gene_correlation import correlate_conditions, correlate_ref
 
 @pytest.fixture
 def adata():
-    """Fixture for simple adata to test with."""
+    """Fixture for simple adata to test with.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA-seq AnnData object with gene names as index.
+    """
     h5ad = os.path.join(os.path.dirname(__file__), '..', 'data', 'adata.h5ad')
     adata = sc.read_h5ad(h5ad)
 
@@ -58,7 +64,7 @@ def test_correlate_ref_vs_all_invalid(adata, gene):
 
 
 def test_compare_two_conditons(adata):
-    """Test if two conditions can be compared wihtout the wrapper function."""
+    """Test if two conditions can be compared without the wrapper function."""
 
     adata_subsets = get_adata_subsets(adata, groupby="condition")
 
