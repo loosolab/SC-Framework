@@ -12,6 +12,10 @@
 - reduce test runtime hotspots, right-size fixture scopes, dedup fixtures/orphan data, and fix warnings (#445)
 - pin the conda environment to Python >=3.9,<3.13 (#460)
 - fix SCSA for Python >= 3.13
+- fix gsea_dot top pathway selection (#457)
+
+### Changes to notebooks
+- General/GSEA: Additional parameters for gsea_dot
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict

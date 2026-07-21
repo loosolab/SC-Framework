@@ -489,7 +489,9 @@ def gsea_dot(adata: sc.AnnData,
              x: Optional[str] = None,
              cluster_col: str = "Cluster",
              cutoff: float = 0.05,
+             hue: Optional[str] = None,
              top_term: Optional[int] = 5,
+             score_sign : Optional[bool] = None,
              figsize: Tuple[int, int] = (5, 8),
              sizes: Tuple[int, int] = (50, 200),
              x_label_rotation: int = 0,
@@ -515,8 +517,16 @@ def gsea_dot(adata: sc.AnnData,
         Cluster column name in adata.uns['sctoolbox']['gsea']['enrichment_table']
     cutoff : float, default 0.05
         Filter cutoff for sig_col.
+    hue : Optional[str], default None
+        Set hue for dotplot.
+        If None uses default stored in adata.uns['sctoolbox']['gsea']['score_col']
     top_term : Optional[int], default 5
         Select top_terms per cluster.
+    score_sign : Optional[bool], default None
+        Pathway selection:
+        True - Only upreagulated pathways (score_col > 0)
+        False - Only downreagulated pathways (score_col < 0)
+        None - All pathways (sort on absolut score_col)
     figsize : Tuple[int, int], default (5, 8)
         Tuple setting the figure size.
     sizes : Tuple[int, int], default (50, 200)
@@ -525,7 +535,7 @@ def gsea_dot(adata: sc.AnnData,
         Set x-tick label rotation angle
     cmap : str, default "viridis"
         Colormap for dots
-    title : str, default "Top regualted pathways"
+    title : str, default "Top regulated pathways"
         Figure title
     title_size : int, default 16
         Title font size.
@@ -561,7 +571,9 @@ def gsea_dot(adata: sc.AnnData,
     # Get required data from adata.uns['sctoolbox']['gsea']
     term_table = get_uns(adata, _core_uns_path + ['enrichment_table']).copy()
     sig_col = sig_col if sig_col else get_uns(adata, _core_uns_path + ['stat_col'])
-    x = x if x else get_uns(adata, _core_uns_path + ['score_col'])
+    hue = hue if hue else get_uns(adata, _core_uns_path + ['stat_col'])
+    score_col = get_uns(adata, _core_uns_path + ['score_col'])
+    x = x if x else score_col
 
     # Check if enrichment table contains required columns
     check_columns(term_table, columns=[cluster_col, x, sig_col])
@@ -569,9 +581,16 @@ def gsea_dot(adata: sc.AnnData,
     # Filter enrichment table
     logger.info("Filtering enrichment table...")
     term_table = term_table[term_table[sig_col] <= cutoff]
+    if score_sign is True:
+        # Get only upregulated pathways
+        term_table = term_table[term_table[score_col] > 0]
+    elif score_sign is False:
+        # Get only downregulated pathways
+        term_table = term_table[term_table[score_col] < 0]
+    term_table["score_abs"] = term_table[score_col].abs()
     if top_term:
         term_table = (
-            term_table.sort_values(by=[cluster_col, x], ascending=[True, False])
+            term_table.sort_values(by=[cluster_col, "score_abs"], ascending=[True, False])
             .groupby(cluster_col, sort=False, group_keys=False)
             .head(top_term)
             .reset_index(drop=True)
@@ -587,7 +606,7 @@ def gsea_dot(adata: sc.AnnData,
         raise ValueError(f"A cutoff of {cutoff} filters every entry in the enrichment table. Set a more lenient cutoff to plot.")
 
     logger.info("Generating dotplot...")
-    norm = plt.Normalize(term_table[sig_col].min(), term_table[sig_col].max())
+    norm = plt.Normalize(term_table[hue].min(), term_table[hue].max())
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     # Create figure
     fig, ax = plt.subplots(1, figsize=figsize)
@@ -596,7 +615,7 @@ def gsea_dot(adata: sc.AnnData,
                            x=x,
                            size="% Genes in set",
                            sizes=sizes,
-                           hue=sig_col,
+                           hue=hue,
                            palette=cmap,
                            ax=ax
                            )
@@ -612,8 +631,8 @@ def gsea_dot(adata: sc.AnnData,
               loc=2, borderaxespad=0., fontsize=13,
               frameon=False, alignment="left")
     # set colorbar
-    cbar = ax.figure.colorbar(sm, ax=ax, shrink=0.4, anchor=(0.1, 0.1), label=sig_col, aspect=10)
-    cbar.set_label(sig_col, rotation=0, ha="left", fontsize=13)
+    cbar = ax.figure.colorbar(sm, ax=ax, shrink=0.4, anchor=(0.1, 0.1), label=hue, aspect=10)
+    cbar.set_label(hue, rotation=0, ha="left", fontsize=13)
 
     # set additional labels and title
     ax.set_ylabel("")
