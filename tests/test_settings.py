@@ -20,6 +20,12 @@ config_path = os.path.join(DATA_DIR, "test_config.yaml")
 config_path_nokey = os.path.join(DATA_DIR, "test_config_nokey.yaml")
 
 
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    """Fixture to reset settings after each test."""
+    yield
+    settings.reset()
+
 # --------------------------- TESTS --------------------------------- #
 
 
@@ -32,7 +38,6 @@ def test_valid_settings(key, value):
     """Test that valid settings can be set."""
     setattr(settings, key, value)
     assert hasattr(settings, key)
-    settings.reset()
 
 
 def test_invalid_keys():
@@ -85,7 +90,6 @@ def test_logfile_verbosity(tmp_path):
 
         assert "[INFO]" in log   # check that info message from load_h5ad is in log file
         assert "[DEBUG]" in log  # check that debug message from get_adata_subsets is in log file
-    settings.reset()
 
 
 @pytest.mark.parametrize("key, path", [(None, config_path_nokey), ("01", config_path)])
@@ -94,14 +98,12 @@ def test_settings_from_config(key, path):
     settings.settings_from_config(path, key=key)
     assert getattr(settings, "overwrite_log")
     assert getattr(settings, "log_file") == "pipeline_output/logs/01_log.txt"
-    settings.reset()
 
 
 def test_invalid_key_settings_from_config():
     """Test that appropriate Error is returned if the given key is not found in the yaml."""
     with pytest.raises(KeyError, match="Key 01 not found in config file"):
         settings.settings_from_config(config_path_nokey, key="01")
-    settings.reset()
 
 
 def test_user_logging(tmp_path):
@@ -126,4 +128,3 @@ def test_user_logging(tmp_path):
     content = open(settings.log_file).read()
     assert "test_info2" not in content  # previous log was overwritten
     assert "test_info3" in content      # new log is there
-    settings.reset()
