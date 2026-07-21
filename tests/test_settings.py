@@ -67,7 +67,6 @@ def test_logfile_verbosity(tmp_path):
 
     sys.stdout = mystdout = StringIO()  # for capturing stdout
 
-    settings.reset()
     settings.verbosity = 1  # info
     settings.log_file = str(tmp_path / "test.log")
 
