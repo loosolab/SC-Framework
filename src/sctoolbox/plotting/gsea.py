@@ -571,7 +571,7 @@ def gsea_dot(adata: sc.AnnData,
     # Get required data from adata.uns['sctoolbox']['gsea']
     term_table = get_uns(adata, _core_uns_path + ['enrichment_table']).copy()
     sig_col = sig_col if sig_col else get_uns(adata, _core_uns_path + ['stat_col'])
-    hue = hue if hue else get_uns(adata, _core_uns_path + ['stat_col'])
+    hue = hue if hue else sig_col
     score_col = get_uns(adata, _core_uns_path + ['score_col'])
     x = x if x else score_col
 
