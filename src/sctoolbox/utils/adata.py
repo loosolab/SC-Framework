@@ -15,6 +15,7 @@ from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tup
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
+from sctoolbox.utils.tables import fill_na
 from sctoolbox.plotting.general import plot_table
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -587,6 +588,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
             for col in drop:
                 if f"{col}_colors" in obj.uns.keys():
                     obj.uns.pop(f"{col}_colors")
+        fill_na(sec_table, inplace=True, replace={"category": "NA", "str": "NA"})
 
         # rename columns
         if rename:
