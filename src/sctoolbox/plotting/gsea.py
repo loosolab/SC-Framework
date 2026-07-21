@@ -526,7 +526,7 @@ def gsea_dot(adata: sc.AnnData,
         Pathway selection:
         True - Only upreagulated pathways (score_col > 0)
         False - Only downreagulated pathways (score_col < 0)
-        None - All pathways (sort on absolut score_col)
+        None - All pathways (sort on absolute score_col)
     figsize : Tuple[int, int], default (5, 8)
         Tuple setting the figure size.
     sizes : Tuple[int, int], default (50, 200)
