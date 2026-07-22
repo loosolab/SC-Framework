@@ -653,7 +653,7 @@ cleanup-orphan-tags:
   stage: .post
   image: alpine:latest
   before_script:
-    - apk add --no-cache curl jq
+    - apk add --no-cache curl jq bash
     - curl -L "https://github.com/google/go-containerregistry/releases/download/v0.7.0/go-containerregistry_Linux_x86_64.tar.gz" -o /tmp/crane.tar.gz
     - tar -zxvf /tmp/crane.tar.gz -C /usr/local/bin/ crane
     - rm /tmp/crane.tar.gz
