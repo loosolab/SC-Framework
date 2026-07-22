@@ -661,7 +661,7 @@ cleanup-orphan-tags:
     - crane auth login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
     - |
-      set -uo pipefail
+      #set -uo pipefail
 
       API="https://gitlab.gwdg.de/api/v4"
       HEADERS_FILE="$(mktemp)"
@@ -735,7 +735,7 @@ cleanup-orphan-tags:
             echo "Tag '$tag' matches a branch and will not be deleted."
           else
             echo "Tag '$tag' does not match any branch and does not follow semantic versioning, will be deleted."
-            # if ! crane delete "$CI_REGISTRY_IMAGE:$tag"; then
+            #if ! crane delete "$CI_REGISTRY_IMAGE:$tag"; then
             #  echo "WARNING: failed to delete tag '$tag' in repo $repo_id" >&2
             #  FAILED=1
             #fi
