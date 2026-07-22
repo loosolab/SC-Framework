@@ -13,6 +13,7 @@
 - pin the conda environment to Python >=3.9,<3.13 (#460)
 - fix SCSA for Python >= 3.13
 - fix gsea_dot top pathway selection (#457)
+- prepare_for_cellxgene: added na check (#458)
 
 ### Changes to notebooks
 - General/GSEA: Additional parameters for gsea_dot
