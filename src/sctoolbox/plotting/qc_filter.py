@@ -15,6 +15,7 @@ import seaborn as sns
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+from IPython.display import display, HTML
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
@@ -690,6 +691,17 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
 
     is_interactive = utils.checker._is_interactive()
 
+    if is_interactive:
+        display(HTML("""
+        <style>
+        .widget-readout {
+            width: auto !important;
+            min-width: 115px !important;
+            text-align: center;
+        }
+        </style>
+        """))
+
     class InitFloatRangeSlider(ipywidgets.FloatRangeSlider):
         """FloatRangeSlider that returns the initial value even if it is outside the range when the threshold was never updated."""
 
@@ -872,7 +884,8 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
 
                 slider = InitFloatRangeSlider(description=str(group), min=data_min, max=data_max,
                                               value=[tmin, tmax],  # initial value
-                                              continuous_update=False)
+                                              continuous_update=False,
+                                              readout_format='.2f')
 
                 slider.observe(functools.partial(_update_thresholds,
                                                  fig=fig,

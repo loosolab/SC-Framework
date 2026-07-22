@@ -15,6 +15,7 @@
 - fix gsea_dot top pathway selection (#457)
 - prepare_for_cellxgene: added na check (#458)
 - fix _filter_anndata: replaceing eval to allow mathematical symbols in column names (#452)
+- fix cut off slider number (#439)
 
 ### Changes to notebooks
 - General/GSEA: Additional parameters for gsea_dot
