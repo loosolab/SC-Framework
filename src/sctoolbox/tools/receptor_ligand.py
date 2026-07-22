@@ -1632,6 +1632,8 @@ def _filter_anndata(  # noqa: C901
     ValueError
         If condition lengths don't match, required columns are missing,
         or specified clusters/genes are not found.
+    KeyError
+        If condition column is not found in adata.obs
 
     Examples
     --------
@@ -1664,12 +1666,14 @@ def _filter_anndata(  # noqa: C901
         return None
 
     # Construct and apply query for cell filtering
-    # Example: If valid_pairs=[('batch', '1'), ('treatment', 'control')],
-    # This creates query: "batch == '1' & treatment == 'control'"
-    query = " & ".join([f"{col} == '{val}'" for col, val in valid_pairs])
+    # Start with a mask of all True
+    cell_mask = pd.Series(True, index=adata.obs.index)
 
-    # Boolean mask
-    cell_mask = adata.obs.eval(query)
+    for col, val in valid_pairs:
+        if col not in adata.obs.columns:
+            raise KeyError(f"Column '{col}' not found in adata.obs")
+        # Combine conditions to mask
+        cell_mask &= (adata.obs[col] == val)
 
     # Check if mask contains only False
     if cell_mask.sum() == 0:
