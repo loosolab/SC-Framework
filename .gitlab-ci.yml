@@ -742,6 +742,7 @@ cleanup-orphan-tags:
             # fi
           fi
         done
+      done
 
       rm -f "$HEADERS_FILE"
       exit $FAILED
