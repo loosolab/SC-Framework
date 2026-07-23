@@ -736,10 +736,10 @@ cleanup-orphan-tags:
             echo "Tag '$tag' matches a branch and will not be deleted."
           else
             echo "Tag '$tag' does not match any branch and does not follow semantic versioning, will be deleted."
-            # if ! crane delete "$CI_REGISTRY_IMAGE:$tag"; then
-            #  echo "WARNING: failed to delete tag '$tag' in repo $repo_id" >&2
-            #  FAILED=1
-            # fi
+            if ! crane delete "$CI_REGISTRY_IMAGE:$tag"; then
+              echo "WARNING: failed to delete tag '$tag' in repo $repo_id" >&2
+              FAILED=1
+            fi
           fi
         done
       done
