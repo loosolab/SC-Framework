@@ -17,6 +17,7 @@
 - fix _filter_anndata: replaceing eval to allow mathematical symbols in column names (#452)
 - fix cut off slider number (#439)
 - add obs_names_make_unique option to `sctoolbox.utils.assemblers.from_R` (#438)
+- add `utils.adata.remove_group` function
 
 ### Changes to notebooks
 - General/GSEA: Additional parameters for gsea_dot

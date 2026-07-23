@@ -810,3 +810,65 @@ def tidy_layers(  # noqa: C901
 
     if not inplace:
         return adata
+
+
+@deco.log_anndata
+@beartype
+def remove_group(
+    adata: sc.AnnData,
+    col_name: str,
+    value: List[Any] | Any,
+    table: Literal['var', 'obs'] = 'obs',
+    inplace: bool = True) -> Optional[sc.AnnData]:
+    """
+    Remove any groups of cells or genes from the anndata object.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The AnnData object to edit.
+    col_name : str
+        Name of the column in .obs or .var (depending on `table`) that
+        contains the group labels to filter on.
+    value : List[Any]
+        A list of values. Any row where `col_name` matches one of these
+        values will be removed.
+    table : Literal['var', 'obs'], default 'obs'
+        Whether to filter cells (.obs) or genes (.var).
+    inplace : bool, default True
+        Whether to modify `adata` inplace. If False, a copy of `adata`
+        with the groups removed is returned.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        If `inplace` is False, returns the filtered AnnData object.
+        If `inplace` is True, returns None (the input `adata` is modified
+        in place).
+
+    Raises
+    ------
+    ValueError
+        If `table` is not 'obs' or 'var', or if `col_name` is not found
+        in the respective table.
+    """
+    df = adata.obs if table == "obs" else adata.var
+
+    if col_name not in df.columns:
+        raise ValueError(f"Column '{col_name}' was not found in '{table}' table.")
+
+    if not isinstance(value, list):
+        value = [value]
+
+    # Boolean mask of rows/columns to keep
+    keep_mask = ~df[col_name].isin(value).to_numpy()
+
+    # Work on a copy or inplace
+    if not inplace:
+        adata = adata.copy()
+
+    # Subset obs or var
+    subset_fn = adata._inplace_subset_obs if table == "obs" else adata._inplace_subset_var
+    subset_fn(keep_mask)
+
+    return adata if not inplace else None
