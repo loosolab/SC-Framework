@@ -371,6 +371,12 @@ def group_expression_boxplot(adata: sc.AnnData,
                              gene_list: list[str],
                              groupby: str,
                              figsize: Optional[Tuple[int | float, int | float]] = None,
+                             norm: bool = True,
+                             layer: Optional[str] = None,
+                             y_label: str = "Normalized expression",
+                             x_label: Optional[str] = None,
+                             y_lim: Optional[Tuple[int | float, int | float]] = None,
+                             save: Optional[str] = None,
                              **kwargs: Any) -> Axes:
     """
     Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`.
@@ -384,15 +390,31 @@ def group_expression_boxplot(adata: sc.AnnData,
     gene_list : list[str]
         A list of genes to show expression for.
     groupby : str
-        A column in .obs for grouping cells into groups on the x-axis
+        A column in .obs for grouping cells into groups on the x-axis.
     figsize : Optional[Tuple[int | float, int | float]], default None (matplotlib default)
         Control the size of the output figure, e.g. (6,10).
+    norm : bool, default True
+        Whether to quantile normalize the pseudobulk expression across groups, and subsequently
+        scale each gene's expression to a 0-1 range across groups. If False, the raw pseudobulk
+        values (mean/sum expression per group, depending on `pseudobulk_table`) are plotted directly.
+    layer : Optional[str], default None
+        Name of the layer in `adata.layers` to use for expression values. If None, `adata.X` is used.
+    y_label : str, default "Normalized expression"
+        Label to use for the y-axis.
+    x_label : Optional[str], default None
+        Label to use for the x-axis. If None, x_label is set to groupby value.
+    y_lim : Optional[Tuple[int | float, int | float]], default None
+        Tuple of (min, max) values to set as the y-axis limits. If None, matplotlib's default
+        limits (based on the data) are used.
+    save : Optional[str], default None
+        If given, save the figure to this path.
     **kwargs : Any
-        Additional arguments passed to seaborn.boxplot.
+        Additional arguments passed to `seaborn.boxplot`.
 
     Returns
     -------
     Axes
+        The matplotlib Axes object containing the boxplot.
 
     Examples
     --------
@@ -404,16 +426,23 @@ def group_expression_boxplot(adata: sc.AnnData,
     """
 
     # Obtain pseudobulk
-    gene_table = utils.bioutils.pseudobulk_table(adata, groupby)
+    gene_table = utils.bioutils.pseudobulk_table(adata, groupby, layer=layer)
 
-    # Normalize across clusters
-    gene_table = qnorm.quantile_normalize(gene_table, axis=1)
+    if norm:
+        # Ensure float64 dtype before quantile normalization, since qnorm can produce
+        # float64 results that are incompatible with a float32 DataFrame (raises a
+        # FutureWarning in recent pandas versions otherwise).
+        gene_table = gene_table.astype(np.float64)
 
-    # Normalize to 0-1 across groups
-    scaler = MinMaxScaler()
-    df = gene_table.T
-    df[df.columns] = scaler.fit_transform(df[df.columns])
-    gene_table = df
+        # Normalize across clusters
+        gene_table = qnorm.quantile_normalize(gene_table, axis=1)
+
+        # Normalize to 0-1 across groups (per gene)
+        scaler = MinMaxScaler()
+        gene_table = gene_table.T
+        gene_table[gene_table.columns] = scaler.fit_transform(gene_table[gene_table.columns])
+    else:
+        gene_table = gene_table.T
 
     # Melt to long format
     gene_table_melted = gene_table.reset_index().melt(id_vars="index", var_name="gene")
@@ -422,20 +451,31 @@ def group_expression_boxplot(adata: sc.AnnData,
     # Subset to input gene list
     gene_table_melted = gene_table_melted[gene_table_melted["gene"].isin(gene_list)]
 
-    # Sort by median value
+    # Sort groups by median value (descending)
     medians = gene_table_melted.groupby(groupby)["value"].median().to_frame()
     medians.columns = ["medians"]
-    gene_table_melted_sorted = gene_table_melted.merge(medians, left_on=groupby, right_index=True).sort_values("medians", ascending=False)
+    gene_table_melted_sorted = (
+        gene_table_melted
+        .merge(medians, left_on=groupby, right_index=True)
+        .sort_values("medians", ascending=False)
+    )
 
     # Joined figure with all
     fig, ax = plt.subplots(figsize=figsize)
-    g = sns.boxplot(data=gene_table_melted_sorted, x=groupby, y="value", ax=ax, color="darkgrey", **kwargs)
-    ax.set_ylabel("Normalized expression")
+    ax = sns.boxplot(data=gene_table_melted_sorted, x=groupby, y="value", ax=ax, **kwargs)
 
-    ax.set_xticks(ax.get_xticks())  # fix the locator so set_xticklabels does not warn
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+    ax.set_ylabel(y_label)
+    ax.set_xlabel(x_label if x_label is not None else groupby)
 
-    return g
+    # Rotate x-axis labels
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+
+    if y_lim:
+        ax.set_ylim(*y_lim)
+
+    _save_figure(save)
+
+    return ax
 
 
 @deco.log_anndata

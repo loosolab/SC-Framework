@@ -14,10 +14,11 @@
 - fix SCSA for Python >= 3.13
 - fix gsea_dot top pathway selection (#457)
 - prepare_for_cellxgene: added na check (#458)
-- fix _filter_anndata: replaceing eval to allow mathematical symbols in column names (#452)
+- fix _filter_anndata: replacing eval to allow mathematical symbols in column names (#452)
 - fix cut off slider number (#439)
 - add obs_names_make_unique option to `sctoolbox.utils.assemblers.from_R` (#438)
 - add `utils.adata.remove_group` function
+- add additional parameters to `group_expression_boxplot()` (#456)
 
 ### Changes to notebooks
 - General/GSEA: Additional parameters for gsea_dot
