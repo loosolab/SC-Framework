@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 name = "SC-Framework"
 dynamic = ["version"]
 description = 'Custom modules for single cell analysis'
-requires-python = ">=3.9,<3.13"  # dict type hints as we use it require python 3.9; 3.13 not supported by cmake # https://github.com/python-cmake-buildsystem/python-cmake-buildsystem/issues/350
+requires-python = ">=3.9,<3.13"  # >=3.9: dict type hints we use require 3.9; <3.13: pygenometracks needs matplotlib<3.9 (no cp313 wheels) — removable once https://github.com/deeptools/pyGenomeTracks/issues/494 ships
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [

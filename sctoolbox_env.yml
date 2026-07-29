@@ -6,6 +6,7 @@ channels:
     - bioconda
     - conda-forge
 dependencies:
+  - python >=3.9,<3.13  # upper bound tracks https://github.com/deeptools/pyGenomeTracks/issues/494; removable once a matplotlib>=3.9-compatible pygenometracks ships
 # jupyter dependencies
   - notebook==6.5.2
   - ipykernel  # needed to register environment as jupyter kernel
