@@ -76,6 +76,6 @@ def test_tsse_scoring(atac_fragments, atac_gtf, tmp_path):
                                       plot=True)
 
     assert all(tSSe_df.columns.isin(['TSS_agg', 'total_ov', 'tsse_score']))
-    assert isinstance(tSSe_df['TSS_agg'][0], np.ndarray)
-    assert isinstance(tSSe_df['total_ov'][0], np.int64)
-    assert isinstance(tSSe_df['tsse_score'][0], np.float64)
+    assert isinstance(tSSe_df['TSS_agg'].iloc[0], np.ndarray)
+    assert isinstance(tSSe_df['total_ov'].iloc[0], np.int64)
+    assert isinstance(tSSe_df['tsse_score'].iloc[0], np.float64)

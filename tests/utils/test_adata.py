@@ -70,7 +70,7 @@ def test_get_adata_subsets(adata):
     subsets = utils.get_adata_subsets(adata, "group")
 
     for group, sub_adata in subsets.items():
-        assert sub_adata.obs["group"][0] == group
+        assert sub_adata.obs["group"].iloc[0] == group
         assert sub_adata.obs["group"].nunique() == 1
 
 
@@ -370,7 +370,9 @@ def test_tidy_layer_keep_and_X(adata, keep_X, replace_X, keep):
         if keep == "all":
             assert len(adata.layers) <= len(adata_out.layers)  # assert that no layers are removed
         else:
-            assert len(adata_out.layers) == len(keep) and all(layer in keep for layer in adata_out.layers.keys())  # assert the correct layers are removed
+            # anndata>=0.13 exposes .X as a spurious None-keyed layer; assert only on real layer names
+            real_layers = [layer for layer in adata_out.layers.keys() if layer is not None]
+            assert len(real_layers) == len(keep) and all(layer in keep for layer in real_layers)  # assert the correct layers are removed
 
         if replace_X:
             # assert the original .X is replaced with the right layer

@@ -40,15 +40,20 @@ def test_annot_HVG(adata_fun_scope, inplace):
 
 
 @pytest.mark.parametrize("inplace", [True, False])
-def test_get_variable_features(adata_atac_qc, inplace):
-    """Test get_variable_features success."""
+# subsample_target=100 is well below the fixture's feature count, so step > 0 and
+# the subsampling branch is exercised; 10000 leaves step == 0 (branch skipped).
+@pytest.mark.parametrize("subsample_target", [10000, 100])
+def test_get_variable_features(adata_atac_qc, inplace, subsample_target):
+    """Test get_variable_features success, including the subsampling branch."""
     adata = adata_atac_qc.copy()
 
     assert "highly_variable" not in adata.var.columns
+    assert adata.n_vars > 100  # guarantees step > 0 for subsample_target=100
 
     output = hv.get_variable_features(adata=adata,
                                       max_cells=None,
                                       min_cells=0,
+                                      subsample_target=subsample_target,
                                       show=True,
                                       inplace=inplace)
 

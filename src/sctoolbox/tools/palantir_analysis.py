@@ -2244,7 +2244,9 @@ def plot_branch_gene_programs(  # noqa: C901
             if isinstance(col, str) and col in metadata_columns:
                 renamed_columns.append(col)
             else:
-                renamed_columns.append(f"pt_{pt_index:04d}_{float(col):.8f}")
+                renamed_columns.append(
+                    f"pt_{pt_index:04d}_{float(col):.8f}"
+                )
                 pt_index += 1
 
         export_df.columns = renamed_columns

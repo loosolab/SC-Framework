@@ -10,6 +10,23 @@ First stage of the sc-framework development workflow
 (this stage is all conversation). Produces a `design.md` that `/plan` turns
 into a concrete plan.
 
+## Workflow scripts — use them, do not hand-roll
+
+This repo ships helper scripts under `scripts/`; **prefer them over ad-hoc
+`bash` / `python -c` / `pip` / `ls` probing.** Run `ls scripts/` if unsure what
+exists. For this stage the canonical ones are:
+
+- `scripts/check_dev_env.py` — env + per-scope tooling verification. Invoked via
+  the `sys-env-check` procedure (step 4); **never** hand-check binaries, imports,
+  or `site-packages` yourself.
+- `scripts/sync_local_allowlist.py` — regenerate `settings.local.json` for a
+  prefix or renamed env (step 3); do not hand-edit the allowlist.
+- `scripts/gitlab_query.py` — read-only fetch of related issues/MRs (step 6).
+
+The later stages have their own: `/plan` and `/implement` likewise route through
+`scripts/` (e.g. `add_change.py` / `check_changes.py` for `CHANGES.md`) — check
+there before writing a one-off command.
+
 ## Inputs (combinable, all optional)
 
 1. **Inline prompt** — free text after `/design`.

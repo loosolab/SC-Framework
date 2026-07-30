@@ -2,6 +2,7 @@
 
 import pandas as pd
 import copy
+import contextlib
 import numpy as np
 import ipywidgets
 import traitlets
@@ -13,6 +14,7 @@ import warnings
 import upsetplot
 import seaborn as sns
 from matplotlib.axes import Axes
+import matplotlib.colors
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
@@ -21,7 +23,7 @@ from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
-from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Any  # , Union, List
+from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Any, Iterator  # , Union, List
 from beartype import beartype
 from numpy.typing import NDArray
 
@@ -1058,6 +1060,49 @@ def _upset_select_cells(adata: sc.AnnData,
     return selection
 
 
+@contextlib.contextmanager
+def _upsetplot_nan_safe_colours() -> Iterator[None]:
+    """Restore upsetplot's matrix-dot style defaults under pandas>=3 copy-on-write.
+
+    ``upsetplot`` (0.9.0) fills missing matrix-dot styles with chained
+    ``Series.fillna(..., inplace=True)`` calls that silently no-op under pandas>=3
+    copy-on-write, leaving ``linewidth``/``facecolor``/``edgecolor``/``linestyle`` as
+    ``NaN`` and raising ``Invalid RGBA argument: nan``. Wrap ``Axes.scatter`` to apply
+    the same defaults, in the same order, just before the values become colours; on
+    pandas<3 the columns are already filled, so the ``fillna`` calls are no-ops.
+
+    Yields
+    ------
+    None
+    """
+    original_scatter = Axes.scatter
+
+    # default facecolor, computed exactly as upsetplot's facecolor="auto" (UpSet.__init__)
+    bgcolor = plt.rcParams.get("axes.facecolor", "white")
+    r, g, b, a = matplotlib.colors.to_rgba(bgcolor)
+    lightness = matplotlib.colors.rgb_to_hsv((r, g, b))[-1] * a
+    default_facecolor = "black" if lightness >= 0.5 else "white"
+
+    @functools.wraps(original_scatter)
+    def _scatter(self: Axes, *args: Any, **kwargs: Any) -> Any:
+        # fill in upsetplot's order so edgecolors inherits an already-filled facecolor
+        if hasattr(kwargs.get("linewidths"), "fillna"):
+            kwargs["linewidths"] = kwargs["linewidths"].fillna(1)
+        if hasattr(kwargs.get("facecolors"), "fillna"):
+            kwargs["facecolors"] = kwargs["facecolors"].fillna(default_facecolor)
+        if hasattr(kwargs.get("edgecolors"), "fillna"):
+            kwargs["edgecolors"] = kwargs["edgecolors"].fillna(kwargs.get("facecolors"))
+        if hasattr(kwargs.get("linestyles"), "fillna"):
+            kwargs["linestyles"] = kwargs["linestyles"].fillna("solid")
+        return original_scatter(self, *args, **kwargs)
+
+    Axes.scatter = _scatter
+    try:
+        yield
+    finally:
+        Axes.scatter = original_scatter
+
+
 def upset_plot_filter_impacts(adata: sc.AnnData,
                               thresholds: dict[str, dict[str | int | float, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
                               limit_combinations: Optional[int] = None,
@@ -1135,7 +1180,9 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
     # set the combinations as index
     combinations_df.set_index(list(selection.columns), inplace=True)
 
-    with warnings.catch_warnings():  # TODO remove when this is merged https://github.com/jnothman/UpSetPlot/pull/278
+    with warnings.catch_warnings(), _upsetplot_nan_safe_colours():
+        # TODO remove warnings when this is merged https://github.com/jnothman/UpSetPlot/pull/278
+        # TODO remove _upsetplot_nan_safe_colours() when this is fixed https://github.com/jnothman/UpSetPlot/issues/303
         warnings.filterwarnings("ignore", message="A value is trying to be set on a copy of a DataFrame or Series through chained assignment using an inplace method.")
 
         # plot the UpSet Plot

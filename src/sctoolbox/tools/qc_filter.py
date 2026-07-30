@@ -318,7 +318,8 @@ def estimate_doublets(adata: sc.AnnData,  # noqa: C901
         all_groups = adata.obs[groupby].astype("category").cat.categories.tolist()
         if threads > 1:
             ctx_in_main = mp.get_context('forkserver')
-            with ctx_in_main.Pool(processes=threads, maxtasksperchild=1) as pool:
+            n_processes = min(threads, len(all_groups))
+            with ctx_in_main.Pool(processes=n_processes, maxtasksperchild=1) as pool:
                 # Run scrublet for each sub data
                 logger.info("Sending {0} batches to {1} threads".format(len(all_groups), threads))
                 jobs = []
@@ -326,7 +327,10 @@ def estimate_doublets(adata: sc.AnnData,  # noqa: C901
 
                     # Clean up adata before sending to thread
                     sub.uns = {}
-                    sub.layers = None
+                    # delete only real layers; anndata>=0.13 backs .X with a None-keyed
+                    # layer entry, so `sub.layers = None` would also drop .X
+                    for layer in [key for key in sub.layers.keys() if key is not None]:
+                        del sub.layers[layer]
 
                     job = pool.apply_async(_run_scrublet, (sub, use_native, threshold), {"verbose": False, **kwargs})
                     jobs.append(job)
@@ -839,7 +843,7 @@ def automatic_thresholds(adata: sc.AnnData,
     for col in columns:
 
         if groupby is None:
-            data = table[col].values
+            data = table[col].to_numpy(copy=True)
             data[np.isnan(data)] = 0
             d = FUN(data, **FUN_kwargs)
             thresholds[col] = d
@@ -847,7 +851,7 @@ def automatic_thresholds(adata: sc.AnnData,
         else:
             thresholds[col] = {}  # initialize to fill in per group
             for group, subtable in table.groupby(groupby):
-                data = subtable[col].values
+                data = subtable[col].to_numpy(copy=True)
                 data[np.isnan(data)] = 0
                 d = FUN(data, **FUN_kwargs)
                 thresholds[col][group] = d
