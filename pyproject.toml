@@ -80,7 +80,7 @@ dependencies = [
         'matplotlib>=3.8.4',  # to speed up installation
         'matplotlib_venn>=1.1.2',  # to speed up installation
         'scanpy[leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (leiden)
-        'anndata>=0.8',  # anndata 0.7 is not upward compatible
+        'anndata>=0.8,!=0.13.0',  # anndata 0.7 is not upward compatible; 0.13.0 under-pins typing_extensions and is broken (scverse/anndata#2537)
         'numba>=0.57.1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy>=2',
         'kneed',
@@ -88,7 +88,7 @@ dependencies = [
         'plotly',
         'scipy>=1.14',
         'statsmodels>=0.14.5',
-        'tqdm',
+        'tqdm>=4.68.4',  # 4.68.4 adds the pandas-3 fallback for the removed pandas.core.common.is_builtin_func (tqdm.pandas())
         'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn>0.12',
         'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
@@ -119,10 +119,12 @@ converter = [
 atac = [
     'uropa',
     'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
-    'pygenometracks>=3.9',
     'peakqc',
     'tobias>=0.17.2',  # to avoid installation error
     'pyranges'
+]
+genometracks = [
+    'pygenometracks>=3.9'  # add back to atac group once this is resolved: https://github.com/deeptools/pyGenomeTracks/issues/494
 ]
 interactive = [
     'click'
@@ -147,7 +149,7 @@ gsea = [
     'gseapy>=1.2.1'  # https://github.com/zqfang/GSEApy/issues/353
 ]
 deseq2 = [
-    'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
+    'pydeseq2>=0.5.4'  # https://github.com/scverse/PyDESeq2/pull/436
 ]
 annotation = [
     'markerRepo>=0.1.5'
@@ -159,14 +161,14 @@ velocity = [
     'scvelo>=0.3.4'
 ]
 palantir = [
-    'palantir>=1.4.4'  # to speed up installation
+    'palantir>=1.4.5'  # https://github.com/dpeerlab/Palantir/issues/180
 ]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
 pilot = [
 #   'pilotpy @ git+https://github.com/loosolab/PILOT_scframework.git',  # PyPI doesn't accept git packages
-    'palantir>=1.4.4'
+    'palantir>=1.4.5'
 ]
 multiome = [
     'muon>=0.1.7',

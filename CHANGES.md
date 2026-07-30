@@ -19,6 +19,14 @@
 - add obs_names_make_unique option to `sctoolbox.utils.assemblers.from_R` (#438)
 - add `utils.adata.remove_group` function
 - add additional parameters to `group_expression_boxplot()` (#456)
+- add compatibility with pandas 3 and anndata 0.13 (!533)
+- make pygenometracks an optional 'genometracks' extra to resolve the matplotlib conflict in .[all] (!533)
+- drop the typing_extensions pin and exclude anndata 0.13.0 (!533)
+- fix estimate_doublets hang when threads exceeds the number of groups (cap pool size) (!533)
+- bump tqdm floor to >=4.68.4 for pandas 3 compatibility (!533)
+- fix get_variable_features subsampling for pandas 3 (Series positional access via .iloc) and expose subsample_target (!533)
+- fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
+- bump palantir floor to >=1.4.5 for pandas 3 / anndata 0.13 compatibility (!533)
 
 ### Changes to notebooks
 - General/GSEA: Additional parameters for gsea_dot
