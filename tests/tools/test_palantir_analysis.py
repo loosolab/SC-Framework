@@ -131,20 +131,27 @@ def sparse_adata():
 def branch_adata(preprocessed_adata):
     """Create an AnnData object with pseudotime and branch masks.
 
+    Parameters
+    ----------
+    preprocessed_adata : anndata.AnnData
+        AnnData object containing the preprocessing keys required by the tests.
+
     Returns
     -------
     anndata.AnnData
-        Synthetic AnnData with branch mask DataFrame and pseudotime values.
+        Copy of the input AnnData with pseudotime values and deterministic
+        branch masks.
     """
     adata = preprocessed_adata.copy()
     n_obs = adata.n_obs
+    rng = np.random.default_rng(42)
 
     adata.obs["palantir_pseudotime"] = np.linspace(0, 1, n_obs)
     adata.obsm["branch_masks"] = pd.DataFrame(
         {
-            "BranchA": np.random.rand(n_obs) > 0.6,
-            "BranchB": np.random.rand(n_obs) > 0.5,
-            "BranchC": np.random.rand(n_obs) > 0.7,
+            "BranchA": rng.random(n_obs) > 0.6,
+            "BranchB": rng.random(n_obs) > 0.5,
+            "BranchC": rng.random(n_obs) > 0.7,
         },
         index=adata.obs_names,
     )
@@ -200,7 +207,8 @@ def test_is_preprocessed_missing_pca_fails_with_error(simple_adata):
 def test_is_preprocessed_missing_embedding_fails(simple_adata):
     """The embedding check should fail if no embedding is present."""
     adata = simple_adata.copy()
-    adata.obsm["X_pca"] = np.random.randn(adata.n_obs, 10)
+    rng = np.random.default_rng(42)
+    adata.obsm["X_pca"] = rng.standard_normal((adata.n_obs, 10))
 
     result = pla.is_preprocessed(
         adata,
@@ -244,8 +252,9 @@ def test_is_preprocessed_all_checks_can_be_disabled(simple_adata):
 
 def test_is_preprocessed_accepts_sparse_matrix(sparse_adata):
     """Sparse AnnData objects should pass when preprocessing keys are present."""
-    sparse_adata.obsm["X_pca"] = np.random.randn(sparse_adata.n_obs, 10)
-    sparse_adata.obsm["X_umap"] = np.random.randn(sparse_adata.n_obs, 2)
+    rng = np.random.default_rng(42)
+    sparse_adata.obsm["X_pca"] = rng.standard_normal((sparse_adata.n_obs, 10))
+    sparse_adata.obsm["X_umap"] = rng.standard_normal((sparse_adata.n_obs, 2))
     sparse_adata.obsp["connectivities"] = sp.csr_matrix(
         (sparse_adata.n_obs, sparse_adata.n_obs)
     )
@@ -435,10 +444,7 @@ def test_classify_trend_pattern_early_high_then_decrease():
     pt = np.linspace(0, 1, 50)
     curve = 2.0 - 2.0 * pt
 
-    assert (
-        pla._classify_trend_pattern(pd.Series(curve))
-        == "early high, then decrease"
-    )
+    assert pla._classify_trend_pattern(pd.Series(curve)) == "early high, then decrease"
 
 
 def test_classify_trend_pattern_broad_increase():
@@ -515,8 +521,7 @@ def test_compare_all_layers_can_exclude_layer(adata_h5ad):
     axs_array = np.atleast_1d(axs)
 
     expected_axes = 1 + sum(
-        layer_name not in excluded_layers
-        for layer_name in adata_h5ad.layers.keys()
+        layer_name not in excluded_layers for layer_name in adata_h5ad.layers.keys()
     )
 
     titles = [ax.get_title() for ax in axs_array]
@@ -525,6 +530,7 @@ def test_compare_all_layers_can_exclude_layer(adata_h5ad):
     assert not any("layers['spliced']" in title for title in titles)
 
     plt.close(fig)
+
 
 # ------------------------- small integration checks -------------------------#
 # No small integration checks remain in this file.
@@ -661,9 +667,7 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
             index=preprocessed_adata.obs_names,
         )
 
-    def fake_run_magic_imputation(
-        data, imputation_key="MAGIC_imputed_data", **kwargs
-    ):
+    def fake_run_magic_imputation(data, imputation_key="MAGIC_imputed_data", **kwargs):
         captured["run_magic_imputation_kwargs"] = kwargs
         captured["imputation_key"] = imputation_key
         data.layers[imputation_key] = data.X.copy()
@@ -730,7 +734,9 @@ def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
 
     def fake_determine_multiscale_space(dm_res_arg):
         captured["determine_multiscale_space_arg"] = dm_res_arg
-        return pd.DataFrame(np.ones((preprocessed_adata.n_obs, 2)), index=preprocessed_adata.obs_names)
+        return pd.DataFrame(
+            np.ones((preprocessed_adata.n_obs, 2)), index=preprocessed_adata.obs_names
+        )
 
     def fake_run_magic_imputation(data, imputation_key="MAGIC_imputed_data", **kwargs):
         captured["run_magic_imputation_kwargs"] = kwargs
@@ -776,8 +782,8 @@ def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
 @pytest.mark.parametrize(
     "terminal_labels,expected",
     [
-        (['Macrophage', 'Macrophage'], ['Macrophage', 'Macrophage_2']),
-        (['TypeA', 'TypeA'], ['TypeA', 'TypeA_2']),
+        (["Macrophage", "Macrophage"], ["Macrophage", "Macrophage_2"]),
+        (["TypeA", "TypeA"], ["TypeA", "TypeA_2"]),
     ],
 )
 def test_detect_and_plot_terminal_states_manual_duplicate_cluster_labels(
@@ -906,7 +912,9 @@ def test_analyze_top_genes_communities_marker_selection_and_pvals_adj(
     assert captured["branch"] == "BranchA"
     assert captured["n_neighbors"] == 5
     assert set(captured["genes"]).issubset(set(gene_trend_adata.var_names))
-    assert "marker_store" in gene_trend_adata.uns["sctoolbox"]["palantir_gene_communities"]
+    assert (
+        "marker_store" in gene_trend_adata.uns["sctoolbox"]["palantir_gene_communities"]
+    )
 
 
 def test_analyze_top_genes_communities_marker_table_missing_columns_raises(
@@ -936,9 +944,7 @@ def test_analyze_top_genes_communities_marker_table_missing_columns_raises(
     "mode",
     ["range", "var", "union"],
 )
-def test_plot_branch_gene_programs_ranking_modes(
-    monkeypatch, gene_trend_adata, mode
-):
+def test_plot_branch_gene_programs_ranking_modes(monkeypatch, gene_trend_adata, mode):
     """Gene program ranking modes should forward parameters to Palantir."""
     captured = {}
 
@@ -1022,7 +1028,9 @@ def test_plot_branch_gene_programs_excludes_flat_genes(monkeypatch, gene_trend_a
     assert "Gene0" not in captured["BranchA"]
 
 
-def test_plot_branch_gene_programs_limits_n_dynamic_genes(monkeypatch, gene_trend_adata):
+def test_plot_branch_gene_programs_limits_n_dynamic_genes(
+    monkeypatch, gene_trend_adata
+):
     """The function should not select more genes than n_dynamic_genes."""
     captured = {}
 
@@ -1058,19 +1066,26 @@ def test_plot_branch_gene_programs_limits_n_dynamic_genes(monkeypatch, gene_tren
     assert len(captured["BranchA"]) == 3
 
 
-def test_plot_branch_gene_programs_unknown_branch_returns_empty(monkeypatch, gene_trend_adata):
+def test_plot_branch_gene_programs_unknown_branch_returns_empty(
+    monkeypatch, gene_trend_adata
+):
     """Requesting an unknown branch should return an empty result."""
-    assert pla.plot_branch_gene_programs(
-        gene_trend_adata,
-        branch="MissingBranch",
-        n_dynamic_genes=4,
-        gene_ranking_mode="union",
-        trend_knn_neighbors=2,
-        plot_representative_genes=False,
-    ) == {}
+    assert (
+        pla.plot_branch_gene_programs(
+            gene_trend_adata,
+            branch="MissingBranch",
+            n_dynamic_genes=4,
+            gene_ranking_mode="union",
+            trend_knn_neighbors=2,
+            plot_representative_genes=False,
+        )
+        == {}
+    )
 
 
-def test_plot_branch_gene_programs_invalid_mode_returns_empty(monkeypatch, gene_trend_adata):
+def test_plot_branch_gene_programs_invalid_mode_returns_empty(
+    monkeypatch, gene_trend_adata
+):
     """An unsupported ranking mode should be skipped gracefully."""
     monkeypatch.setattr(
         pla.palantir.presults,
@@ -1093,7 +1108,9 @@ def test_plot_branch_gene_programs_invalid_mode_returns_empty(monkeypatch, gene_
     assert result == {}
 
 
-def test_plot_branch_early_late_genes_skips_umap_when_missing(monkeypatch, gene_trend_adata):
+def test_plot_branch_early_late_genes_skips_umap_when_missing(
+    monkeypatch, gene_trend_adata
+):
     """Missing UMAP data should skip the UMAP panel but still produce trends."""
     gene_trend_adata = gene_trend_adata.copy()
     gene_trend_adata.obsm.pop("X_umap", None)
@@ -1273,6 +1290,7 @@ def test_detect_and_plot_terminal_states_auto(monkeypatch, gene_trend_adata):
 
 def test_analyze_top_genes_communities_hvg_smoke(monkeypatch, gene_trend_adata):
     """HVG-based community analysis should return selected genes and communities."""
+
     def fake_cluster_gene_trends(adata, branch, genes, n_neighbors=30):
         return pd.Series(
             ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)],
@@ -1305,11 +1323,14 @@ def test_analyze_top_genes_communities_hvg_smoke(monkeypatch, gene_trend_adata):
     assert "BranchA" in communities
     assert isinstance(communities["BranchA"], pd.Series)
     assert "sctoolbox" in gene_trend_adata.uns
-    assert "test_store" in gene_trend_adata.uns["sctoolbox"]["palantir_gene_communities"]
+    assert (
+        "test_store" in gene_trend_adata.uns["sctoolbox"]["palantir_gene_communities"]
+    )
 
 
 def test_plot_branch_gene_programs_smoke(monkeypatch, gene_trend_adata):
     """Branch gene programs should be generated from small synthetic trends."""
+
     def fake_cluster_gene_trends(adata, branch, genes, n_neighbors=30):
         labels = ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)]
         return pd.Series(labels, index=genes)
@@ -1351,8 +1372,63 @@ def test_plot_branch_gene_programs_smoke(monkeypatch, gene_trend_adata):
     assert "cluster_summary" in result["BranchA"]
 
 
+def test_plot_branch_gene_programs_continues_after_branch_error(
+    monkeypatch,
+    gene_trend_adata,
+):
+    """A failing branch should not stop later branches when branch=None."""
+    processed_branches = []
+
+    def fake_cluster_gene_trends(adata, branch, genes, n_neighbors=30):
+        if branch == "BranchA":
+            raise RuntimeError("simulated branch failure")
+
+        processed_branches.append(branch)
+
+        labels = ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)]
+        return pd.Series(labels, index=genes)
+
+    def fake_plot_gene_trend_clusters(*args, **kwargs):
+        fig, axes = plt.subplots(1, 2)
+        axes[0].plot([0, 1], [0, 1])
+        axes[0].set_title("Cluster 0")
+        axes[1].plot([0, 1], [1, 0])
+        axes[1].set_title("Cluster 1")
+        return fig
+
+    monkeypatch.setattr(
+        pla.palantir.presults,
+        "cluster_gene_trends",
+        fake_cluster_gene_trends,
+    )
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "plot_gene_trend_clusters",
+        fake_plot_gene_trend_clusters,
+    )
+    monkeypatch.setattr(
+        plt,
+        "show",
+        lambda *args, **kwargs: None,
+    )
+
+    result = pla.plot_branch_gene_programs(
+        gene_trend_adata,
+        branch=None,
+        n_dynamic_genes=4,
+        gene_ranking_mode="union",
+        trend_knn_neighbors=2,
+        plot_representative_genes=False,
+    )
+
+    assert "BranchA" not in result
+    assert "BranchB" in result
+    assert processed_branches == ["BranchB"]
+
+
 def test_plot_branch_early_late_genes_smoke(monkeypatch, gene_trend_adata):
     """Early/late gene plotting should return trend and UMAP result handles."""
+
     def fake_plot_embedding(*args, **kwargs):
         fig, ax = plt.subplots()
         ax.plot([0, 1], [0, 1])

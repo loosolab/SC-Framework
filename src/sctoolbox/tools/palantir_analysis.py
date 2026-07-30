@@ -115,7 +115,9 @@ def is_preprocessed(  # noqa: C901
         logger.warning(message)
         return False
 
-    def _X_values_sample(X: spmatrix | np.ndarray, sample_size: int, random_state: int) -> np.ndarray:
+    def _X_values_sample(
+        X: spmatrix | np.ndarray, sample_size: int, random_state: int
+    ) -> np.ndarray:
         """Return a 1D sample of values from an expression matrix.
 
         For sparse matrices, only stored values (`.data`) are sampled.
@@ -158,7 +160,9 @@ def is_preprocessed(  # noqa: C901
         bool
             True if sampled values are integer-like, otherwise False.
         """
-        x = _X_values_sample(adata.X, sample_size=sample_size, random_state=random_state)
+        x = _X_values_sample(
+            adata.X, sample_size=sample_size, random_state=random_state
+        )
         if x.size == 0:
             return False
         return bool(np.all(np.equal(x, np.round(x))))
@@ -173,7 +177,9 @@ def is_preprocessed(  # noqa: C901
         float
             Maximum sampled value (0.0 if empty).
         """
-        x = _X_values_sample(adata.X, sample_size=sample_size, random_state=random_state)
+        x = _X_values_sample(
+            adata.X, sample_size=sample_size, random_state=random_state
+        )
         if x.size == 0:
             return 0.0
         return float(np.nanmax(x))
@@ -290,16 +296,22 @@ def run_diffusion_and_magic(
 
         # Minimal validity check: if MAGIC layer exists, we treat cache as complete.
         if imputation_key in cached.layers:
-            logger.info("Found MAGIC layer '%s' in cache. Returning cached AnnData.", imputation_key)
+            logger.info(
+                "Found MAGIC layer '%s' in cache. Returning cached AnnData.",
+                imputation_key,
+            )
             return cached
 
-        logger.warning("Cached AnnData is missing MAGIC layer '%s'. Recomputing.", imputation_key)
+        logger.warning(
+            "Cached AnnData is missing MAGIC layer '%s'. Recomputing.", imputation_key
+        )
         adata = cached  # keep any cached preprocessing state for recomputation
 
     # ------------------------------------------------------------------
     # (3) Compute diffusion maps
     # ------------------------------------------------------------------
-    logger.info("Running diffusion maps with n_components=%d, knn=%d, kernel_backend='%s'.",
+    logger.info(
+        "Running diffusion maps with n_components=%d, knn=%d, kernel_backend='%s'.",
         n_components,
         knn,
         kernel_backend,
@@ -309,11 +321,11 @@ def run_diffusion_and_magic(
         n_components=n_components,
         knn=knn,
         kernel_backend=kernel_backend,
-        pca_key='X_pca',
-        kernel_key='DM_Kernel',
-        sim_key='DM_Similarity',
-        eigval_key='DM_EigenValues',
-        eigvec_key='DM_EigenVectors',
+        pca_key="X_pca",
+        kernel_key="DM_Kernel",
+        sim_key="DM_Similarity",
+        eigval_key="DM_EigenValues",
+        eigvec_key="DM_EigenVectors",
     )
     # ------------------------------------------------------------------
     # (4) Compute multiscale diffusion space and store it
@@ -346,7 +358,9 @@ def run_diffusion_and_magic(
 
 @deco.log_anndata
 @beartype
-def compare_all_layers(adata: AnnData, exclude_layers: list[str] = None) -> tuple[plt.Figure, np.ndarray]:
+def compare_all_layers(
+    adata: AnnData, exclude_layers: list[str] = None
+) -> tuple[plt.Figure, np.ndarray]:
     """
     Compare total counts per cell for `adata.X` and all layers in `adata.layers`, working with both dense and sparse matrices.
 
@@ -437,12 +451,18 @@ def remove_cells_by_label(
         return adata
 
     if column_name is None:
-        raise ValueError("You must specify 'column_name' when providing labels_to_remove.")
+        raise ValueError(
+            "You must specify 'column_name' when providing labels_to_remove."
+        )
     if column_name not in adata.obs.columns:
         raise ValueError(f"Column '{column_name}' does not exist in adata.obs.")
 
     # Normalize to a list once
-    labels = [labels_to_remove] if isinstance(labels_to_remove, str) else list(labels_to_remove)
+    labels = (
+        [labels_to_remove]
+        if isinstance(labels_to_remove, str)
+        else list(labels_to_remove)
+    )
 
     col = adata.obs[column_name]
 
@@ -649,7 +669,9 @@ def detect_and_plot_terminal_states(  # noqa: C901
     if early_cell not in adata.obs_names:
         raise ValueError(f"Early cell '{early_cell}' not found in adata.obs_names.")
     if clusters_to_analyze is not None and clusters_to_analyze not in adata.obs.columns:
-        raise ValueError(f"Cluster column '{clusters_to_analyze}' not found in adata.obs.")
+        raise ValueError(
+            f"Cluster column '{clusters_to_analyze}' not found in adata.obs."
+        )
 
     # The embedding is only used for plotting.
     # Palantir plotting helpers expect a 2D embedding such as UMAP or t-SNE.
@@ -665,7 +687,9 @@ def detect_and_plot_terminal_states(  # noqa: C901
     # Step 1: Determine terminal-state candidates
     # ------------------------------------------------------------------
     if terminal_states is None:
-        logger.info("No terminal cells provided — running Palantir automatic detection.")
+        logger.info(
+            "No terminal cells provided — running Palantir automatic detection."
+        )
 
         # Convert the diffusion representation into a DataFrame with cell IDs as index.
         # Palantir uses these cell IDs internally to identify terminal states.
@@ -675,14 +699,16 @@ def detect_and_plot_terminal_states(  # noqa: C901
         # Palantir returns:
         # - detected terminal cells
         # - excluded boundary cells that were considered but not selected
-        detected_terminal_states, excluded_boundaries = palantir.core.identify_terminal_states(
-            diffusion_df,
-            early_cell=early_cell,
-            knn=knn,
-            num_waypoints=num_waypoints,
-            n_jobs=n_jobs,
-            max_iterations=max_iterations,
-            seed=seed,
+        detected_terminal_states, excluded_boundaries = (
+            palantir.core.identify_terminal_states(
+                diffusion_df,
+                early_cell=early_cell,
+                knn=knn,
+                num_waypoints=num_waypoints,
+                n_jobs=n_jobs,
+                max_iterations=max_iterations,
+                seed=seed,
+            )
         )
 
         candidate_cells = detected_terminal_states
@@ -695,7 +721,9 @@ def detect_and_plot_terminal_states(  # noqa: C901
 
     # Keep only valid cell IDs that actually exist in the AnnData object.
     # This protects against typos or outdated cell IDs.
-    terminal_cells = [str(cell_id) for cell_id in candidate_cells if str(cell_id) in adata.obs_names]
+    terminal_cells = [
+        str(cell_id) for cell_id in candidate_cells if str(cell_id) in adata.obs_names
+    ]
     if not terminal_cells:
         raise ValueError("No valid terminal cells found in adata.obs_names.")
 
@@ -751,7 +779,10 @@ def detect_and_plot_terminal_states(  # noqa: C901
         dtype=object,
     )
 
-    logger.info("Terminal states passed to run_palantir (index=cell_id, value=label):\n%s", terminal_state_series)
+    logger.info(
+        "Terminal states passed to run_palantir (index=cell_id, value=label):\n%s",
+        terminal_state_series,
+    )
     # ------------------------------------------------------------------
     # Step 3: Plot terminal cells on the chosen 2D embedding
     # ------------------------------------------------------------------
@@ -769,7 +800,9 @@ def detect_and_plot_terminal_states(  # noqa: C901
     # These cells were considered during automatic detection, but were not chosen
     # as final terminal states by Palantir.
     if show_excluded_boundaries and len(excluded_boundaries) > 0:
-        excluded_valid = [cell_id for cell_id in excluded_boundaries if cell_id in coords.index]
+        excluded_valid = [
+            cell_id for cell_id in excluded_boundaries if cell_id in coords.index
+        ]
         if excluded_valid:
             plt.scatter(
                 coords.loc[excluded_valid, "x"],
@@ -900,7 +933,9 @@ def analyze_top_genes_communities(  # noqa: C901
 
         hvgs = adata.var_names[adata.var["highly_variable"]]
         selected_genes = list(hvgs[:top_n])
-        logger.info("Selected %d/%d HVGs for clustering.", len(selected_genes), hvgs.size)
+        logger.info(
+            "Selected %d/%d HVGs for clustering.", len(selected_genes), hvgs.size
+        )
 
     else:
         if not marker_table:
@@ -929,7 +964,9 @@ def analyze_top_genes_communities(  # noqa: C901
             if "names" not in df_raw.columns and "gene" in df_raw.columns:
                 df_raw = df_raw.rename(columns={"gene": "names"})
             if "names" not in df_raw.columns:
-                raise ValueError(f"Marker table '{group}' has no 'names'/'gene' column.")
+                raise ValueError(
+                    f"Marker table '{group}' has no 'names'/'gene' column."
+                )
 
             df_raw = df_raw[df_raw["names"].notna() & (df_raw["names"] != "")]
             group_tables[group] = df_raw
@@ -941,14 +978,18 @@ def analyze_top_genes_communities(  # noqa: C901
             if "names" not in df2.columns and "gene" in df2.columns:
                 df2 = df2.rename(columns={"gene": "names"})
             if "names" not in df2.columns:
-                raise ValueError(f"Marker table '{group}' has no 'names'/'gene' column.")
+                raise ValueError(
+                    f"Marker table '{group}' has no 'names'/'gene' column."
+                )
 
             df2 = df2[df2["names"].notna() & (df2["names"] != "")]
 
             if "pvals_adj" in df2.columns:
                 df2 = df2[df2["pvals_adj"].notna() & (df2["pvals_adj"] <= alpha)]
 
-            missing = [col for col in ("logfoldchanges", "scores") if col not in df2.columns]
+            missing = [
+                col for col in ("logfoldchanges", "scores") if col not in df2.columns
+            ]
             if missing:
                 raise ValueError(
                     f"Marker table '{group}' is missing required columns: {missing}. "
@@ -959,11 +1000,12 @@ def analyze_top_genes_communities(  # noqa: C901
             df2["rank_score"] = df2["logfoldchanges"].abs() + df2["scores"].abs()
 
             if "pvals_adj" in df2.columns:
-                df2["rank_score"] += (-np.log10(df2["pvals_adj"].clip(lower=1e-300))) * 0.1
+                df2["rank_score"] += (
+                    -np.log10(df2["pvals_adj"].clip(lower=1e-300))
+                ) * 0.1
 
-            df2 = (
-                df2.sort_values("rank_score", ascending=False)
-                .drop_duplicates(subset="names", keep="first")
+            df2 = df2.sort_values("rank_score", ascending=False).drop_duplicates(
+                subset="names", keep="first"
             )
 
             top_group = df2.head(per_group)
@@ -973,9 +1015,8 @@ def analyze_top_genes_communities(  # noqa: C901
         # Keep a stable ranking-based order instead of converting the set directly.
         combined = pd.concat(ranked_rows, axis=0, ignore_index=True)
         combined = combined[combined["names"].isin(selected_set)]
-        combined = (
-            combined.sort_values("rank_score", ascending=False)
-            .drop_duplicates(subset="names", keep="first")
+        combined = combined.sort_values("rank_score", ascending=False).drop_duplicates(
+            subset="names", keep="first"
         )
 
         if len(selected_set) > top_n:
@@ -1070,7 +1111,9 @@ def analyze_top_genes_communities(  # noqa: C901
                 "top_n": top_n,
                 "n_neighbors": n_neighbors,
                 "gene_source": gene_source,
-                "marker_source": marker_key if marker_key is not None else "dict_or_none",
+                "marker_source": marker_key
+                if marker_key is not None
+                else "dict_or_none",
                 "trend_branches": trend_branch_list,
             },
         }
@@ -1117,7 +1160,9 @@ def analyze_top_genes_communities(  # noqa: C901
             if name in trend_branch_list:
                 trend_df = adata.varm.get(f"{gene_trend_base_key}_{name}")
                 if isinstance(trend_df, pd.DataFrame):
-                    common_genes = [gene for gene in df_copy["gene"] if gene in trend_df.index]
+                    common_genes = [
+                        gene for gene in df_copy["gene"] if gene in trend_df.index
+                    ]
                     if common_genes:
                         trend_subset = trend_df.loc[common_genes].copy()
                         trend_subset.index.name = None
@@ -1187,11 +1232,15 @@ def branch_qc(
     out_cols = ["branch", "n_cells", "pt_min", "pt_max", "coverage", "keep"]
 
     if masks_key not in adata.obsm:
-        logger.warning("Key '%s' not found in adata.obsm. Returning empty QC table.", masks_key)
+        logger.warning(
+            "Key '%s' not found in adata.obsm. Returning empty QC table.", masks_key
+        )
         return pd.DataFrame(columns=out_cols)
 
     if pseudotime_key not in adata.obs:
-        logger.warning("Key '%s' not found in adata.obs. Returning empty QC table.", pseudotime_key)
+        logger.warning(
+            "Key '%s' not found in adata.obs. Returning empty QC table.", pseudotime_key
+        )
         return pd.DataFrame(columns=out_cols)
 
     masks = adata.obsm[masks_key]
@@ -1206,14 +1255,28 @@ def branch_qc(
 
         if n_cells == 0:
             rows.append(
-                {"branch": branch, "n_cells": 0, "pt_min": np.nan, "pt_max": np.nan, "coverage": 0.0, "keep": False}
+                {
+                    "branch": branch,
+                    "n_cells": 0,
+                    "pt_min": np.nan,
+                    "pt_max": np.nan,
+                    "coverage": 0.0,
+                    "keep": False,
+                }
             )
             continue
 
         pt_branch = pt.loc[cell_ids].dropna()
         if pt_branch.empty:
             rows.append(
-                {"branch": branch, "n_cells": n_cells, "pt_min": np.nan, "pt_max": np.nan, "coverage": 0.0, "keep": False}
+                {
+                    "branch": branch,
+                    "n_cells": n_cells,
+                    "pt_min": np.nan,
+                    "pt_max": np.nan,
+                    "coverage": 0.0,
+                    "keep": False,
+                }
             )
             continue
 
@@ -1231,7 +1294,14 @@ def branch_qc(
         keep = (n_cells >= int(min_cells)) and (coverage >= float(min_coverage))
 
         rows.append(
-            {"branch": branch, "n_cells": n_cells, "pt_min": pt_min, "pt_max": pt_max, "coverage": coverage, "keep": keep}
+            {
+                "branch": branch,
+                "n_cells": n_cells,
+                "pt_min": pt_min,
+                "pt_max": pt_max,
+                "coverage": coverage,
+                "keep": keep,
+            }
         )
 
     qc = (
@@ -1331,11 +1401,13 @@ def plot_branch_qc_distributions(  # noqa: C901
 
     # If anything is missing → do not crash, return empty figure
     if missing:
-        logger.warning("Missing required key(s): %s. Nothing to plot.", ", ".join(missing))
+        logger.warning(
+            "Missing required key(s): %s. Nothing to plot.", ", ".join(missing)
+        )
         return plt.figure(), np.array([], dtype=object)
 
-    pt = adata.obs[pseudotime_key]      # pseudotime vector
-    masks = adata.obsm[masks_key]      # boolean cell × branch matrix
+    pt = adata.obs[pseudotime_key]  # pseudotime vector
+    masks = adata.obsm[masks_key]  # boolean cell × branch matrix
 
     # ------------------------------------------------------------------
     # Step 2 — Decide which branches to visualize
@@ -1371,7 +1443,9 @@ def plot_branch_qc_distributions(  # noqa: C901
     # Using a shared x-axis makes distributions comparable
     pt_all = pt.dropna().to_numpy()
     if pt_all.size == 0:
-        logger.warning("Pseudotime column '%s' contains no finite values.", pseudotime_key)
+        logger.warning(
+            "Pseudotime column '%s' contains no finite values.", pseudotime_key
+        )
         return plt.figure(), np.array([], dtype=object)
 
     x_min = float(np.min(pt_all))
@@ -1391,7 +1465,7 @@ def plot_branch_qc_distributions(  # noqa: C901
         nrows_eff,
         ncols_eff,
         figsize=(4.8 * ncols_eff, 3.2 * nrows_eff),
-        sharex=True,                 # important for comparability
+        sharex=True,  # important for comparability
         constrained_layout=True,
     )
 
@@ -1479,7 +1553,7 @@ def _classify_trend_pattern(curve: pd.Series) -> str:
 
     # Summarize the beginning, middle, and end of the curve.
     start = float(np.nanmean(y[: max(1, y.size // 5)]))
-    end = float(np.nanmean(y[-max(1, y.size // 5):]))
+    end = float(np.nanmean(y[-max(1, y.size // 5) :]))
     mid_start = y.size // 3
     mid_end = max(mid_start + 1, (2 * y.size) // 3)
     middle = float(np.nanmean(y[mid_start:mid_end]))
@@ -1501,11 +1575,19 @@ def _classify_trend_pattern(curve: pd.Series) -> str:
     late_cut = min(y.size - 1, int(0.75 * y.size))
 
     # Middle higher than both ends suggests a transient peak.
-    if middle > start + 0.5 and middle > end + 0.5 and early_cut <= peak_idx <= late_cut:
+    if (
+        middle > start + 0.5
+        and middle > end + 0.5
+        and early_cut <= peak_idx <= late_cut
+    ):
         return "transient peak"
 
     # Middle lower than both ends suggests a transient dip.
-    if middle < start - 0.5 and middle < end - 0.5 and early_cut <= through_idx <= late_cut:
+    if (
+        middle < start - 0.5
+        and middle < end - 0.5
+        and early_cut <= through_idx <= late_cut
+    ):
         return "transient dip"
 
     # Strong increase with a late maximum suggests late activation.
@@ -1620,7 +1702,7 @@ def plot_branch_gene_programs(  # noqa: C901
     # These tables are later reused to estimate branch specificity when
     # choosing representative genes.
     branch_trend_tables = {
-        key[len(varm_prefix):]: value
+        key[len(varm_prefix) :]: value
         for key, value in adata.varm.items()
         if key.startswith(varm_prefix) and isinstance(value, pd.DataFrame)
     }
@@ -1642,8 +1724,7 @@ def plot_branch_gene_programs(  # noqa: C901
         branches_to_process = sorted(branch_trend_tables.keys())
         if not branches_to_process:
             logger.warning(
-                "No branches found in adata.varm with prefix '%s'.",
-                varm_prefix
+                "No branches found in adata.varm with prefix '%s'.", varm_prefix
             )
             return {}
 
@@ -1750,18 +1831,12 @@ def plot_branch_gene_programs(  # noqa: C901
         if mode == "range":
             # Select genes with the largest total amplitude.
             selected_genes = (
-                dynamic_range.sort_values(ascending=False)
-                .head(n_select)
-                .index
-                .tolist()
+                dynamic_range.sort_values(ascending=False).head(n_select).index.tolist()
             )
         elif mode == "var":
             # Select genes with the largest variance across pseudotime.
             selected_genes = (
-                dynamic_var.sort_values(ascending=False)
-                .head(n_select)
-                .index
-                .tolist()
+                dynamic_var.sort_values(ascending=False).head(n_select).index.tolist()
             )
         elif mode == "union":
             # Combine both rankings so that both strong monotonic trends
@@ -1769,7 +1844,9 @@ def plot_branch_gene_programs(  # noqa: C901
             n_by_range = n_select // 2
             n_by_var = n_select - n_by_range
 
-            top_range = dynamic_range.sort_values(ascending=False).head(n_by_range).index
+            top_range = (
+                dynamic_range.sort_values(ascending=False).head(n_by_range).index
+            )
             top_var = dynamic_var.sort_values(ascending=False).head(n_by_var).index
             selected = pd.Index(top_range).union(pd.Index(top_var)).tolist()
 
@@ -1783,8 +1860,7 @@ def plot_branch_gene_programs(  # noqa: C901
                 fill = (
                     combined.loc[~combined.index.isin(selected)]
                     .head(missing)
-                    .index
-                    .tolist()
+                    .index.tolist()
                 )
                 selected.extend(fill)
 
@@ -1810,12 +1886,26 @@ def plot_branch_gene_programs(  # noqa: C901
 
         # Cluster selected gene trends with Palantir.
         # Output is a mapping from gene to trend-cluster label.
-        trend_clusters = palantir.presults.cluster_gene_trends(
-            adata,
-            br,
-            selected_genes,
-            n_neighbors=int(trend_knn_neighbors),
-        ).astype(str)
+        try:
+            trend_clusters = palantir.presults.cluster_gene_trends(
+                adata,
+                br,
+                selected_genes,
+                n_neighbors=int(trend_knn_neighbors),
+            ).astype(str)
+        except Exception as exc:
+            # When all branches are processed, one failing branch should not stop
+            # the remaining branches.
+            if branch is None:
+                logger.exception(
+                    "Branch '%s' failed during gene-trend clustering and will be skipped: %s",
+                    br,
+                    exc,
+                )
+                continue
+
+            # If the user explicitly requested one branch, keep the error visible.
+            raise
 
         # Keep only genes that are present in both the cleaned trend table
         # and the Palantir cluster output.
@@ -1968,14 +2058,18 @@ def plot_branch_gene_programs(  # noqa: C901
 
                     other_curve = other_df.loc[gene]
                     other_curve = pd.to_numeric(other_curve, errors="coerce")
-                    other_curve = other_curve.replace([np.inf, -np.inf], np.nan).dropna()
+                    other_curve = other_curve.replace(
+                        [np.inf, -np.inf], np.nan
+                    ).dropna()
 
                     if other_curve.empty:
                         continue
 
                     other_ranges.append(float(other_curve.max() - other_curve.min()))
 
-                other_branch_ranges[gene] = float(np.mean(other_ranges)) if other_ranges else 0.0
+                other_branch_ranges[gene] = (
+                    float(np.mean(other_ranges)) if other_ranges else 0.0
+                )
 
             branch_specificity = pd.Series(
                 {
@@ -1995,17 +2089,15 @@ def plot_branch_gene_programs(  # noqa: C901
                 x_gene = gene_z.loc[genes_in_cluster].values
                 centroid = centroid_z.loc[cl].values
                 sim = (x_gene @ centroid) / (
-                    np.linalg.norm(x_gene, axis=1)
-                    * (np.linalg.norm(centroid) + 1e-12)
+                    np.linalg.norm(x_gene, axis=1) * (np.linalg.norm(centroid) + 1e-12)
                     + 1e-12
                 )
                 sim_series = pd.Series(sim, index=genes_in_cluster)
 
                 # Additional criteria describing dynamic strength and specificity.
-                gene_range = (
-                    trend_df_sel.loc[genes_in_cluster].max(axis=1)
-                    - trend_df_sel.loc[genes_in_cluster].min(axis=1)
-                )
+                gene_range = trend_df_sel.loc[genes_in_cluster].max(
+                    axis=1
+                ) - trend_df_sel.loc[genes_in_cluster].min(axis=1)
                 gene_var = trend_df_sel.loc[genes_in_cluster].var(axis=1)
                 gene_specificity = branch_specificity.loc[genes_in_cluster]
 
@@ -2013,7 +2105,9 @@ def plot_branch_gene_programs(  # noqa: C901
                 sim_rank = sim_series.rank(ascending=False, method="average")
                 range_rank = gene_range.rank(ascending=False, method="average")
                 var_rank = gene_var.rank(ascending=False, method="average")
-                specificity_rank = gene_specificity.rank(ascending=False, method="average")
+                specificity_rank = gene_specificity.rank(
+                    ascending=False, method="average"
+                )
 
                 representative_score = (
                     sim_rank + range_rank + var_rank + specificity_rank
@@ -2022,8 +2116,7 @@ def plot_branch_gene_programs(  # noqa: C901
                 best = (
                     representative_score.sort_values(ascending=True)
                     .head(int(representatives_per_cluster))
-                    .index
-                    .tolist()
+                    .index.tolist()
                 )
                 cluster_representatives[str(cl)] = best
 
@@ -2114,9 +2207,7 @@ def plot_branch_gene_programs(  # noqa: C901
         # Build a gene-level export table for this branch.
         # Each row contains one gene, cluster metadata, and the full trend curve.
         representative_genes = {
-            gene
-            for genes in cluster_representatives.values()
-            for gene in genes
+            gene for genes in cluster_representatives.values() for gene in genes
         }
 
         export_df = trend_df_sel.copy()
@@ -2153,9 +2244,7 @@ def plot_branch_gene_programs(  # noqa: C901
             if isinstance(col, str) and col in metadata_columns:
                 renamed_columns.append(col)
             else:
-                renamed_columns.append(
-                    f"pt_{pt_index:04d}_{float(col):.8f}"
-                )
+                renamed_columns.append(f"pt_{pt_index:04d}_{float(col):.8f}")
                 pt_index += 1
 
         export_df.columns = renamed_columns
@@ -2202,7 +2291,8 @@ def plot_branch_gene_programs(  # noqa: C901
                 # Round pseudotime columns for readability in Excel.
                 # Round each column separately to avoid assignment issues with duplicated labels.
                 pt_cols = [
-                    col for col in sheet.columns
+                    col
+                    for col in sheet.columns
                     if isinstance(col, str) and col.startswith("pt_")
                 ]
                 for col in pt_cols:
@@ -2310,7 +2400,9 @@ def plot_branch_early_late_genes(  # noqa: C901
     prefix = f"{gene_trend_key}_"  # varm keys look like "gene_trends_<branch>"
 
     # --- detect branches from varm ---------------------------------------------
-    detected = [k.split(prefix, 1)[1] for k in adata.varm.keys() if k.startswith(prefix)]
+    detected = [
+        k.split(prefix, 1)[1] for k in adata.varm.keys() if k.startswith(prefix)
+    ]
     detected = list(dict.fromkeys(detected))  # de-duplicate while preserving order
 
     if branches is not None:
@@ -2412,21 +2504,25 @@ def plot_branch_early_late_genes(  # noqa: C901
 
         # Create the two subplots: early panel (left) and late panel (right)
         ax_early = trend_fig.add_subplot(grid[0, 0])  # early-high genes
-        ax_late = trend_fig.add_subplot(grid[0, 1])   # late-high genes
+        ax_late = trend_fig.add_subplot(grid[0, 1])  # late-high genes
 
         # Plot the trend curves for the top "early" genes
         for g in early_genes:
-            if g in df.index:  # defensive check: only plot if gene exists in the trend table
+            if (
+                g in df.index
+            ):  # defensive check: only plot if gene exists in the trend table
                 ax_early.plot(
-                    pt_vals,                      # x-axis: pseudotime grid (sorted)
-                    df.loc[g].to_numpy(),         # y-axis: smoothed trend values for this gene
-                    label=g,                      # legend entry = gene name
-                    linewidth=trend_linewidth,    # consistent line thickness across genes
+                    pt_vals,  # x-axis: pseudotime grid (sorted)
+                    df.loc[g].to_numpy(),  # y-axis: smoothed trend values for this gene
+                    label=g,  # legend entry = gene name
+                    linewidth=trend_linewidth,  # consistent line thickness across genes
                 )
 
         # Plot the trend curves for the top "late" genes
         for g in late_genes:
-            if g in df.index:  # defensive check: only plot if gene exists in the trend table
+            if (
+                g in df.index
+            ):  # defensive check: only plot if gene exists in the trend table
                 ax_late.plot(
                     pt_vals,
                     df.loc[g].to_numpy(),
