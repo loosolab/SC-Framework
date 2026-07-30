@@ -2128,15 +2128,27 @@ def plot_branch_gene_programs(  # noqa: C901
             [gene in representative_genes for gene in export_df.index],
         )
 
-        # Rename pseudotime columns to a stable Excel-friendly format.
-        # Use 4 decimals to reduce the risk of duplicated column names after rounding.
-        export_df.columns = [
-            col
-            if isinstance(col, str)
-            and col in {"trend_cluster", "cluster_pattern", "gene", "representative"}
-            else f"pt_{float(col):.4f}"
-            for col in export_df.columns
-        ]
+        # Rename pseudotime columns to unique, Excel-friendly names.
+        metadata_columns = {
+            "trend_cluster",
+            "cluster_pattern",
+            "gene",
+            "representative",
+        }
+
+        renamed_columns = []
+        pt_index = 0
+
+        for col in export_df.columns:
+            if isinstance(col, str) and col in metadata_columns:
+                renamed_columns.append(col)
+            else:
+                renamed_columns.append(
+                    f"pt_{pt_index:04d}_{float(col):.8f}"
+                )
+                pt_index += 1
+
+        export_df.columns = renamed_columns
 
         # Fail early if column renaming produced duplicate names.
         if export_df.columns.duplicated().any():

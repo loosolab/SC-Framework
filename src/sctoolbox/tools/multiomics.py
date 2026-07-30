@@ -298,13 +298,18 @@ def join_modalities(adata_list: List[sc.AnnData],
         adata.obs.index.name = None
         adata.var.index.name = None
 
-    # Create mudata object from anndata objects for modality 1 and modality 2
-    mdata = mu.MuData(dict(zip(modality_list, adata_list)))
-
     # Check if cells that are not present in both modalities are to be kept or filtered out
     if not keep_outer:
-        # Filter to keep only cells that exist in both modalities
-        mu.pp.intersect_obs(mdata)
+        # Keep only cells that exist in all modalities. This reimplements
+        # mu.pp.intersect_obs, which reads anndata's removed private ._X attribute
+        # and therefore fails on newer anndata versions. The intersection of obs_names
+        # (np.intersect1d, matching muon) is used to subset each modality before the
+        # MuData is built; the .isin mask preserves each modality's own cell order.
+        common_obs = reduce(np.intersect1d, [adata.obs_names for adata in adata_list])
+        adata_list = [adata[adata.obs_names.isin(common_obs)].copy() for adata in adata_list]
+
+    # Create mudata object from anndata objects for modality 1 and modality 2
+    mdata = mu.MuData(dict(zip(modality_list, adata_list)))
 
     return mdata
 
@@ -453,7 +458,10 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
     df_sankey = df_tmp.reset_index()
 
     # Group by cluster names of modality 1 clusters
-    df_final = df_heatmap.groupby(index, observed=False).agg(list)
+    # Cast the categorical modality 2 cluster column to object first: pandas 3 tries to cast
+    # the list-valued .agg(list) result back into the categorical dtype, which fails as a list
+    # is not a valid (hashable) category. object works identically on pandas 2 and 3.
+    df_final = df_heatmap.astype({clustercols[1]: object}).groupby(index, observed=False).agg(list)
     # Generate column with modality 2 cluster names as keys and number of cells per modality 2 cluster as values in dictionary
     df_final.insert(3, clusters_mod2,
                     df_final.apply(lambda x: dict(zip(x[clustercols[1]], x["Cells_per_cluster"])), axis=1))

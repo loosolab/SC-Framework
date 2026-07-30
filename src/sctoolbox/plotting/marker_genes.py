@@ -407,7 +407,8 @@ def group_expression_boxplot(adata: sc.AnnData,
     gene_table = utils.bioutils.pseudobulk_table(adata, groupby)
 
     # Normalize across clusters
-    gene_table = qnorm.quantile_normalize(gene_table, axis=1)
+    # cast to float64 first: qnorm assigns float64 values in-place, which pandas 3 rejects on the float32 pseudobulk columns
+    gene_table = qnorm.quantile_normalize(gene_table.astype(float), axis=1)
 
     # Normalize to 0-1 across groups
     scaler = MinMaxScaler()
