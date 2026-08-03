@@ -4,7 +4,7 @@ Welcome to the documentation of the single cell framework!
 .. image:: image/sc_framework_overview.png
    :width: 800
 
-.. image:: https://img.shields.io/badge/Zenodo-10.5281%2Fzenodo.16913120-blue
+.. image:: https://img.shields.io/badge/Zenodo-10.5281%2Fzenodo.11065517-blue
    :target: https://doi.org/10.5281/zenodo.11065517
    :alt: Zenodo DOI 10.5281/zenodo.11065517
 

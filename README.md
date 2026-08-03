@@ -1,4 +1,4 @@
-[![Static Badge](https://img.shields.io/badge/Zenodo-10.5281%2Fzenodo.16913120-blue)](https://doi.org/10.5281/zenodo.16913120)
+[![Static Badge](https://img.shields.io/badge/Zenodo-10.5281%2Fzenodo.11065517-blue)](https://doi.org/10.5281/zenodo.11065517)
 [![Static Badge](https://img.shields.io/badge/iScience-10.1016%2Fj.isci.2026.116631-blue)](https://doi.org/10.1016/j.isci.2026.116631)
 [![Release](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/badges/release.svg)](https://github.com/loosolab/SC-Framework/releases)
 ![Coverage](https://gitlab.gwdg.de/loosolab/software/sc_framework/badges/main/coverage.svg?key_text=coverage&key_width=70)
