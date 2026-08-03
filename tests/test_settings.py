@@ -8,15 +8,16 @@ import sys
 
 from sctoolbox.utils.adata import load_h5ad, get_adata_subsets
 from sctoolbox import settings
+from tests.conftest import DATA_DIR
 logger = settings.logger
 
 
 # --------------------------- FIXTURES ------------------------------ #
 
 
-adata_path = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
-config_path = os.path.join(os.path.dirname(__file__), 'data', "test_config.yaml")
-config_path_nokey = os.path.join(os.path.dirname(__file__), 'data', "test_config_nokey.yaml")
+adata_path = os.path.join(DATA_DIR, "adata.h5ad")
+config_path = os.path.join(DATA_DIR, "test_config.yaml")
+config_path_nokey = os.path.join(DATA_DIR, "test_config_nokey.yaml")
 
 
 # --------------------------- TESTS --------------------------------- #
@@ -55,14 +56,14 @@ def test_invalid_values(key, value):
         setattr(settings, key, value)
 
 
-def test_logfile_verbosity():
+def test_logfile_verbosity(tmp_path):
     """Check that info messages to stdout respect verbosity, and that all messages (including debug) are written to log file."""
 
     sys.stdout = mystdout = StringIO()  # for capturing stdout
 
     settings.reset()
     settings.verbosity = 1  # info
-    settings.log_file = "test.log"
+    settings.log_file = str(tmp_path / "test.log")
 
     # Read adata and run get_adata_subsets
     adata = load_h5ad(adata_path)
@@ -95,21 +96,23 @@ def test_settings_from_config(key, path):
 
 
 def test_invalid_key_settings_from_config():
-    """Test that apropriate Error is returned if the given key is not found in the yaml."""
+    """Test that appropriate Error is returned if the given key is not found in the yaml."""
     with pytest.raises(KeyError, match="Key 01 not found in config file"):
         settings.settings_from_config(config_path_nokey, key="01")
     settings.reset()
 
 
-def test_user_logging():
+def test_user_logging(tmp_path):
     """Test is logfile is correctly overwritten."""
 
-    settings.log_file = "test.log"
+    log_path = str(tmp_path / "test.log")
+
+    settings.log_file = log_path
     logger.info("test_info")
     assert "test_info" in open(settings.log_file).read()
 
     # Set again to the same file
-    settings.log_file = "test.log"
+    settings.log_file = log_path
     logger.info("test_info2")
     content = open(settings.log_file).read()
     assert "test_info" in content  # check that the first log is still there

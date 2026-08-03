@@ -13,7 +13,7 @@ tracks_folder = os.path.join(os.path.dirname(__file__), '../data', 'tracks')
 # ------------------------------ TESTS --------------------------------- #
 
 
-def test_genometracks():
+def test_genometracks(tmp_path):
     """Test genometracks plotting."""
 
     G = pl.GenomeTracks()
@@ -56,12 +56,10 @@ def test_genometracks():
     assert len(G.tracks) == 14
 
     # Plot
-    G.plot(region="X:3000000-3500000", output="genometrack_X.png", trackLabelFraction=0.2)
+    output_path = tmp_path / "genometrack_X.png"
+    G.plot(region="X:3000000-3500000", output=str(output_path), trackLabelFraction=0.2)
 
-    assert os.path.isfile("genometrack_X.png")
-
-    # Remove file
-    os.remove("genometrack_X.png")
+    assert output_path.is_file()
 
 
 @pytest.mark.parametrize("file_type", ["spacer", "x-axis", "hlines", "invalid"])

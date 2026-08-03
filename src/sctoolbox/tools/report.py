@@ -178,7 +178,7 @@ def generate_report(  # noqa: C901
             continue
 
         # collect files
-        file_ext = [ext.lower() for ext in file_ext]  # make case-insensetive
+        file_ext = [ext.lower() for ext in file_ext]  # make case-insensitive
         files = []
         for f in Path(sec_dir).iterdir():
             # iterate over all files only keep the ones with allowed extensions

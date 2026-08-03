@@ -108,7 +108,7 @@ def download_db(  # noqa: C901
     This will remove all information stored in adata.uns['receptor-ligand']
     """
 
-    # datbase already existing?
+    # database already existing?
     if not overwrite and "receptor-ligand" in adata.uns and "database" in adata.uns["receptor-ligand"]:
         warnings.warn("Database already exists! Skipping. Set `overwrite=True` to replace.")
 
@@ -151,7 +151,7 @@ def download_db(  # noqa: C901
 
     modified_adata = adata if inplace else adata.copy()
 
-    # setup dict to store information old data will be overwriten!
+    # setup dict to store information old data will be overwritten!
     modified_adata.uns['receptor-ligand'] = dict()
 
     modified_adata.uns['receptor-ligand']['database_path'] = db_path
@@ -267,10 +267,10 @@ def calculate_interaction_table(adata: sc.AnnData,  # noqa: C901
         # -- compute expression percentage --
         # get nonzero expression count for all genes
         _, cols = cluster_layer.nonzero()
-        gene_occurence = Counter(cols)
+        gene_occurrence = Counter(cols)
 
         cl_percent_expression[cluster] = 0
-        cl_percent_expression.iloc[list(gene_occurence.keys()), cl_percent_expression.columns.get_loc(cluster)] = list(gene_occurence.values())
+        cl_percent_expression.iloc[list(gene_occurrence.keys()), cl_percent_expression.columns.get_loc(cluster)] = list(gene_occurrence.values())
         cl_percent_expression[cluster] = cl_percent_expression[cluster] / len(cluster_adata.obs) * 100
 
     # combine duplicated genes through mean (can happen due to mapping between organisms)
@@ -1299,7 +1299,7 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
 
     # create colorramp
     if line_colors:
-        cmap = matplotlib.cm.get_cmap(line_colors, len(receptors))
+        cmap = plt.get_cmap(line_colors, len(receptors))
         colors = cmap(range(len(receptors)))
     else:
         colors = ["black"] * len(receptors)
@@ -1390,7 +1390,8 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
         # hue
         hue_steps = np.linspace(*hue_range, num=step_num)
         # set colormap
-        colormap = plt.cm.ScalarMappable(cmap=palette, norm=plt.Normalize(*hue_range))
+        colormap = plt.get_cmap(palette)
+        norm = plt.Normalize(*hue_range)
 
         # size
         size_steps = np.linspace(*(size_range), num=step_num)
@@ -1410,7 +1411,7 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
             # create one legend for hue and one for size
             # add hue legend entries
             handles.append(plt.scatter([], [], alpha=0, label=hue))  # add title
-            handles.extend([plt.scatter([], [], s=50, color=colormap.cmap(s), label=f"{s:.2f}") for s in hue_steps])
+            handles.extend([plt.scatter([], [], s=50, color=colormap(norm(s)), label=f"{s:.2f}") for s in hue_steps])
 
             # add size legend entries
             handles.append(plt.scatter([], [], alpha=0, label=size))  # add title
@@ -1419,7 +1420,7 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
             # create a combined legend if hue and size show the same data
             # add combined legend entries
             handles.append(plt.scatter([], [], alpha=0, label=size))  # add title
-            handles.extend([plt.scatter([], [], s=size_norm(color), color=colormap.cmap(color), label=f"{color:.2f}") for color in hue_steps])
+            handles.extend([plt.scatter([], [], s=size_norm(color), color=colormap(norm(color)), label=f"{color:.2f}") for color in hue_steps])
 
         return handles
 
@@ -3182,7 +3183,7 @@ def plot_all_condition_differences(
     save : Optional[str | Tuple[str, str]], default None
         Tuple with output filename base on index 0 and file format (e.g. PDF) on index 1 or
         string with output filename base. When a string is given the file format is set to 'pdf'.
-        The string is used as the prefix of the final filname.
+        The string is used as the prefix of the final filename.
     split_by_direction : bool, default True
         Create separate plots for positive and negative differences.
     hub_threshold : int, default 4

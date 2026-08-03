@@ -1,7 +1,6 @@
 """Test tools/gsea.py functions."""
 
 import pytest
-import scanpy as sc
 import sctoolbox.tools as tools
 import pandas as pd
 from sctoolbox.utils.adata import in_uns
@@ -11,15 +10,20 @@ from sctoolbox.utils.adata import in_uns
 
 
 @pytest.fixture
-def adata():
+def adata(pbmc3k_processed):
     """Return clustered dataset with ranked genes.
+
+    Parameters
+    ----------
+    pbmc3k_processed : anndata.AnnData
+        Shared processed PBMC3k dataset from ``tests/conftest.py``.
 
     Returns
     -------
     anndata.AnnData
         Preprocessed PBMC3k dataset with ranked genes.
     """
-    obj = sc.datasets.pbmc3k_processed()
+    obj = pbmc3k_processed.copy()
     tools.marker_genes.run_rank_genes(obj, "louvain")
 
     return obj

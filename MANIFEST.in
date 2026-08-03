@@ -1,7 +1,28 @@
-include sctoolbox/data/*
-include sctoolbox/data/gene_lists/*.txt
-include sctoolbox/data/promoters_gtf/*.gtf
-include sctoolbox/data/celltype_markers/*.tsv
-include sctoolbox/data/method_templates/*.md
-include README.md
+# this controls what is added to the sdist aka sc_framework-*.tar.gz
+
+# include everything in these directories
+graft src/sctoolbox
+graft tests
+
+# include files matching these patterns
+include CHANGES.md
 include LICENSE
+include MANIFEST.in
+include pyproject.toml
+include README.md
+include sctoolbox_env.yml
+
+# exclude cache/build/execution result files
+global-exclude *.py[cod]
+prune tests/.pytest_cache
+exclude tests/test.log
+# exclude src/*.egg-info
+
+# exclude githab/gitlab files
+prune .github
+prune .gitlab
+exclude .git*
+
+# exclude analysis notebooks
+prune *_analysis
+prune general_notebooks

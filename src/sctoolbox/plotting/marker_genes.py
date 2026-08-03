@@ -102,7 +102,7 @@ def rank_genes_plot(adata: sc.AnnData,  # noqa: C901
     parameters.update(kwargs)
     if key is not None:  # from rank_genes_groups output
 
-        # change var.index if neccessary
+        # change var.index if necessary
         if "sctoolbox_params" in adata.uns[key] and "index" in adata.uns[key]["sctoolbox_params"]:
             adata = adata[:, ~adata.var[adata.uns[key]["sctoolbox_params"]["index"]].isna()].copy()  # remove na
             # make the column unique same as .make_var_names_unique
@@ -265,7 +265,7 @@ def grouped_violin(adata: sc.AnnData,  # noqa: C901
 
     if isinstance(x, str):
         x = [x]
-    x = list(x)  # convert to list incase x was a numpy array or other iterable
+    x = list(x)  # convert to list in case x was a numpy array or other iterable
 
     # Establish if x is a column in adata.obs or a gene in adata.var.index
     x_assignment = []
@@ -326,14 +326,14 @@ def grouped_violin(adata: sc.AnnData,  # noqa: C901
 
     # Normalize values to 0-1 per group in x_var
     if normalize:
-        obs_table[y_var] = obs_table.groupby(x_var, group_keys=False)[y_var].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
+        obs_table[y_var] = obs_table.groupby(x_var, group_keys=False, observed=False)[y_var].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
 
     # Plot expression from obs table
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
 
     if style == "violin":
-        kwargs["scale"] = "width" if "scale" not in kwargs else kwargs["scale"]  # set defaults
+        kwargs["density_norm"] = "width" if "density_norm" not in kwargs else kwargs["density_norm"]  # set defaults ("scale" renamed to "density_norm" in seaborn)
         kwargs["cut"] = 0 if "cut" not in kwargs else kwargs["cut"]
         sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     elif style == "boxplot":
@@ -352,6 +352,7 @@ def grouped_violin(adata: sc.AnnData,  # noqa: C901
     if x_assignment == "obs" and y_assignment == "var":
         ax.set_ylabel(ax.get_ylabel() + " expression")
 
+    ax.set_xticks(ax.get_xticks())  # fix the locator so set_xticklabels does not warn
     _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
     ax.set_title(title)
 
@@ -406,7 +407,8 @@ def group_expression_boxplot(adata: sc.AnnData,
     gene_table = utils.bioutils.pseudobulk_table(adata, groupby)
 
     # Normalize across clusters
-    gene_table = qnorm.quantile_normalize(gene_table, axis=1)
+    # cast to float64 first: qnorm assigns float64 values in-place, which pandas 3 rejects on the float32 pseudobulk columns
+    gene_table = qnorm.quantile_normalize(gene_table.astype(float), axis=1)
 
     # Normalize to 0-1 across groups
     scaler = MinMaxScaler()
@@ -431,6 +433,7 @@ def group_expression_boxplot(adata: sc.AnnData,
     g = sns.boxplot(data=gene_table_melted_sorted, x=groupby, y="value", ax=ax, color="darkgrey", **kwargs)
     ax.set_ylabel("Normalized expression")
 
+    ax.set_xticks(ax.get_xticks())  # fix the locator so set_xticklabels does not warn
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
 
     return g
@@ -513,7 +516,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
                                                 colors_ratio=0.03)
     """
 
-    adata = adata[:, genes]  # Subset to genes
+    adata = adata[:, genes].copy()  # Subset to genes (copy so the later .obs writes don't warn on a view)
 
     # Decide which combination to cluster by
     groupby_col = "_cluster_by"
@@ -611,7 +614,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
         if g.ax_col_dendrogram.get_visible():
             g.ax_col_dendrogram.set_title(title, fontsize=13)
         else:
-            g.ax_heatmap.text(counts_z.shape[1] / 2, -2, title,  # ensures space beetween title and heatmap
+            g.ax_heatmap.text(counts_z.shape[1] / 2, -2, title,  # ensures space between title and heatmap
                               transform=g.ax_heatmap.transData, ha="center", va="bottom",
                               fontsize=13)
 
@@ -699,7 +702,7 @@ def plot_gene_correlation(adata: sc.AnnData,
     adata : sc.AnnData
         An annotated data matrix object containing counts in .X.
     ref_gene : str
-        Reference gene to which other genes are comapred to.
+        Reference gene to which other genes are compared to.
     gene_list : list[str] | str
         A list of genes to show expression for.
     ncols : int, default 3

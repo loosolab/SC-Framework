@@ -1,4 +1,4 @@
-"""Funtions of different single cell embeddings e.g. UMAP, PCA, tSNE."""
+"""Functions of different single cell embeddings e.g. UMAP, PCA, tSNE."""
 
 import multiprocessing as mp
 import warnings
@@ -13,7 +13,7 @@ import seaborn as sns
 from matplotlib import __version__ as mpl_version, rcParams
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
-from matplotlib import cm, colors
+from matplotlib import cm, colors, colormaps
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from matplotlib.collections import PathCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -50,7 +50,7 @@ def sc_colormap() -> ListedColormap:
     """
 
     # Custom colormap for single cells
-    color_cmap = cm.get_cmap('Reds', 200)
+    color_cmap = colormaps['Reds'].resampled(200)
     newcolors = color_cmap(np.linspace(0.2, 0.9, 200))
     newcolors[0, :] = colors.to_rgba("lightgrey")  # count 0 = grey
     sc_cmap = ListedColormap(newcolors)
@@ -66,7 +66,7 @@ def grey_colormap() -> ListedColormap:
     cmap : ListedColormap
         Grey-scale colormap.
     """
-    color_cmap = cm.get_cmap('Greys', 200)
+    color_cmap = colormaps['Greys'].resampled(200)
     newcolors = color_cmap(np.linspace(0.2, 1, 200))
     cmap = ListedColormap(newcolors)
 
@@ -129,7 +129,7 @@ def _add_contour(x: NDArray,
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
 
-    # Peform the kernel density estimate
+    # Perform the kernel density estimate
     X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
     positions = np.vstack([X.ravel(), Y.ravel()])
     values = np.vstack([x, y])
@@ -358,7 +358,7 @@ def plot_embedding(adata: sc.AnnData,  # noqa: C901
     # ---- Plot embedding for chosen colors ---- #
 
     # get embedding dimensions if passed as a kwarg
-    # otherwise use defalut dimensions 1 and 2
+    # otherwise use default dimensions 1 and 2
     n_components = adata.obsm[obsm_key].shape[1]
     args = locals()  # get all arguments passed to function
     kwargs = args.pop("kwargs")  # split args from kwargs dict
@@ -509,7 +509,7 @@ def plot_embedding(adata: sc.AnnData,  # noqa: C901
                 if ax_color is None:
                     has_colorbar = True  # even non-colored plots have colorbar with density of cells
 
-                # Values are continous
+                # Values are continuous
                 if has_colorbar:
                     if color_values is None:
                         sns.kdeplot(x=coordinates[:, 0], y=coordinates[:, 1], fill=True, ax=ax, cmap=cmap, thresh=0.01, cbar=True,
@@ -958,7 +958,7 @@ def search_tsne_parameters(adata: sc.AnnData,
     color : Optional[str], default None
         Name of the column in adata.obs to color plots by. If None, plots are not colored.
     threads : int, default 1
-        The threads paramerter is currently not supported. Please leave at 1.
+        The threads parameter is currently not supported. Please leave at 1.
         This may be fixed in the future.
     save : Optional[str], default None (not saved)
         Path to save the figure to.
@@ -1597,7 +1597,7 @@ def umap_marker_overview(adata: sc.AnnData,
     adata : sc.AnnData
         Annotated data matrix.
     markers : list[str] | str
-        List of markers or singel marker
+        List of markers or single marker
     ncols : int, default 3
         Number of columns in grid.
     figsize : Optional[Tuple[int, int]], default None
@@ -1853,6 +1853,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],  # noqa: C901
 
                     # Plot LISI scores
                     boxplot(adata.obs[lisi_columns], ax=ax)
+                    # rotate the x-axis labels by 45 degree
+                    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
                     LISI_axes.append(ax)
 
                 else:
@@ -1988,7 +1990,7 @@ def plot_pca_variance(adata: sc.AnnData,  # noqa: C901
     suptitle : Optional[str], default "PCA Component Selection"
         The title of the figure. Ignored when `ax` is used.
     log_var_exp : bool, default False
-        Wether to apply log-scale to the "variance explained" (left) y-axis.
+        Whether to apply log-scale to the "variance explained" (left) y-axis.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 

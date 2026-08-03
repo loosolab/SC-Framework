@@ -85,7 +85,7 @@ class GenomeTracks():
 
         Returns
         -------
-        String represantation of the object.
+        String representation of the object.
         """
         n_tracks = len(self.tracks)
         return f"GenomeTracks object with {n_tracks} track(s). See <obj>.tracks for details."

@@ -162,7 +162,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
     if adata.raw:
         logger.warning("Found AnnData.raw! Be aware that Scanpy favors '.raw' unless explicitly told to do otherwise."
-                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where neccessary.")
+                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where necessary.")
 
     return adata
 
@@ -214,13 +214,15 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
 
     # generate report
     if settings.report_dir and report:
+        # filter out a None key: anndata>=0.13 exposes .X as a spurious None-keyed layer (absent on anndata 0.12)
+        real_layers = [key for key in adata.layers.keys() if key is not None]
         with open(Path(settings.report_dir) / report[0], "w") as f:
             f.write("\n".join([
                 "## Dataset",
                 f"{adata.shape[0]} observations x {adata.shape[1]} variables",
                 f"Observation information: {', '.join(adata.obs.columns)}",
                 f"Variable information: {', '.join(adata.var.columns)}",
-                f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
+                f"Additional data layers: {', '.join(real_layers)}" if real_layers else ""
             ]))
 
         # method
@@ -262,7 +264,15 @@ def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str
     """
     # check DataFrame column names
     if isinstance(var, pd.DataFrame):
-        col_names = [n for n in var.columns if "/" in n]
+        # get column names with the offending character
+        col_names = []
+        for c in var.columns:
+            try:
+                if repl[0] in c:
+                    col_names.append(c)
+            except TypeError:
+                # if the column type doesn't support the 'in' operator skip
+                continue
 
         if col_names:
             # first element is an adata attribute
@@ -306,7 +316,7 @@ def add_uns_info(adata: sc.AnnData,  # noqa: C901
     value : Any
         The value to add to adata.uns['sctoolbox'].
     how : str, default "overwrite"
-        When set to "overwrite" provided key will be overwriten. If "append" will add element to existing list or dict.
+        When set to "overwrite" provided key will be overwritten. If "append" will add element to existing list or dict.
 
     Raises
     ------
@@ -545,7 +555,10 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
         If ``layer`` is set but no layer with that name exists.
     """
     if layer and layer not in adata.layers:
-        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
+        # filter out a None key: anndata>=0.13 exposes .X as a spurious None-keyed layer
+        # (absent on anndata 0.12); listing only real (str) layer names keeps the message correct
+        available = ','.join(key for key in adata.layers.keys() if key is not None)
+        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {available}.")
 
     def clean_section(obj: sc.AnnData, axis: str = "obs", keep: Optional[list[str]] = None, delete: Optional[list[str]] = None, rename: Optional[dict[str, str]] = None) -> None:  # noqa: C901
         """
@@ -790,12 +803,13 @@ def tidy_layers(  # noqa: C901
         if replace_X in adata.layers:
             adata.X = adata.layers[replace_X].copy()
         else:
-            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({list(adata.layers.keys())}).")
+            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({[key for key in adata.layers.keys() if key is not None]}).")
 
     # ----- keep ----- #
     if keep != "all":
         for layer in list(adata.layers.keys()):
-            if layer not in keep:
+            # skip a None key: anndata>=0.13 exposes .X as a None-keyed layer; deleting it would drop .X
+            if layer is not None and layer not in keep:
                 del adata.layers[layer]
 
     if not inplace:

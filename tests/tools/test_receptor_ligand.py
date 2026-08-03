@@ -4,7 +4,6 @@ import pytest
 import os
 import pandas as pd
 import numpy as np
-import scanpy as sc
 import random
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -14,6 +13,7 @@ from unittest.mock import patch, MagicMock
 import warnings
 
 import sctoolbox.tools.receptor_ligand as rl
+from tests.conftest import DATA_DIR
 
 
 # ------------------------------ FIXTURES -------------------------------- #
@@ -24,7 +24,7 @@ plt.switch_backend("Agg")
 
 
 @pytest.fixture
-def adata():
+def adata(adata_h5ad):
     """Load and returns an anndata object.
 
     Returns
@@ -32,9 +32,7 @@ def adata():
     sc.AnnData
         An anndata object with cluster annotations.
     """
-    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
-
-    obj = sc.read_h5ad(f)
+    obj = adata_h5ad
 
     # add cluster column
     def repeat_items(list, count):
@@ -64,7 +62,7 @@ def db_file():
     str
         Path to the mouse receptor-ligand database TSV file.
     """
-    return os.path.join(os.path.dirname(__file__), '..', 'data', 'receptor-ligand', 'mouse_lr_pair.tsv')
+    return os.path.join(DATA_DIR, 'receptor-ligand', 'mouse_lr_pair.tsv')
 
 
 @pytest.fixture
@@ -753,10 +751,6 @@ def test_filter_anndata_gene_mask_zero_sum(adata):
         # Check if any warning was raised
         assert len(w) > 0
 
-        # Print the warning messages to debug
-        for warning in w:
-            print(f"Warning message: {str(warning.message)}")
-
         assert any(
             "gene" in str(warning.message).lower()
             and (
@@ -785,10 +779,6 @@ def test_filter_anndata_cluster_mask_zero_sum(adata):
 
         # Check if any warning was raised
         assert len(w) > 0
-
-        # Print the actual warning messages to help debug
-        for warning in w:
-            print(f"Warning message: {str(warning.message)}")
 
         assert any(
             ("cluster" in str(warning.message).lower() or "cell" in str(warning.message).lower())

@@ -37,20 +37,13 @@ def adata1():
 
 
 @pytest.fixture
-def adata2():
-    """Load scanpy processed pbmc3k adata.
-
-    Returns
-    -------
-    sc.AnnData
-        Processed PBMC3k dataset from scanpy.
-    """
-    return sc.datasets.pbmc3k_processed()
-
-
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
-def adata():
+def adata(random_adata):
     """Return adata object with 3 groups.
+
+    Parameters
+    ----------
+    random_adata : sc.AnnData
+        Shared synthetic-AnnData object from ``tests/conftest.py``.
 
     Returns
     -------
@@ -58,7 +51,7 @@ def adata():
         Random AnnData object with 3 groups (C1, C2, C3) and test layers.
     """
 
-    adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
+    adata = random_adata
     adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
 
     # add some layers for testing
@@ -77,14 +70,14 @@ def test_get_adata_subsets(adata):
     subsets = utils.get_adata_subsets(adata, "group")
 
     for group, sub_adata in subsets.items():
-        assert sub_adata.obs["group"][0] == group
+        assert sub_adata.obs["group"].iloc[0] == group
         assert sub_adata.obs["group"].nunique() == 1
 
 
 @pytest.mark.parametrize("raw", [True, False])
-def test_save_and_load_h5ad(adata, raw, caplog):
+def test_save_and_load_h5ad(adata, raw, caplog, tmp_path):
     """Test if h5ad file is saved correctly. Then test loading."""
-    path = "test.h5ad"
+    path = str(tmp_path / "test.h5ad")
 
     # add raw layer
     adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
@@ -93,22 +86,18 @@ def test_save_and_load_h5ad(adata, raw, caplog):
     else:
         adata.raw = None
 
-    try:
-        with add_logger_handler(utils.logger, caplog.handler):
-            utils.save_h5ad(adata, path)
+    with add_logger_handler(utils.logger, caplog.handler):
+        utils.save_h5ad(adata, path)
 
-            assert os.path.isfile(path)
+        assert os.path.isfile(path)
 
-            loaded = utils.load_h5ad(path)
+        loaded = utils.load_h5ad(path)
 
-            assert isinstance(loaded, sc.AnnData)
+        assert isinstance(loaded, sc.AnnData)
 
-            # assume the last record is the warning
-            log_rec = caplog.records[-1]
-            assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
-
-    finally:
-        os.remove(path)  # clean up after tests
+        # assume the last record is the warning
+        log_rec = caplog.records[-1]
+        assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
 
 
 @pytest.fixture(scope="session")
@@ -381,7 +370,9 @@ def test_tidy_layer_keep_and_X(adata, keep_X, replace_X, keep):
         if keep == "all":
             assert len(adata.layers) <= len(adata_out.layers)  # assert that no layers are removed
         else:
-            assert len(adata_out.layers) == len(keep) and all(layer in keep for layer in adata_out.layers.keys())  # assert the correct layers are removed
+            # anndata>=0.13 exposes .X as a spurious None-keyed layer; assert only on real layer names
+            real_layers = [layer for layer in adata_out.layers.keys() if layer is not None]
+            assert len(real_layers) == len(keep) and all(layer in keep for layer in real_layers)  # assert the correct layers are removed
 
         if replace_X:
             # assert the original .X is replaced with the right layer

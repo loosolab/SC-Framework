@@ -30,7 +30,7 @@ def _convert_gtf_to_bed(gtf: str,
     gtf : str
         Path to .gtf file.
     out : Optional[str], default None
-        Path to save new BED file. If none, the file will be saved in the same folder as tha BAM file.
+        Path to save new BED file. If none, the file will be saved in the same folder as the BAM file.
     temp_files : list[str], default []
         List of temporary files.
 
@@ -91,7 +91,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,  # noqa: C901
     Parameters
     ----------
     adata : sc.AnnData
-        The anndata object containig cell barcodes in adata.obs.
+        The anndata object containing cell barcodes in adata.obs.
     regions_file : str
         Path to BED or GTF file containing regions of interest.
     bam_file : Optional[str], default None
@@ -199,8 +199,10 @@ def fc_fragments_in_regions(adata: sc.AnnData,  # noqa: C901
     column_name = f'fold_change_{regions_name}_fragments'  # name of the new column
     merged_df[column_name] = merged_df['count_ov'] / merged_df['count_all']  # calculate fold change (Maybe better to use log2 fold change?)
 
-    # fill NaN with 0 as NaN means no fragments in that cell
-    merged_df = merged_df.fillna(0)
+    # fill NaN with 0 as NaN means no fragments in that cell (opt in to the
+    # future no-silent-downcasting behaviour to avoid the pandas FutureWarning)
+    with pd.option_context("future.no_silent_downcasting", True):
+        merged_df = merged_df.fillna(0).infer_objects(copy=False)
 
     # add to adata.obs
     logger.info('Adding results to adata object...')

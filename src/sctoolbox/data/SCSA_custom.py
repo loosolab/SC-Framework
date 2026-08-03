@@ -25,7 +25,7 @@ class Annotator(object):
         if outtag.lower() == "ms-excel":
             h_values.to_excel(wb, sheet_name="Cluster " + cname + " " + title, index=False)
         else:
-            h_values.to_csv(wb, sep="\t", quotechar="\t", index=False, header=False)
+            h_values.to_csv(wb, sep="\t", index=False, header=False)
 
     def print_class(self, h_values, cname):
         """print cell predictions with scores."""

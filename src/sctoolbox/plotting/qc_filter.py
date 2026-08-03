@@ -2,6 +2,7 @@
 
 import pandas as pd
 import copy
+import contextlib
 import numpy as np
 import ipywidgets
 import traitlets
@@ -13,6 +14,7 @@ import warnings
 import upsetplot
 import seaborn as sns
 from matplotlib.axes import Axes
+import matplotlib.colors
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
@@ -21,7 +23,7 @@ from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
-from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Any  # , Union, List
+from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Any, Iterator  # , Union, List
 from beartype import beartype
 from numpy.typing import NDArray
 
@@ -655,7 +657,7 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
         A column in table to values on the x-axis.
     ncols : int, default 2
         Number of columns in the plot.
-    header : Optional[list[str]], defaul None
+    header : Optional[list[str]], default None
         A list of custom headers for each measure given in columns.
     color_list : Optional[list[str]], default None
         A list of colors to use for violins. If None, colors are chosen automatically.
@@ -676,7 +678,7 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
     -------
     Tuple[Any, Dict[str, Any]]
         Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
-        First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continously updated.
+        First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continuously updated.
 
     Raises
     ------
@@ -714,7 +716,7 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
 
         @property
         def ext_value(self) -> tuple:
-            """Return _init_values if never updated otherwise self.value."""
+            """The _init_values if never updated otherwise self.value."""
             return (
                 self._init_values[0] if not self._low_updated else self.value[0],
                 self._init_values[1] if not self._high_updated else self.value[1]
@@ -803,17 +805,21 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
         ax = axes_list[i]
         slider_dict[column] = {}
 
-        # Plot data from table
+        # Plot data from table. seaborn deprecates passing `palette` without a
+        # `hue`; when there is no groupby the plot is a single violin, so colour
+        # it directly via `color` instead of `palette`.
+        violin_kwargs = {"cut": 0, "legend": False, **kwargs}
+        if groupby is not None:
+            violin_kwargs["palette"] = color_list
+        else:
+            violin_kwargs["color"] = color_list[0]
         sns.violinplot(data=table,
                        x=groupby,
                        hue=groupby,
                        y=column,
                        ax=ax,
                        order=groups,
-                       palette=color_list,
-                       cut=0,
-                       legend=False,
-                       **kwargs)
+                       **violin_kwargs)
         ax.set_xticks(ax.get_xticks())  # get rid of userwarning https://stackoverflow.com/a/68794383/19870975
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
         ax.set_ylabel("")
@@ -1016,7 +1022,7 @@ def _upset_select_cells(adata: sc.AnnData,
     ------
     ValueError
         1. If any/all thresholds are grouped but groupby is set to None
-        2. If grouped threhold dict key does not match values in given groupby column
+        2. If grouped threshold dict key does not match values in given groupby column
     """
     selection = {}
     # loop over all columns
@@ -1052,6 +1058,49 @@ def _upset_select_cells(adata: sc.AnnData,
     selection.reset_index(inplace=True, drop=True)
 
     return selection
+
+
+@contextlib.contextmanager
+def _upsetplot_nan_safe_colours() -> Iterator[None]:
+    """Restore upsetplot's matrix-dot style defaults under pandas>=3 copy-on-write.
+
+    ``upsetplot`` (0.9.0) fills missing matrix-dot styles with chained
+    ``Series.fillna(..., inplace=True)`` calls that silently no-op under pandas>=3
+    copy-on-write, leaving ``linewidth``/``facecolor``/``edgecolor``/``linestyle`` as
+    ``NaN`` and raising ``Invalid RGBA argument: nan``. Wrap ``Axes.scatter`` to apply
+    the same defaults, in the same order, just before the values become colours; on
+    pandas<3 the columns are already filled, so the ``fillna`` calls are no-ops.
+
+    Yields
+    ------
+    None
+    """
+    original_scatter = Axes.scatter
+
+    # default facecolor, computed exactly as upsetplot's facecolor="auto" (UpSet.__init__)
+    bgcolor = plt.rcParams.get("axes.facecolor", "white")
+    r, g, b, a = matplotlib.colors.to_rgba(bgcolor)
+    lightness = matplotlib.colors.rgb_to_hsv((r, g, b))[-1] * a
+    default_facecolor = "black" if lightness >= 0.5 else "white"
+
+    @functools.wraps(original_scatter)
+    def _scatter(self: Axes, *args: Any, **kwargs: Any) -> Any:
+        # fill in upsetplot's order so edgecolors inherits an already-filled facecolor
+        if hasattr(kwargs.get("linewidths"), "fillna"):
+            kwargs["linewidths"] = kwargs["linewidths"].fillna(1)
+        if hasattr(kwargs.get("facecolors"), "fillna"):
+            kwargs["facecolors"] = kwargs["facecolors"].fillna(default_facecolor)
+        if hasattr(kwargs.get("edgecolors"), "fillna"):
+            kwargs["edgecolors"] = kwargs["edgecolors"].fillna(kwargs.get("facecolors"))
+        if hasattr(kwargs.get("linestyles"), "fillna"):
+            kwargs["linestyles"] = kwargs["linestyles"].fillna("solid")
+        return original_scatter(self, *args, **kwargs)
+
+    Axes.scatter = _scatter
+    try:
+        yield
+    finally:
+        Axes.scatter = original_scatter
 
 
 def upset_plot_filter_impacts(adata: sc.AnnData,
@@ -1131,7 +1180,9 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
     # set the combinations as index
     combinations_df.set_index(list(selection.columns), inplace=True)
 
-    with warnings.catch_warnings():  # TODO remove when this is merged https://github.com/jnothman/UpSetPlot/pull/278
+    with warnings.catch_warnings(), _upsetplot_nan_safe_colours():
+        # TODO remove warnings when this is merged https://github.com/jnothman/UpSetPlot/pull/278
+        # TODO remove _upsetplot_nan_safe_colours() when this is fixed https://github.com/jnothman/UpSetPlot/issues/303
         warnings.filterwarnings("ignore", message="A value is trying to be set on a copy of a DataFrame or Series through chained assignment using an inplace method.")
 
         # plot the UpSet Plot

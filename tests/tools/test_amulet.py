@@ -578,18 +578,27 @@ class TestAssignReadsWithinOverlaps:
 class TestCountFragmentOverlaps:
     """Tests for count_fragment_overlaps function."""
 
-    @pytest.mark.parametrize("file_fixture", ["sample_fragment_file", "sample_fragment_file_gz"])
-    def test_parse_file_formats(self, request, available_chromosomes, available_barcodes, file_fixture):
-        """Test parsing different file formats (TSV and gzipped)."""
-        fragment_file = request.getfixturevalue(file_fixture)
+    def test_parse_tsv_format(self, sample_fragment_file, available_chromosomes, available_barcodes):
+        """Test parsing TSV file format."""
         chr1 = available_chromosomes[0]
         bc1 = available_barcodes[0]
 
         overlaps_df, summary_df = amulet.count_fragment_overlaps(
-            fragment_file, [bc1], chromosomes=[chr1]
+            sample_fragment_file, [bc1], chromosomes=[chr1]
         )
 
-        # Should parse without error and return DataFrames
+        assert isinstance(overlaps_df, pd.DataFrame)
+        assert isinstance(summary_df, pd.DataFrame)
+
+    def test_parse_gzipped_format(self, sample_fragment_file_gz, available_chromosomes, available_barcodes):
+        """Test parsing gzipped file format."""
+        chr1 = available_chromosomes[0]
+        bc1 = available_barcodes[0]
+
+        overlaps_df, summary_df = amulet.count_fragment_overlaps(
+            sample_fragment_file_gz, [bc1], chromosomes=[chr1]
+        )
+
         assert isinstance(overlaps_df, pd.DataFrame)
         assert isinstance(summary_df, pd.DataFrame)
 

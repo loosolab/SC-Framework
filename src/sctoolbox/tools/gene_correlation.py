@@ -71,7 +71,7 @@ def correlate_conditions(adata: sc.AnnData,
 
 
 @beartype
-def correlate_ref_vs_all(adata: sc.AnnData,
+def correlate_ref_vs_all(adata: sc.AnnData,  # noqa: C901
                          ref_gene: str,
                          correlation_threshold: float = 0.4,
                          save: Optional[str] = None) -> pd.DataFrame:
@@ -95,7 +95,7 @@ def correlate_ref_vs_all(adata: sc.AnnData,
     Returns
     -------
     pd.DataFrame
-        Dataframe containing correlation of refrence gene to other genes.
+        Dataframe containing correlation of reference gene to other genes.
     """
 
     def spearmanr_of_gene(ref: np.ndarray, gene: np.ndarray, gene_name: str) -> tuple:
@@ -166,8 +166,12 @@ def correlate_ref_vs_all(adata: sc.AnnData,
     corr_df['correlation_strength'] = corr_df['correlation'].apply(map_correlation_strength)
     corr_df["reject_0?"] = np.where(corr_df['padj'] < 0.05, True, False)
 
-    # Clean up after nan values
-    corr_df.loc[corr_df.isnull().any(axis=1), :] = np.nan
+    # Clean up after nan values (cast the bool column first so writing NaN into
+    # it does not raise on future pandas; only when a row is actually nulled)
+    na_rows = corr_df.isnull().any(axis=1)
+    if na_rows.any():
+        corr_df["reject_0?"] = corr_df["reject_0?"].astype("object")
+        corr_df.loc[na_rows, :] = np.nan
 
     if save:
         to_plot = corr_df[corr_df["correlation"] > correlation_threshold].index.to_list()

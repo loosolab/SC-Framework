@@ -1,6 +1,42 @@
 # Changelog
 
-## 0.15.0 (in progress)
+## 0.16.0 (in progress)
+- connectionPlot: Fix colormap by replacing deprecated function get_cmap (#462)
+- document the development environment setup and the testing/linting dependency-groups in `development.rst`
+- document the doc-string example conventions (`.. plot::` / `.. exec_code::`) and pre-code fixtures in `development.rst`
+- refactor tests: consolidate duplicate fixtures into shared `conftest` files (tools, plotting, utils, settings), migrate RNA test data to `scanpy.datasets` (drop the bundled `adata_rna.rds`), reduce runtime by removing unused t-SNE and sharing expensive fixture builds, and document the fixture/test-data conventions in `development.rst` (#445)
+- fix broken tests (missing scanpy import in multiomics, unbound `peaks_to_bins` result, and batch-label length in the norm_correct fixture)
+- fix gitlab_download: replace the broken throttler rate limiter with a basic time.sleep and remove the throttler dependency
+- reduce test-data size and mock S3 download to reduce runtime and size (#445)
+- enables parallel test execution (#445)
+- reduce test runtime hotspots, right-size fixture scopes, dedup fixtures/orphan data, and fix warnings (#445)
+- pin the conda environment to Python >=3.9,<3.13 (#460)
+- fix SCSA for Python >= 3.13
+- add compatibility with pandas 3 and anndata 0.13 (!533)
+- make pygenometracks an optional 'genometracks' extra to resolve the matplotlib conflict in .[all] (!533)
+- drop the typing_extensions pin and exclude anndata 0.13.0 (!533)
+- fix estimate_doublets hang when threads exceeds the number of groups (cap pool size) (!533)
+- bump tqdm floor to >=4.68.4 for pandas 3 compatibility (!533)
+- fix get_variable_features subsampling for pandas 3 (Series positional access via .iloc) and expose subsample_target (!533)
+- fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
+- bump palantir floor to >=1.4.5 for pandas 3 / anndata 0.13 compatibility (!533)
+
+## 0.15.1 (15-05-2026)
+- from_mtx: Fix read option when providing str instead of dict
+- Reduce package build size (#448)
+- link guidance.rst in the notebokks (#450)
+
+### Changes to notebooks
+- General/multiomics: Set plotly render option to notebook mode
+
+## 0.15.0 (07-05-2026)
+- Readthedocs overhaul (#312, #239, #351)
+- add multi-factor batch correction support and add the scvi correction (#272)
+- enhance `utils.assemblers.from_mtx(path)` to accept dicts (#367)
+- implemented SCF-analysis-setup CLI (#437)
+- implemented `sctoolbox.utils.creators.github_download`
+- spellcheck the project
+- fixed TypeError caused by non-string column names in `utils.adata._rec_search`
 - Add function adjust_doublet_threshold
 - move scvelo dependency to pyproject.toml (#423)
 - integration of AMULET to find multiplets in single-cell ATAC-seq data (#260)
@@ -25,10 +61,17 @@
 - README: Update figure (#268)
 - Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
 - fix logging issue causing error on save (#333)
-- CI improvments
+- Pin scFates to >= 1.2.3 (#433)
 - lint according to new D420 rule
+- CI improvements
+- add scanpy score feature including apoptosis,mito,ribo and cell cycle (#401)
+- Add multiomics tools and plotting functions (#237)
 
 ### Changes to notebooks
+- RNA/ATAC batch: enable multi-factor batch correction (#272)
+- RNA/ATAC assembly: adjust for updated `from_mtx`
+- add a number prefix to notebook output figures (#440)
+- implemented the Palantir notebook
 - Notebook 2: Show doubled threshold in plot and make it adjustable afterwards (#328)
 - Notebooks 4: Fix blue input cell order
 - RNA/02: Filter genes: Added check for label column (#430)
@@ -37,7 +80,12 @@
 - RNA/02: Create 06_*_info.txt report file when no genes are filtered
 - RNA/ATAC: always keep the norm layer (#411)
 - ATAC/02: add peakqc references
+- Pseudotime: Run tl.merge_empty_segments after tl.pseudotime
 - Notebook 4: Fix report issue when reclustering (#431)
+- Pilot: Implemented Pilot Notebook (#353)
+- RNA Notebook 2: added apoptosis score and fixed section numbers (#401)
+- General/annotation: utilize settings to define the repository path
+- General: Add multiomics notebook (#237)
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
@@ -97,7 +145,7 @@
 - set bbknn(computation="cKDTree") and scanorama(approx=False) to fix issue with annoy package and processor architecture
 
 ## 0.13.1 (13-08-25)
-- scrublet: use forkserver to start separte processes to enable multiprocessing (#380)
+- scrublet: use forkserver to start separate processes to enable multiprocessing (#380)
 - enable AnnData write compression (this was default prior to AnnData version 0.6.16)
 
 ## 0.13.0 (08-08-25)
@@ -232,7 +280,7 @@
 - added kwargs and check for quant folder in assemblers.from_quant (#280)
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
 - pl.gsea.term_dotplot: Fix example; Fix index==None bug
-- added additional qc metrices for ATAC-seq to the first notebook (#256)
+- added additional qc metrics for ATAC-seq to the first notebook (#256)
 - Pin ipywidget version to > 8.0.0 to fix interactive labels (qc notebooks)
 - revised prepare_atac_anndata (#267)
 - solved scanpy, matplotlib, pandas.. version conflict by temporarily removing scanpro (#257)
@@ -251,7 +299,7 @@
 - expand marker_genes notebook for atac, move to general_notebooks, change deseq2(R) to pydeseq2(python)
 
 ### Changes to notebooks
-- improvments in description and structure of atac and general notebooks (#144)
+- improvements in description and structure of atac and general notebooks (#144)
 - added header parameter to option 2 in notebook 01_assembling_anndata (#280)
 - added notebook versioning (#115)
 - added load from multiple h5ad files to assembly notebooks (#224)
@@ -268,7 +316,7 @@
 - remove legacy import structure
 - implement lazy module loading 
 - wrapped up native scrublet (#242, #150)
-- prepare_for_cellxgene: Account for duplciate var indices
+- prepare_for_cellxgene: Account for duplicate var indices
 - added number of features to ATAC nb 3 and added combat as an available batch correct algorithm (#245)
 - removed cleanup temp for the selfservice container (#258)
 
@@ -309,7 +357,7 @@
 ### Changes to notebooks
 - Move proportion_analysis notebooks to general notebooks (#195 and #214)
 - replace scanpy pseudotime with scFates in pseudotime_analysis notebook
-- prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
+- prepare_for_cellxgene: Adapt to new mampok version 2.0.9
 - prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
 - rna 03_batch revision (#209, #202, #200, #152)
 - 05_marker_genes: Complete Overhaul (#181)
@@ -345,7 +393,7 @@
 - constraint ipywidgets version to 7.7.5 to fix the quality_violinplot() (#151)(#143)
 - Add temp_dir to calc_overlap_fc.py (#167) and revised related functions
 - more testing (mainly sctoolbox.tools) (#166)
-- gerneral text revisions
+- general text revisions
 
 ### Changes to notebooks
 - Add pseudotime & velocity analysis notebooks (#164)
@@ -420,7 +468,7 @@
 ### Changes to ATAC notebooks
 - Fixed assembling atac notebook 01
 - Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
-- Added custome cwt implementation
+- Added custom cwt implementation
 - Added additional parameters to add_insertsize_metrics
 - Revised nucleosomal score scoring
 

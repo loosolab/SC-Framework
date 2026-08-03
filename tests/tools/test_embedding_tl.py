@@ -1,7 +1,6 @@
 """Test tools/embedding.py functions."""
 
 import pytest
-import scanpy as sc
 
 import sctoolbox.tools.embedding as ste
 
@@ -9,8 +8,8 @@ import sctoolbox.tools.embedding as ste
 # ----------------------------- FIXTURES ------------------------------- #
 
 
-@pytest.fixture(scope="session")
-def adata():
+@pytest.fixture
+def adata(pbmc3k_processed):
     """Create an anndata object with PCA and UMAP.
 
     Returns
@@ -18,7 +17,7 @@ def adata():
     anndata.AnnData
         Preprocessed PBMC3k dataset with PCA and UMAP.
     """
-    return sc.datasets.pbmc3k_processed()
+    return pbmc3k_processed
 
 
 # ------------------------------ TESTS --------------------------------- #

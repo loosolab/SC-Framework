@@ -69,7 +69,7 @@ def write_TOBIAS_config(out_path: str,
     plot_correction : bool, default True
         Flag for the step of plotting correction of the TOBIAS run.
     plot_venn : bool, default True
-        Flag for the step of plotting venn diagramms of the TOBIAS run.
+        Flag for the step of plotting venn diagrams of the TOBIAS run.
     coverage : bool, default True
         Flag for coverage step of the TOBIAS run.
     wilson : bool, default True

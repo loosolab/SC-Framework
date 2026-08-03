@@ -6,14 +6,17 @@ channels:
     - bioconda
     - conda-forge
 dependencies:
+  - python >=3.9,<3.13  # upper bound tracks https://github.com/deeptools/pyGenomeTracks/issues/494; removable once a matplotlib>=3.9-compatible pygenometracks ships
 # jupyter dependencies
   - notebook==6.5.2
   - ipykernel  # needed to register environment as jupyter kernel
+  - jupyter_contrib_nbextensions
 # Dependencies used within the notebooks (but not the sctoolbox package)
-#  - pip>=24.2  # for installing additional packages
-#  - pip:
+  - pip>=24.2  # for installing additional packages
+  - pip:
 #    # PyPI does not accept direct links so non PyPI packages are installed here
 #    # - git+https://github.com/Novartis/scar.git  # skipped as it would add ~10GB to the docker image
+     - pilotpy@git+https://github.com/loosolab/PILOT_scframework.git
 # sctoolbox related dependency exemptions
 # R dependencies (needed to enable data R->Python conversion)
   - r-base

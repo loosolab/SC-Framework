@@ -8,3 +8,4 @@ sctoolbox API reference
    tools
    plotting
    utils
+   Settings <_settings.rst>

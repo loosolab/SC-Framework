@@ -73,7 +73,7 @@ def check_barcode_tag(adata: sc.AnnData,
                       bamfile: str,
                       cb_tag: str = "CB") -> None:
     """
-    Check for the possibilty that the wrong barcode is used.
+    Check for the possibility that the wrong barcode is used.
 
     Parameters
     ----------
@@ -239,7 +239,7 @@ def split_bam_clusters(adata: sc.AnnData,  # noqa: C901
     writer_threads : Optional[int], default 1
         Number of threads to use for writing. Set None to use settings.get_threads.
     parallel : bool, default False
-        Whether to enable parallel processsing.
+        Whether to enable parallel processing.
     pysam_threads : Optional[int], default 4
         Number of threads for pysam. Set None to use settings.get_threads.
     buffer_size : int, default 10000
@@ -651,7 +651,7 @@ def _buffered_reader(path: str,
     path : str
         Path to bam file.
     out_queues : dict[str | int, multiprocessing.queues.Queue]
-        Dict of multiprocesssing.Queues with cluster as key.
+        Dict of multiprocessing.Queues with cluster as key.
     bc2cluster : dict[str | int, str | int]
         Dict of clusters with barcode as key.
     tag : str
@@ -669,7 +669,7 @@ def _buffered_reader(path: str,
     Raises
     ------
     Exception
-        If buffered reader failes.
+        If buffered reader fails.
     """  # noqa: DOC502
 
     # Test parameter types not covered by beartype
@@ -758,7 +758,7 @@ def _writer(read_queue: Any,
     Raises
     ------
     Exception
-        If buffered reader failes.
+        If buffered reader fails.
     """  # noqa: DOC502
 
     # Check parameter that are not covered by beartype
@@ -973,7 +973,7 @@ def create_fragment_file(bam: str,  # noqa: C901
     FileNotFoundError
         If the input bam file does not exist.
     Exception
-        On unkown error while sorting .bam
+        On unknown error while sorting .bam
     """  # noqa: DOC502
 
     utils.checker.check_module("pysam")

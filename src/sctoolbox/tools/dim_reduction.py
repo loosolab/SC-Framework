@@ -354,7 +354,11 @@ def subset_PCA(adata: sc.AnnData,
         select = [i - 1 for i in select]
 
         adata.obsm["X_pca"] = adata.obsm["X_pca"][:, select]
-        adata.varm["PCs"] = adata.varm["PCs"][:, select]
+
+        # subset the loadings if they exist
+        # they don't exist if the PCA is replaced with another embedding that doesn't have loadings (e.g. scvi)
+        if "PCs" in adata.varm:
+            adata.varm["PCs"] = adata.varm["PCs"][:, select]
 
         if "variance_ratio" in adata.uns.get("pca", {}):
             adata.uns["pca"]["variance_ratio"] = adata.uns["pca"]["variance_ratio"][select]
@@ -398,7 +402,7 @@ def dim_red(anndata: sc.AnnData, method: Optional[Literal["PCA", "LSI"]], method
     method_kwargs : dict, default {}
         Parameters of the chosen method.
     subset : Optional[List[int]], default None
-        A list of integers specifing a subset of components to keep. Forwarded to "select" of :func:sctoolbox.`tools.dim_reduction.subset_PCA`.
+        A list of integers specifying a subset of components to keep. Forwarded to "select" of :func:sctoolbox.`tools.dim_reduction.subset_PCA`.
     neighbor_kwargs : dict, default {}
         Parameters to the neighbor graph computation. :func:`scanpy.pp.neighbors`
     inplace : bool, default False

@@ -275,7 +275,7 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
     ValueError
         1. If species parameter is not Human, Mouse or None.
         2. If no species and no user database is provided.
-        3. If SCSA run failes
+        3. If SCSA run fails
 
     Notes
     -----

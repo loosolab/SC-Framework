@@ -54,7 +54,7 @@ def annot_HVG(anndata: sc.AnnData,
     Optional[sc.AnnData]
         Adds annotation of HVG to anndata object. Information is added to Anndata.var["highly_variable"].
         If inplace is False, the function returns None
-        Else returns a chagned copy of the input anndata object.
+        Else returns a changed copy of the input anndata object.
 
     Notes
     -----
@@ -77,7 +77,7 @@ def annot_HVG(anndata: sc.AnnData,
         if i < max_iterations and hvg_count < hvg_range[0]:
             min_mean /= step
         elif i < max_iterations and hvg_count > hvg_range[1]:
-            min_mean *= step + 0.00001  # This .000001 is to avoid an infinit loop if the current mean lie in the above if.
+            min_mean *= step + 0.00001  # This .000001 is to avoid an infinite loop if the current mean lie in the above if.
         else:
             break
 
@@ -99,6 +99,7 @@ def annot_HVG(anndata: sc.AnnData,
 def get_variable_features(adata: sc.AnnData,
                           max_cells: Optional[float | int] = None,
                           min_cells: Optional[float | int] = 0,
+                          subsample_target: int = 10000,
                           show: bool = True,
                           inplace: bool = True,
                           save: Optional[str] = None,
@@ -114,6 +115,8 @@ def get_variable_features(adata: sc.AnnData,
         The maximum variability score to set as threshold. Defaults to knee estimated threshold.
     min_cells : Optional[float | int], default 0
         The minimum variability score to set as threshold.
+    subsample_target : int, default 10000
+        Target number of features to subsample to when estimating the knee threshold (only used when `max_cells` is None).
     show : bool, default True
         Show plot of variability scores and thresholds.
     inplace : bool, default True
@@ -154,11 +157,10 @@ def get_variable_features(adata: sc.AnnData,
 
     if max_cells is None:
         # Subset data to reduce computational time
-        target = 10000
-        step = int(len(n_cells) / target)
+        step = int(len(n_cells) / subsample_target)
         if step > 0:
             idx_selection = np.arange(len(n_cells), step=step)
-            n_cells = n_cells[idx_selection]
+            n_cells = n_cells.iloc[idx_selection]
             x = x[idx_selection]
 
         # Smooth using lowess (prevents early finding of knees due to noise)
