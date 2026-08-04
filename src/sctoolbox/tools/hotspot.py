@@ -28,25 +28,36 @@ def was_subsetted(
     Check whether current_adata contains fewer cells than original_adata.
 
     This is useful to decide whether PCA/neighbors/UMAP should be recomputed.
+
+    Returns
+    -------
+    bool
+        True if current_adata contains fewer cells than original_adata,
+        otherwise False.
     """
     return current_adata.n_obs < original_adata.n_obs
 
 
 def ensure_pca(
     adata: AnnData,
-    pca_key: str="X_pca",
-    n_comps: int=50,
-    use_highly_variable: bool=True,
-    layer: str | None=None,
-    svd_solver=None,
-    random_state: int=0,
-    force_recompute: bool=False,
+    pca_key: str = "X_pca",
+    n_comps: int = 50,
+    use_highly_variable: bool = True,
+    layer: str | None = None,
+    svd_solver: str | None = None,
+    random_state: int = 0,
+    force_recompute: bool = False,
 ) -> str:
     """
     Ensure that a PCA representation exists in adata.obsm.
 
     If pca_key already exists and force_recompute=False, it is reused.
     Otherwise, PCA is computed and stored in adata.obsm[pca_key].
+
+    Returns
+    -------
+    str
+        Key under which the PCA representation is stored in adata.obsm.
     """
 
     if pca_key in adata.obsm and not force_recompute:
@@ -74,17 +85,29 @@ def ensure_pca(
 def ensure_harmony(
     adata: AnnData,
     batch_key: str | None,
-    basis: str="X_pca",
-    adjusted_basis: str="X_pca_harmony",
-    force_recompute: bool=False,
+    basis: str = "X_pca",
+    adjusted_basis: str = "X_pca_harmony",
+    force_recompute: bool = False,
 ) -> str | None:
     """
-    Ensures that a Harmony-corrected latent representation exists.
+    Ensure that a Harmony-corrected latent representation exists.
 
     Requires:
     - batch_key in adata.obs
     - PCA basis in adata.obsm[basis]
     - scanpy.external and harmonypy installed
+
+    Returns
+    -------
+    str or None
+        Key of the existing or newly computed Harmony representation.
+        Returns None if no valid batch key is available or Harmony
+        cannot be computed.
+
+    Raises
+    ------
+    ValueError
+        If basis is not present in adata.obsm.
     """
 
     if adjusted_basis in adata.obsm and not force_recompute:
@@ -125,23 +148,35 @@ def ensure_harmony(
         print(f"Reason: {e}")
         return None
 
+
 def ensure_umap(
     adata: AnnData,
     use_rep: str,
-    neighbors_key: str="neighbors",
-    n_neighbors: int=30,
-    n_pcs: int=30,
-    metric: str="euclidean",
-    min_dist: float=0.5,
-    spread: float=1.0,
-    n_components: int=2,
-    random_state: int=0,
-    force_recompute=False,
+    neighbors_key: str = "neighbors",
+    n_neighbors: int = 30,
+    n_pcs: int = 30,
+    metric: str = "euclidean",
+    min_dist: float = 0.5,
+    spread: float = 1.0,
+    n_components: int = 2,
+    random_state: int = 0,
+    force_recompute: bool = False,
 ) -> str:
     """
-    Ensures that adata.obsm['X_umap'] exists.
+    Ensure that adata.obsm['X_umap'] exists.
 
     UMAP is used for visualization, not as the main Hotspot input.
+
+    Returns
+    -------
+    str
+        Key of the UMAP representation in adata.obsm, namely
+        "X_umap".
+
+    Raises
+    ------
+    ValueError
+        If use_rep is not present in adata.obsm.
     """
 
     if "X_umap" in adata.obsm and not force_recompute:
@@ -200,6 +235,18 @@ def ensure_representation_for_umap(
     - X_pca_harmony
 
     Other representations, e.g. X_scVI or X_scanorama, must already exist.
+
+    Returns
+    -------
+    str
+        Key of the selected representation in adata.obsm.
+
+    Raises
+    ------
+    KeyError
+        If the requested representation is not present in adata.obsm.
+    ValueError
+        If the Harmony representation cannot be computed.
     """
 
     if use_rep == pca_key:
@@ -280,6 +327,12 @@ def ensure_umap_for_visualization(
 
     This function only computes PCA/Harmony/neighbors/UMAP if needed.
     It does not plot.
+
+    Returns
+    -------
+    str
+        Key of the UMAP representation stored in adata.obsm,
+        namely "X_umap".
     """
 
     force_rep_effective = force_recompute_rep or (is_subset and recompute_if_subset)
@@ -333,6 +386,17 @@ def plot_umap(
 ) -> Any:
     """
     Plot UMAP using sctoolbox plotting style.
+
+    Returns
+    -------
+    Any
+        Plot object returned by pl.embedding.plot_embedding.
+
+    Raises
+    ------
+    KeyError
+        If condition_column is not present in adata.obs or
+        adata.var_names.
     """
 
     if condition_column not in adata.obs.columns and condition_column not in adata.var_names:
@@ -355,6 +419,7 @@ def plot_umap(
         **kwargs,
     )
 
+
 def ensure_hotspot_latent_representation(
     adata: AnnData,
     representation_settings: dict[str, Any],
@@ -373,6 +438,20 @@ def ensure_hotspot_latent_representation(
 
     External representations such as X_scVI or X_scanorama are only used
     if they already exist in adata.obsm. They are not recomputed automatically.
+
+    Returns
+    -------
+    str
+        Key of the selected latent representation in ``adata.obsm``.
+
+    Raises
+    ------
+    KeyError
+        If the requested representation or a required configuration key
+        is missing.
+    ValueError
+        If the requested representation cannot be computed or no suitable
+        representation can be selected.
     """
 
     preferred_rep = representation_settings.get("preferred_rep", "auto")
