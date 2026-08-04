@@ -15,10 +15,11 @@ from IPython.display import display
 from beartype import beartype
 from beartype.typing import Optional, Any
 from pathlib import Path
-from typing import Any
 from sctoolbox import settings
 
 logger = settings.logger
+
+
 def was_subsetted(
     original_adata: AnnData,
     current_adata: AnnData,
@@ -30,18 +31,19 @@ def was_subsetted(
     """
     return current_adata.n_obs < original_adata.n_obs
 
+
 def ensure_pca(
-    adata,
-    pca_key="X_pca",
-    n_comps=50,
-    use_highly_variable=True,
-    layer=None,
+    adata: AnnData,
+    pca_key: str="X_pca",
+    n_comps: int=50,
+    use_highly_variable: bool=True,
+    layer: str | None=None,
     svd_solver=None,
-    random_state=0,
-    force_recompute=False,
-):
+    random_state: int=0,
+    force_recompute: bool=False,
+) -> str:
     """
-    Ensures that a PCA representation exists in adata.obsm.
+    Ensure that a PCA representation exists in adata.obsm.
 
     If pca_key already exists and force_recompute=False, it is reused.
     Otherwise, PCA is computed and stored in adata.obsm[pca_key].
@@ -68,13 +70,14 @@ def ensure_pca(
 
     return pca_key
 
+
 def ensure_harmony(
-    adata,
-    batch_key,
-    basis="X_pca",
-    adjusted_basis="X_pca_harmony",
-    force_recompute=False,
-):
+    adata: AnnData,
+    batch_key: str | None,
+    basis: str="X_pca",
+    adjusted_basis: str="X_pca_harmony",
+    force_recompute: bool=False,
+) -> str | None:
     """
     Ensures that a Harmony-corrected latent representation exists.
 
@@ -123,18 +126,18 @@ def ensure_harmony(
         return None
 
 def ensure_umap(
-    adata,
-    use_rep,
-    neighbors_key="neighbors",
-    n_neighbors=30,
-    n_pcs=30,
-    metric="euclidean",
-    min_dist=0.5,
-    spread=1.0,
-    n_components=2,
-    random_state=0,
+    adata: AnnData,
+    use_rep: str,
+    neighbors_key: str="neighbors",
+    n_neighbors: int=30,
+    n_pcs: int=30,
+    metric: str="euclidean",
+    min_dist: float=0.5,
+    spread: float=1.0,
+    n_components: int=2,
+    random_state: int=0,
     force_recompute=False,
-):
+) -> str:
     """
     Ensures that adata.obsm['X_umap'] exists.
 
@@ -174,6 +177,7 @@ def ensure_umap(
     )
 
     return "X_umap"
+
 
 def ensure_representation_for_umap(
     adata: AnnData,
@@ -247,6 +251,7 @@ def ensure_representation_for_umap(
     print(f"Using existing representation: adata.obsm['{use_rep}']")
     return use_rep
 
+
 def ensure_umap_for_visualization(
     adata: AnnData,
     use_rep: str = "X_pca",
@@ -315,6 +320,7 @@ def ensure_umap_for_visualization(
 
     return umap_key
 
+
 def plot_umap(
     adata: AnnData,
     condition_column: str,
@@ -323,8 +329,8 @@ def plot_umap(
     save: str | None = None,
     report: str | None = None,
     rasterize: bool = True,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> Any:
     """
     Plot UMAP using sctoolbox plotting style.
     """
