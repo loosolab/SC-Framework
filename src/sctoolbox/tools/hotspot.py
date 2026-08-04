@@ -494,7 +494,7 @@ def ensure_hotspot_latent_representation(
     # --------------------------------------------------------
     # Helper: compute PCA
     # --------------------------------------------------------
-    def _compute_pca():
+    def _compute_pca() -> str:
         return ensure_pca(
             adata,
             force_recompute=force_pca_effective,
@@ -504,7 +504,7 @@ def ensure_hotspot_latent_representation(
     # --------------------------------------------------------
     # Helper: compute Harmony
     # --------------------------------------------------------
-    def _compute_harmony():
+    def _compute_harmony() -> str:
         ensure_pca(
             adata,
             force_recompute=force_pca_effective,
@@ -615,6 +615,7 @@ def ensure_hotspot_latent_representation(
         "Please check preferred_rep, priority, or enable PCA/Harmony computation."
     )
 
+
 def subset_adata(
     adata: AnnData,
     subset_filters: dict[str, Any] | None = None,
@@ -650,6 +651,17 @@ def subset_adata(
     -------
     AnnData
         Subsetted AnnData object.
+
+    Raises
+    ------
+    KeyError
+        If a column specified in subset_filters is not present in
+        adata.obs.
+    TypeError
+        If subset_filters is not a dictionary.
+    ValueError
+        If requested values are missing, no values are provided, or the
+        subsetting removes all cells.
     """
     if subset_filters is None or len(subset_filters) == 0:
         return adata.copy() if copy else adata
@@ -705,17 +717,17 @@ def subset_adata(
     return adata_subset
 
 def inspect_and_filter_genes_by_cell_detection(
-    adata,
-    layer_key="raw",
-    min_cells=50,
-    thresholds_to_show=(10, 20, 30, 50, 100),
-    filter_genes=False,
-    plot=True,
-    bins=50,
-    add_to_var=True,
-    var_column="n_cells_detected",
-    copy=True,
-):
+    adata: AnnData,
+    layer_key: str | None = "raw",
+    min_cells: int = 50,
+    thresholds_to_show: tuple[int, ...] = (10, 20, 30, 50, 100),
+    filter_genes: bool = False,
+    plot: bool = True,
+    bins: int = 50,
+    add_to_var: bool = True,
+    var_column: str = "n_cells_detected",
+    copy: bool = True,
+) -> tuple[AnnData, pd.DataFrame, dict[str, Any]]:
     """
     Inspect and optionally filter genes based on the number of cells
     in which each gene is detected.
@@ -756,6 +768,11 @@ def inspect_and_filter_genes_by_cell_detection(
         DataFrame with gene names and number of cells detected.
     summary : dict
         Summary information about filtering.
+
+    Raises
+    ------
+    KeyError
+        If layer_key is not present in adata.layers.
     """
 
     # --------------------------------------------------------
@@ -950,6 +967,17 @@ def run_hotspot(
     -------
     dict
         Dictionary with Hotspot object and result tables.
+
+    Raises
+    ------
+    TypeError
+        If ``adata`` is not an AnnData object.
+    KeyError
+        If the requested layer, latent representation, or a required result
+        column is missing.
+    ValueError
+        If the selected configuration is invalid, all genes have zero
+        variance, or the requested analysis steps are incompatible.
     """
     if not isinstance(adata, AnnData):
         raise TypeError("`adata` must be an AnnData object.")
@@ -1174,6 +1202,7 @@ def summarize_modules(
 
     return pd.DataFrame(summary_rows).sort_values("module").reset_index(drop=True)
 
+
 def save_hotspot_results(
     results: dict[str, Any],
     output_dir: str | Path,
@@ -1235,20 +1264,21 @@ def save_hotspot_results(
     if adata is not None and adata_path is not None:
         adata.write(adata_path)
 
+
 def show_hotspot_results(
-    adata,
-    results,
-    fdr_threshold=0.05,
-    module_score_prefix="Hotspot module",
-    ncols=3,
-    output_prefix="hotspot",
-    plot_umap_modules=True,
-    plot_local_correlation_heatmap=True,
-    plot_autocorrelation_distribution=True,
-    plot_module_sizes=True,
-    save=True,
-    report=True,
-):
+    adata: AnnData,
+    results: dict[str, Any],
+    fdr_threshold: float = 0.05,
+    module_score_prefix: str = "Hotspot module",
+    ncols: int = 3,
+    output_prefix: str = "hotspot",
+    plot_umap_modules: bool = True,
+    plot_local_correlation_heatmap: bool = True,
+    plot_autocorrelation_distribution: bool = True,
+    plot_module_sizes: bool = True,
+    save: bool = True,
+    report: bool = True,
+) -> dict[str, Any]:
     """
     Show and save the main Hotspot results.
 
@@ -1286,6 +1316,12 @@ def show_hotspot_results(
         Whether to save figures.
     report : bool
         Whether to save report figures if supported by sctoolbox.
+
+    Returns
+    -------
+    dict[str, Any]
+        Summary containing information such as the number of tested genes,
+        selected genes, modules, module sizes, and module-score columns.
     """
     summary = {}
 
@@ -1528,18 +1564,20 @@ def show_hotspot_results(
     display(pd.Series(summary_display, name="value"))
 
     return summary
+
+
 def add_hotspot_results_to_adata(
-    adata,
-    results,
-    prefix="hotspot",
-    fdr_threshold=0.05,
-    store_module_scores=True,
-    store_autocorrelations=True,
-    store_modules=True,
-    store_selected_genes=True,
-    store_local_correlations=False,
-    copy=False,
-):
+    adata: AnnData,
+    results: dict[str, Any],
+    prefix: str = "hotspot",
+    fdr_threshold: float = 0.05,
+    store_module_scores: bool = True,
+    store_autocorrelations: bool = True,
+    store_modules: bool = True,
+    store_selected_genes: bool = True,
+    store_local_correlations: bool = False,
+    copy: bool = False,
+) -> AnnData:
     """
     Add Hotspot results to AnnData before saving.
 
@@ -1551,6 +1589,11 @@ def add_hotspot_results_to_adata(
     - summary information in adata.uns
 
     Does not store the Hotspot object itself.
+
+    Returns
+    -------
+    AnnData
+        AnnData object containing the selected Hotspot results.
     """
 
     if copy:
@@ -1680,6 +1723,7 @@ def add_hotspot_results_to_adata(
 
     return adata
 
+
 @deco.log_anndata
 @beartype
 def run_hotspot_module_enrichment(
@@ -1732,6 +1776,11 @@ def run_hotspot_module_enrichment(
     -------
     Optional[sc.AnnData]
         Modified AnnData object if inplace=False, otherwise None.
+
+    Raises
+    ------
+    ValueError
+        If the module assignments or enrichment configuration are invalid.
     """
 
     if gene_sets is None:
@@ -1886,6 +1935,7 @@ def run_hotspot_module_enrichment(
 
     return modified_adata
 
+
 @beartype
 def summarize_hotspot_module_enrichment(
     adata: sc.AnnData,
@@ -1894,6 +1944,11 @@ def summarize_hotspot_module_enrichment(
 ) -> pd.DataFrame:
     """
     Return the top enriched terms per Hotspot module.
+
+    Returns
+    -------
+    pd.DataFrame
+        Table containing the top enriched terms for each Hotspot module.
     """
 
     enrichment_info = (
@@ -1934,6 +1989,7 @@ def summarize_hotspot_module_enrichment(
 
     return summary
 
+
 @deco.log_anndata
 @beartype
 def plot_hotspot_module_enrichment(
@@ -1958,6 +2014,11 @@ def plot_hotspot_module_enrichment(
     -------
     pd.DataFrame
         Top enrichment terms per module.
+
+    Raises
+    ------
+    ValueError
+        If no valid enrichment results are available for plotting.
     """
 
     enrichment_info = (
@@ -2094,13 +2155,20 @@ def plot_hotspot_module_enrichment(
 
     return top_terms
 
-def stringify_adata_keys_for_saving(adata):
+
+def stringify_adata_keys_for_saving(adata: AnnData) -> AnnData:
     """
     Convert non-string keys/columns in obs, var and uns to strings
     so that sctoolbox.utils.adata.save_h5ad can handle them.
+
+    Returns
+    -------
+    AnnData
+        The modified AnnData object with string-compatible keys.
     """
 
-    def stringify_nested_keys(obj):
+
+    def stringify_nested_keys(obj: Any) -> Any:
         if isinstance(obj, dict):
             new_items = {}
             for k, v in list(obj.items()):
@@ -2127,5 +2195,6 @@ def stringify_adata_keys_for_saving(adata):
     adata.var.columns = adata.var.columns.map(str)
 
     stringify_nested_keys(adata.uns)
+
 
     return adata
