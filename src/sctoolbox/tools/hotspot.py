@@ -420,7 +420,7 @@ def plot_umap(
     )
 
 
-def ensure_hotspot_latent_representation(
+def ensure_hotspot_latent_representation(  # noqa: C901
     adata: AnnData,
     representation_settings: dict[str, Any],
     pca_settings: dict[str, Any],
@@ -616,7 +616,7 @@ def ensure_hotspot_latent_representation(
     )
 
 
-def subset_adata(
+def subset_adata(  # noqa: C901
     adata: AnnData,
     subset_filters: dict[str, Any] | None = None,
     copy: bool = True,
@@ -716,6 +716,7 @@ def subset_adata(
 
     return adata_subset
 
+
 def inspect_and_filter_genes_by_cell_detection(
     adata: AnnData,
     layer_key: str | None = "raw",
@@ -729,8 +730,7 @@ def inspect_and_filter_genes_by_cell_detection(
     copy: bool = True,
 ) -> tuple[AnnData, pd.DataFrame, dict[str, Any]]:
     """
-    Inspect and optionally filter genes based on the number of cells
-    in which each gene is detected.
+    Inspect and optionally filter genes based on the number of cells in which each gene is detected.
 
     A gene is considered detected in a cell if its expression/count value is > 0.
 
@@ -889,7 +889,8 @@ def inspect_and_filter_genes_by_cell_detection(
 
     return adata_out, gene_detection, summary
 
-def run_hotspot(
+
+def run_hotspot(  # noqa: C901
     adata: AnnData,
     layer_key: str = "raw",
     latent_obsm_key: str | None = None,
@@ -999,7 +1000,7 @@ def run_hotspot(
 
     if umi_counts_obs_key not in adata.obs or overwrite_obs_key:
         adata.obs[umi_counts_obs_key] = np.asarray(adata.layers[layer_key].sum(axis=1)).ravel()
-        
+
         # Remove genes with zero variance in the selected layer
     X = adata.layers[layer_key]
 
@@ -1265,7 +1266,7 @@ def save_hotspot_results(
         adata.write(adata_path)
 
 
-def show_hotspot_results(
+def show_hotspot_results(  # noqa: C901
     adata: AnnData,
     results: dict[str, Any],
     fdr_threshold: float = 0.05,
@@ -1566,7 +1567,7 @@ def show_hotspot_results(
     return summary
 
 
-def add_hotspot_results_to_adata(
+def add_hotspot_results_to_adata(  # noqa: C901
     adata: AnnData,
     results: dict[str, Any],
     prefix: str = "hotspot",
@@ -1726,7 +1727,7 @@ def add_hotspot_results_to_adata(
 
 @deco.log_anndata
 @beartype
-def run_hotspot_module_enrichment(
+def run_hotspot_module_enrichment(  # noqa: C901
     adata: sc.AnnData,
     results: dict,
     gene_sets: Optional[list[str]] = None,
@@ -1992,7 +1993,7 @@ def summarize_hotspot_module_enrichment(
 
 @deco.log_anndata
 @beartype
-def plot_hotspot_module_enrichment(
+def plot_hotspot_module_enrichment(  # noqa: C901
     adata: sc.AnnData,
     top_n: int = 5,
     pvalue_column: str = "Adjusted P-value",
@@ -2158,15 +2159,13 @@ def plot_hotspot_module_enrichment(
 
 def stringify_adata_keys_for_saving(adata: AnnData) -> AnnData:
     """
-    Convert non-string keys/columns in obs, var and uns to strings
-    so that sctoolbox.utils.adata.save_h5ad can handle them.
+    Convert non-string keys/columns in obs, var and uns to strings so that sctoolbox.utils.adata.save_h5ad can handle them.
 
     Returns
     -------
     AnnData
         The modified AnnData object with string-compatible keys.
     """
-
 
     def stringify_nested_keys(obj: Any) -> Any:
         if isinstance(obj, dict):
@@ -2195,6 +2194,5 @@ def stringify_adata_keys_for_saving(adata: AnnData) -> AnnData:
     adata.var.columns = adata.var.columns.map(str)
 
     stringify_nested_keys(adata.uns)
-
 
     return adata
