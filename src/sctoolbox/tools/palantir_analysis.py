@@ -707,10 +707,33 @@ def detect_and_plot_terminal_states(  # noqa: C901
         )
 
     # The embedding is only used for plotting.
-    # Palantir plotting helpers expect a 2D embedding such as UMAP or t-SNE.
-    embedding = adata.obsm[embedding_key]
-    if embedding.shape[1] != 2:
-        raise ValueError(f"Embedding '{embedding_key}' must be 2D for plotting.")
+    # At least two dimensions are required; higher-dimensional embeddings
+    # are reduced to the first two dimensions below.
+    embedding = np.asarray(adata.obsm[embedding_key])
+
+    if embedding.ndim != 2:
+        raise ValueError(
+            f"Embedding '{embedding_key}' must be a two-dimensional array."
+        )
+
+    if embedding.shape[1] < 2:
+        raise ValueError(
+            f"Embedding '{embedding_key}' must contain at least two dimensions."
+        )
+
+    plot_adata = adata
+    plot_embedding = embedding
+
+    if embedding.shape[1] > 2:
+        logger.warning(
+            "Embedding '%s' contains %d dimensions. "
+            "Using the first two dimensions for the terminal-state plot.",
+            embedding_key,
+            embedding.shape[1],
+        )
+        plot_adata = adata.copy()
+        plot_embedding = embedding[:, :2]
+        plot_adata.obsm[embedding_key] = plot_embedding
 
     # Store excluded diffusion boundaries from automatic detection.
     # These are not used as final terminal states, but can be shown for QC.
@@ -820,13 +843,13 @@ def detect_and_plot_terminal_states(  # noqa: C901
     # Step 3: Plot terminal cells on the chosen 2D embedding
     # ------------------------------------------------------------------
     palantir.plot.highlight_cells_on_umap(
-        adata,
+        plot_adata,
         terminal_cells,
         embedding_basis=embedding_key,
     )
 
     # Build a small coordinate table for easier annotation.
-    coords = pd.DataFrame(embedding, index=adata.obs_names, columns=["x", "y"])
+    coords = pd.DataFrame(plot_embedding, index=adata.obs_names, columns=["x", "y"])
 
     # Optional QC overlay:
     # Show excluded boundaries as "x" markers.

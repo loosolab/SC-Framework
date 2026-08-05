@@ -1388,6 +1388,47 @@ def test_plot_branch_gene_programs_smoke(monkeypatch, gene_trend_adata):
     assert "cluster_summary" in result["BranchA"]
 
 
+def test_detect_and_plot_terminal_states_supports_3d_embedding(
+    monkeypatch, gene_trend_adata
+):
+    """Three-dimensional embeddings should use the first two dimensions for plotting."""
+    adata = gene_trend_adata.copy()
+    adata.obsm["X_umap"] = np.random.randn(adata.n_obs, 3)
+
+    captured = {}
+
+    def fake_highlight_cells_on_umap(adata_obj, cells, embedding_basis):
+        captured["embedding_shape"] = adata_obj.obsm[embedding_basis].shape
+        captured["cells"] = list(cells)
+
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "highlight_cells_on_umap",
+        fake_highlight_cells_on_umap,
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    early_cell = adata.obs_names[0]
+    terminal_cells = [
+        adata.obs_names[1],
+        adata.obs_names[2],
+    ]
+
+    result = pla.detect_and_plot_terminal_states(
+        adata,
+        early_cell=early_cell,
+        terminal_states=terminal_cells,
+        clusters_to_analyze=None,
+        embedding_key="X_umap",
+        eigvec_key="DM_EigenVectors_multiscaled",
+    )
+
+    assert isinstance(result, pd.Series)
+    assert captured["embedding_shape"] == (adata.n_obs, 2)
+    assert captured["cells"] == terminal_cells
+    assert adata.obsm["X_umap"].shape == (adata.n_obs, 3)
+
+
 def test_plot_branch_gene_programs_continues_after_branch_error(
     monkeypatch,
     gene_trend_adata,
