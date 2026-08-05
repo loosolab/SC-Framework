@@ -587,16 +587,15 @@ def test_plot_branch_qc_distributions_missing_keys_returns_empty(branch_adata):
 
 
 def test_plot_interactive_embedding_cell_ids_returns_figure(
-    monkeypatch, preprocessed_adata
+    preprocessed_adata,
 ):
     """Interactive embedding plots should return a Plotly figure."""
-    monkeypatch.setattr(pla.PlotlyFigure, "show", lambda self: None)
-
     fig = pla.plot_interactive_embedding_cell_ids(
         preprocessed_adata,
         embedding_key="X_umap",
         color_by="celltype",
         renderer=None,
+        show=False,
     )
 
     assert fig is not None
@@ -613,15 +612,32 @@ def test_plot_interactive_embedding_cell_ids_missing_embedding(simple_adata):
         )
 
 
-def test_plot_interactive_embedding_cell_ids_rejects_non_2d_embedding(simple_adata):
-    """Embeddings with more than two dimensions should raise a ValueError."""
-    simple_adata.obsm["X_bad"] = np.random.randn(simple_adata.n_obs, 3)
+def test_plot_interactive_embedding_cell_ids_supports_3d_embedding(simple_adata):
+    """Three-dimensional embeddings should create a Plotly 3D scatter plot."""
+    simple_adata.obsm["X_3d"] = np.random.randn(simple_adata.n_obs, 3)
 
-    with pytest.raises(ValueError, match="must be 2D"):
+    fig = pla.plot_interactive_embedding_cell_ids(
+        simple_adata,
+        embedding_key="X_3d",
+        renderer=None,
+        show=False,
+    )
+
+    assert fig is not None
+    assert len(fig.data) > 0
+    assert all(trace.type == "scatter3d" for trace in fig.data)
+
+
+def test_plot_interactive_embedding_cell_ids_rejects_one_dimension(simple_adata):
+    """Embeddings with fewer than two dimensions should raise a ValueError."""
+    simple_adata.obsm["X_1d"] = np.random.randn(simple_adata.n_obs, 1)
+
+    with pytest.raises(ValueError, match="at least two dimensions"):
         pla.plot_interactive_embedding_cell_ids(
             simple_adata,
-            embedding_key="X_bad",
+            embedding_key="X_1d",
             renderer=None,
+            show=False,
         )
 
 

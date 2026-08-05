@@ -11,7 +11,6 @@ from scipy.sparse import issparse, spmatrix
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import plotly.express as px
-import plotly.io as pio
 import seaborn as sns
 from plotly.graph_objects import Figure as PlotlyFigure
 
@@ -504,9 +503,10 @@ def plot_interactive_embedding_cell_ids(
     color_by: str | None = None,
     embedding_key: str = "X_umap",
     title: str = "Interactive embedding (hover to see cell ID)",
-    renderer: str | None = "notebook_connected",
+    renderer: str | None = None,
+    show: bool = True,
 ) -> PlotlyFigure:
-    """Plot an interactive 2D embedding and show cell IDs on hover.
+    """Plot an interactive 2D or 3D embedding and show cell IDs on hover.
 
     This optional helper supports manual terminal-state selection by showing
     cell IDs when hovering over points in the embedding.
@@ -520,12 +520,16 @@ def plot_interactive_embedding_cell_ids(
         Column in ``adata.obs`` used to color the points. If ``None``, all
         cells are shown without grouping.
     embedding_key : str, default="X_umap"
-        Key in ``adata.obsm`` containing a 2D embedding.
+        Key in ``adata.obsm`` containing an embedding with at least two dimensions.
+        Two-dimensional embeddings are shown as scatter plots. Embeddings with
+        three or more dimensions use the first three dimensions.
     title : str, default="Interactive embedding (hover to see cell ID)"
         Title shown above the plot.
-    renderer : str | None, default="notebook_connected"
-        Plotly renderer used to display the figure. Set to ``None`` to keep
-        the current Plotly renderer unchanged.
+    renderer : str | None, default=None
+        Plotly renderer used only for this figure. If ``None``, Plotly uses the
+        currently configured default renderer.
+    show : bool, default=True
+        Whether to display the figure immediately.
 
     Returns
     -------
@@ -536,23 +540,38 @@ def plot_interactive_embedding_cell_ids(
     ------
     ValueError
         If ``embedding_key`` is missing in ``adata.obsm``, if the embedding is
-        not two-dimensional, or if ``color_by`` is not found in ``adata.obs``.
+        not a two-dimensional array, if it contains fewer than two dimensions,
+        or if ``color_by`` is not found in ``adata.obs``.
     """
-    # Use the Plotly notebook renderer so the interactive figure is shown directly
-    # inside the notebook output.
-    if renderer is not None:
-        pio.renderers.default = renderer
-
     if embedding_key not in adata.obsm:
         raise ValueError(f"Embedding '{embedding_key}' not found in adata.obsm.")
 
-    embedding = adata.obsm[embedding_key]
-    if embedding.shape[1] != 2:
-        raise ValueError(f"Embedding '{embedding_key}' must be 2D.")
+    embedding = np.asarray(adata.obsm[embedding_key])
+
+    if embedding.ndim != 2:
+        raise ValueError(
+            f"Embedding '{embedding_key}' must be a two-dimensional array."
+        )
+
+    if embedding.shape[1] < 2:
+        raise ValueError(
+            f"Embedding '{embedding_key}' must contain at least two dimensions."
+        )
+
+    if embedding.shape[1] > 3:
+        logger.warning(
+            "Embedding '%s' contains %d dimensions. "
+            "Using the first three dimensions for the interactive plot.",
+            embedding_key,
+            embedding.shape[1],
+        )
+
+    used_dimensions = min(embedding.shape[1], 3)
+    columns = [f"Dim{i}" for i in range(1, used_dimensions + 1)]
 
     df = pd.DataFrame(
-        embedding,
-        columns=["Dim1", "Dim2"],
+        embedding[:, :used_dimensions],
+        columns=columns,
         index=adata.obs_names,
     )
 
@@ -561,16 +580,30 @@ def plot_interactive_embedding_cell_ids(
             raise ValueError(f"Column '{color_by}' not found in adata.obs.")
         df[color_by] = adata.obs[color_by].astype(str)
 
-    fig = px.scatter(
-        df,
-        x="Dim1",
-        y="Dim2",
-        color=color_by,
-        hover_name=df.index,
-        title=title,
-    )
+    if used_dimensions == 2:
+        fig = px.scatter(
+            df,
+            x="Dim1",
+            y="Dim2",
+            color=color_by,
+            hover_name=df.index,
+            title=title,
+        )
+    else:
+        fig = px.scatter_3d(
+            df,
+            x="Dim1",
+            y="Dim2",
+            z="Dim3",
+            color=color_by,
+            hover_name=df.index,
+            title=title,
+        )
+
     fig.update_layout(width=800, height=700)
-    fig.show()
+
+    if show:
+        fig.show(renderer=renderer)
 
     return fig
 
