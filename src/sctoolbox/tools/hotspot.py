@@ -374,52 +374,6 @@ def ensure_umap_for_visualization(
     return umap_key
 
 
-def plot_umap(
-    adata: AnnData,
-    condition_column: str,
-    ncols: int = 3,
-    title: str | None = None,
-    save: str | None = None,
-    report: str | None = None,
-    rasterize: bool = True,
-    **kwargs: Any,
-) -> Any:
-    """
-    Plot UMAP using sctoolbox plotting style.
-
-    Returns
-    -------
-    Any
-        Plot object returned by pl.embedding.plot_embedding.
-
-    Raises
-    ------
-    KeyError
-        If condition_column is not present in adata.obs or
-        adata.var_names.
-    """
-
-    if condition_column not in adata.obs.columns and condition_column not in adata.var_names:
-        raise KeyError(
-            f"'{condition_column}' was not found in adata.obs or adata.var_names."
-        )
-
-    if title is None:
-        title = "UMAP\ncolored by " + condition_column
-
-    return pl.embedding.plot_embedding(
-        adata,
-        method="umap",
-        color=condition_column,
-        ncols=ncols,
-        suptitle=title,
-        save=save,
-        report=report,
-        rasterize=rasterize,
-        **kwargs,
-    )
-
-
 def ensure_hotspot_latent_representation(  # noqa: C901
     adata: AnnData,
     representation_settings: dict[str, Any],
