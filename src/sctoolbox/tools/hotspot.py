@@ -1725,7 +1725,7 @@ def add_hotspot_results_to_adata(  # noqa: C901
     return adata
 
 
-@deco.log_anndata
+@deco.log_anndata(exclude={"results"})
 @beartype
 def run_hotspot_module_enrichment(  # noqa: C901
     adata: sc.AnnData,
