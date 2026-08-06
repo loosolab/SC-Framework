@@ -180,7 +180,10 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity,palantir,pilot,multiome]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity,palantir,pilot,multiome,hotspot]'
+]
+hotspot = [
+    'hotspotsc'
 ]
 # all is intended to install everything
 all = [
