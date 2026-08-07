@@ -1,5 +1,5 @@
 {#- ---------- Core Analysis ---------- -#}
-The analysis was performed with the SC-Framework (Schultheis et al., doi: 10.5281/zenodo.11065517, version {{ args["sctoolbox"].version }}), utilizing the following tools as part of its integrated analysis environment. {##}
+The analysis was performed with the SC-Framework (Schultheis et al., doi: 10.1016/j.isci.2026.116631, software doi: 10.5281/zenodo.11065517, version {{ args["sctoolbox"].version }}), utilizing the following tools as part of its integrated analysis environment. {##}
 {#- ----- assembly notebook -#}
 {%- if args["01_assembly"] -%}
     Mapped and quantified data was assembled by the SC-Framework, which created an initial dataset of {{ args["01_assembly"].var_count }} genes and {{ args["01_assembly"].obs_count }} cells. {##}
