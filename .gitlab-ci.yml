@@ -753,7 +753,7 @@ cleanup-orphan-tags:
             #if ! crane delete "$CI_REGISTRY_IMAGE/$REPO_NAME:$tag"; then
             #  echo "WARNING: failed to delete tag '$tag' in repo $REPO_NAME" >&2
             #  FAILED=1
-            fi
+            #fi
           fi
         done
       done
