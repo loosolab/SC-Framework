@@ -712,48 +712,38 @@ cleanup-orphan-tags:
       echo "Branches:"
       printf '%s\n' "${BRANCHES[@]}"
 
-      # ---- Fetch sc_framework container repository ----
-      REPO_NAME="sc_framework"
-      repos_json="$(api "$API/projects/$CI_PROJECT_ID/registry/repositories?per_page=100")" || exit 1
-      REPO_IDS="$(printf '%s' "$repos_json" | jq -r --arg name "$REPO_NAME" '.[] | select(.name == $name or .path == $name) | .id')"
-
-      if [ -z "$REPO_IDS" ]; then
-        echo "ERROR: Repository '$REPO_NAME' not found in project $CI_PROJECT_ID." >&2
-        exit 1
-      fi
-
       SEMVER_REGEX="^([0-9]+)\.([0-9]+)\.([0-9]+)$"
       FAILED=0
+      # HARDCODED REPO ID - ID is of sc_framework container repo
+      repo_id="2721"
 
-      for repo_id in $REPO_IDS; do
-        echo "== Cleaning repository ID $repo_id ($REPO_NAME) =="
+      echo "== Cleaning repository ID $repo_id =="
 
-        # ---- Fetch ALL tags via Link-header pagination ----
-        TAGS=()
-        url="$API/projects/$CI_PROJECT_ID/registry/repositories/${repo_id}/tags?per_page=100"
-        while [ -n "$url" ]; do
-          chunk="$(api "$url")" || { FAILED=1; break; }
-          mapfile -t names < <(printf '%s' "$chunk" | jq -r '.[].name')
-          TAGS+=("${names[@]}")
-          url="$(next_link)"
-        done
+      # ---- Fetch ALL tags via Link-header pagination ----
+      TAGS=()
+      url="$API/projects/$CI_PROJECT_ID/registry/repositories/${repo_id}/tags?per_page=100"
+      while [ -n "$url" ]; do
+        chunk="$(api "$url")" || { FAILED=1; break; }
+        mapfile -t names < <(printf '%s' "$chunk" | jq -r '.[].name')
+        TAGS+=("${names[@]}")
+        url="$(next_link)"
+      done
 
-        echo "Tags:"
-        printf '%s\n' "${TAGS[@]}"
+      echo "Tags:"
+      printf '%s\n' "${TAGS[@]}"
 
-        for tag in "${TAGS[@]}"; do
-          if [[ $tag =~ $SEMVER_REGEX ]] || [[ $tag == "latest" ]] || [[ $tag == "dev" ]]; then
-            echo "Tag '$tag' follows semantic versioning or is 'latest'/'dev' and will be kept."
-          elif printf '%s\n' "${BRANCHES[@]}" | grep -qx "$tag"; then
-            echo "Tag '$tag' matches a branch and will not be deleted."
-          else
-            echo "Tag '$tag' does not match any branch and does not follow semantic versioning, will be deleted."
-            if ! crane delete "$CI_REGISTRY_IMAGE:$tag"; then
-              echo "WARNING: failed to delete tag '$tag' in repo $REPO_NAME" >&2
-              FAILED=1
-            fi
+      for tag in "${TAGS[@]}"; do
+        if [[ $tag =~ $SEMVER_REGEX ]] || [[ $tag == "latest" ]] || [[ $tag == "dev" ]]; then
+          echo "Tag '$tag' follows semantic versioning or is 'latest'/'dev' and will be kept."
+        elif printf '%s\n' "${BRANCHES[@]}" | grep -qx "$tag"; then
+          echo "Tag '$tag' matches a branch and will not be deleted."
+        else
+          echo "Tag '$tag' does not match any branch and does not follow semantic versioning, will be deleted."
+          if ! crane delete "$CI_REGISTRY_IMAGE:$tag"; then
+            echo "WARNING: failed to delete tag '$tag' in repo $REPO_NAME" >&2
+            FAILED=1
           fi
-        done
+        fi
       done
 
       rm -f "$HEADERS_FILE"
