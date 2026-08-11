@@ -717,8 +717,6 @@ cleanup-orphan-tags:
       repos_json="$(api "$API/projects/$CI_PROJECT_ID/registry/repositories?per_page=100&name=$REPO_NAME")" || exit 1
       REPO_IDS="$(printf '%s' "$repos_json" | jq -r '.[].id')"
 
-      echo "$REPO_IDS"
-
       if [ -z "$REPO_IDS" ]; then
         echo "ERROR: Repository '$REPO_NAME' not found in project $CI_PROJECT_ID." >&2
         exit 1
@@ -750,10 +748,10 @@ cleanup-orphan-tags:
             echo "Tag '$tag' matches a branch and will not be deleted."
           else
             echo "Tag '$tag' does not match any branch and does not follow semantic versioning, will be deleted."
-            #if ! crane delete "$CI_REGISTRY_IMAGE/$REPO_NAME:$tag"; then
-            #  echo "WARNING: failed to delete tag '$tag' in repo $REPO_NAME" >&2
-            #  FAILED=1
-            #fi
+            if ! crane delete "$CI_REGISTRY_IMAGE/$REPO_NAME:$tag"; then
+              echo "WARNING: failed to delete tag '$tag' in repo $REPO_NAME" >&2
+              FAILED=1
+            fi
           fi
         done
       done
