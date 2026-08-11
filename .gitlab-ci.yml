@@ -657,7 +657,9 @@ cleanup-orphan-tags:
   stage: .post
   image: alpine:latest
   before_script:
+    # Install curl and jq
     - apk add --no-cache curl jq bash
+    # Install crane
     - curl -L "https://github.com/google/go-containerregistry/releases/download/v0.7.0/go-containerregistry_Linux_x86_64.tar.gz" -o /tmp/crane.tar.gz
     - tar -zxvf /tmp/crane.tar.gz -C /usr/local/bin/ crane
     - rm /tmp/crane.tar.gz
@@ -710,15 +712,23 @@ cleanup-orphan-tags:
       echo "Branches:"
       printf '%s\n' "${BRANCHES[@]}"
 
-      # ---- Fetch ALL container repositories (not just the first one!) ----
-      repos_json="$(api "$API/projects/$CI_PROJECT_ID/registry/repositories?per_page=100")" || exit 1
+      # ---- Fetch sc_framework container repository ----
+      REPO_NAME="sc_framework"
+      repos_json="$(api "$API/projects/$CI_PROJECT_ID/registry/repositories?per_page=100&name=$REPO_NAME")" || exit 1
       REPO_IDS="$(printf '%s' "$repos_json" | jq -r '.[].id')"
+
+      echo "$REPO_IDS"
+
+      if [ -z "$REPO_IDS" ]; then
+        echo "ERROR: Repository '$REPO_NAME' not found in project $CI_PROJECT_ID." >&2
+        exit 1
+      fi
 
       SEMVER_REGEX="^([0-9]+)\.([0-9]+)\.([0-9]+)$"
       FAILED=0
 
       for repo_id in $REPO_IDS; do
-        echo "== Cleaning repository ID $repo_id =="
+        echo "== Cleaning repository ID $repo_id ($REPO_NAME) =="
 
         # ---- Fetch ALL tags via Link-header pagination ----
         TAGS=()
@@ -740,9 +750,9 @@ cleanup-orphan-tags:
             echo "Tag '$tag' matches a branch and will not be deleted."
           else
             echo "Tag '$tag' does not match any branch and does not follow semantic versioning, will be deleted."
-            if ! crane delete "$CI_REGISTRY_IMAGE:$tag"; then
-              echo "WARNING: failed to delete tag '$tag' in repo $repo_id" >&2
-              FAILED=1
+            #if ! crane delete "$CI_REGISTRY_IMAGE/$REPO_NAME:$tag"; then
+            #  echo "WARNING: failed to delete tag '$tag' in repo $REPO_NAME" >&2
+            #  FAILED=1
             fi
           fi
         done
@@ -751,4 +761,4 @@ cleanup-orphan-tags:
       rm -f "$HEADERS_FILE"
       exit $FAILED
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "fix_collection"
