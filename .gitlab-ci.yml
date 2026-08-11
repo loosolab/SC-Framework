@@ -749,4 +749,4 @@ cleanup-orphan-tags:
       rm -f "$HEADERS_FILE"
       exit $FAILED
   rules:
-    - if: $CI_COMMIT_BRANCH == "fix_collection"
+    - if: $CI_COMMIT_BRANCH == "main"
