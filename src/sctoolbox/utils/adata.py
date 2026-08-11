@@ -836,7 +836,7 @@ def remove_group(
     col_name : str
         Name of the column in .obs or .var (depending on `table`) that
         contains the group labels to filter on.
-    value : List[Any]
+    value : List[Any] | Any
         A list of values. Any row where `col_name` matches one of these
         values will be removed.
     table : Literal['var', 'obs'], default 'obs'
@@ -858,7 +858,7 @@ def remove_group(
         If `table` is not 'obs' or 'var', or if `col_name` is not found
         in the respective table.
     """
-    df = adata.obs if table == "obs" else adata.var
+    df = getattr(adata, table)
 
     if col_name not in df.columns:
         raise ValueError(f"Column '{col_name}' was not found in '{table}' table.")

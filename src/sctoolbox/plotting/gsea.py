@@ -518,8 +518,9 @@ def gsea_dot(adata: sc.AnnData,
     cutoff : float, default 0.05
         Filter cutoff for sig_col.
     hue : Optional[str], default None
-        Set hue for dotplot.
-        If None uses default stored in adata.uns['sctoolbox']['gsea']['score_col']
+        Column name used to determine the color of each dot and the colorbar scale.
+        Expected to contain numerical values (e.g., significance scores or enrichment scores).
+        If None, defaults to the column specified by `sig_col`.
     top_term : Optional[int], default 5
         Select top_terms per cluster.
     score_sign : Optional[bool], default None

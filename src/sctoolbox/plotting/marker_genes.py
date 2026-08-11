@@ -373,7 +373,7 @@ def group_expression_boxplot(adata: sc.AnnData,
                              figsize: Optional[Tuple[int | float, int | float]] = None,
                              norm: bool = True,
                              layer: Optional[str] = None,
-                             y_label: str = "Normalized expression",
+                             y_label: Optional[str] = None,
                              x_label: Optional[str] = None,
                              y_lim: Optional[Tuple[int | float, int | float]] = None,
                              save: Optional[str] = None,
@@ -399,8 +399,9 @@ def group_expression_boxplot(adata: sc.AnnData,
         values (mean/sum expression per group, depending on `pseudobulk_table`) are plotted directly.
     layer : Optional[str], default None
         Name of the layer in `adata.layers` to use for expression values. If None, `adata.X` is used.
-    y_label : str, default "Normalized expression"
-        Label to use for the y-axis.
+    y_label : Optional[str], default None
+        Label for the y-axis. If None, defaults to "Normalized expression" when `norm=True`,
+        and "Expression" when `norm=False`.
     x_label : Optional[str], default None
         Label to use for the x-axis. If None, x_label is set to groupby value.
     y_lim : Optional[Tuple[int | float, int | float]], default None
@@ -441,8 +442,10 @@ def group_expression_boxplot(adata: sc.AnnData,
         scaler = MinMaxScaler()
         gene_table = gene_table.T
         gene_table[gene_table.columns] = scaler.fit_transform(gene_table[gene_table.columns])
+        y_label = y_label if y_label is not None else "Normalized expression"
     else:
         gene_table = gene_table.T
+        y_label = y_label if y_label is not None else "Expression"
 
     # Melt to long format
     gene_table_melted = gene_table.reset_index().melt(id_vars="index", var_name="gene")
