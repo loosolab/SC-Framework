@@ -384,6 +384,7 @@ def test_tidy_layer_keep_and_X(adata, keep_X, replace_X, keep):
 # Test remove_group
 # --------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize("table, col_name, value", [
     ("obs", "group", "C1"),
     ("obs", "group", ["C1", "C2"]),
