@@ -824,10 +824,19 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                                 LEGEND_PLANET_Y_ALIGNMENT=-1.5
                                 )
     """
-    def minmax_group_scale(df, group_col):
+    def minmax_group_scale(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
         """
-        Min-max scale gene columns (ending in '_y') and 'agg_expression' 
-        grouped by a specified column. Automatically detects targets & ignores others.
+        Min-max scale gene columns (ending in '_y') and 'agg_expression' grouped by a specified column.
+
+        Returns
+        -------
+        pd.Dataframe
+            Group scaled gene expressions.
+
+        Raises
+        ------
+        ValueError
+            If group column is not found in dataframe.
         """
         # 1. Explicit check: ensure group_col exists in the DataFrame
         if group_col not in df.columns:
