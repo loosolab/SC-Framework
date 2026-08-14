@@ -824,8 +824,6 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                                 LEGEND_PLANET_Y_ALIGNMENT=-1.5
                                 )
     """
-
-    
     def minmax_group_scale(df, group_col):
         """
         Min-max scale gene columns (ending in '_y') and 'agg_expression' 
@@ -853,7 +851,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
         df_scaled[cols_to_scale] = np.where(range_vals == 0, 0.0, (df[cols_to_scale] - grp_min) / range_vals)
 
         return df_scaled
-    
+
     # ---- Initialization parameters ---- #
     dpi = 100    # Dots per inches
     ipd = 1 / dpi
