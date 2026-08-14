@@ -21,6 +21,10 @@
 - fix get_variable_features subsampling for pandas 3 (Series positional access via .iloc) and expose subsample_target (!533)
 - fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
 - bump palantir floor to >=1.4.5 for pandas 3 / anndata 0.13 compatibility (!533)
+- Add gene expression scaling for planet plots (#466)
+
+### Changes to notebooks
+- General/group_marker: Add gene expression scaling option for planet plots
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
