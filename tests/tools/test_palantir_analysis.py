@@ -84,50 +84,6 @@ def preprocessed_adata(simple_adata):
 
 
 @pytest.fixture
-def raw_integer_adata():
-    """Create an AnnData object with raw integer counts.
-
-    Returns
-    -------
-    anndata.AnnData
-        Synthetic AnnData with raw integer count values.
-    """
-    np.random.seed(42)
-    n_obs = 80
-    n_vars = 40
-
-    X = np.random.poisson(lam=10, size=(n_obs, n_vars)).astype(np.uint32)
-    adata = AnnData(X=X)
-    adata.obs["sample"] = np.random.choice(["S1", "S2"], n_obs)
-    adata.var["gene_name"] = [f"GENE_{i}" for i in range(n_vars)]
-
-    return adata
-
-
-@pytest.fixture
-def sparse_adata():
-    """Create an AnnData object with sparse expression data.
-
-    Returns
-    -------
-    anndata.AnnData
-        Synthetic AnnData with sparse expression matrix and annotations.
-    """
-    np.random.seed(42)
-    n_obs = 120
-    n_vars = 60
-
-    X = sp.random(n_obs, n_vars, density=0.1, format="csr")
-    X.data = np.exp(X.data * 2)
-
-    adata = AnnData(X=X)
-    adata.obs["condition"] = np.random.choice(["CtrlA", "TreatedB"], n_obs)
-    adata.var["gene_symbol"] = [f"G{i}" for i in range(n_vars)]
-
-    return adata
-
-
-@pytest.fixture
 def branch_adata(preprocessed_adata):
     """Create an AnnData object with pseudotime and branch masks.
 
@@ -206,12 +162,8 @@ def test_is_preprocessed_missing_pca_fails_with_error(simple_adata):
 
 def test_is_preprocessed_missing_embedding_fails(simple_adata):
     """The embedding check should fail if no embedding is present."""
-    adata = simple_adata.copy()
-    rng = np.random.default_rng(42)
-    adata.obsm["X_pca"] = rng.standard_normal((adata.n_obs, 10))
-
     result = pla.is_preprocessed(
-        adata,
+        simple_adata,
         normalize=False,
         log1p=False,
         pca=False,
@@ -222,10 +174,10 @@ def test_is_preprocessed_missing_embedding_fails(simple_adata):
     assert result is False
 
 
-def test_is_preprocessed_detects_raw_counts(raw_integer_adata):
+def test_is_preprocessed_detects_raw_counts(adata_raw_small):
     """Raw integer counts should fail the normalization check."""
     result = pla.is_preprocessed(
-        raw_integer_adata,
+        adata_raw_small,
         normalize="error",
         log1p=False,
         pca=False,
@@ -250,24 +202,24 @@ def test_is_preprocessed_all_checks_can_be_disabled(simple_adata):
     assert result is True
 
 
-def test_is_preprocessed_accepts_sparse_matrix(sparse_adata):
+def test_is_preprocessed_accepts_sparse_matrix(adata_h5ad):
     """Sparse AnnData objects should pass when preprocessing keys are present."""
     rng = np.random.default_rng(42)
-    sparse_adata.obsm["X_pca"] = rng.standard_normal((sparse_adata.n_obs, 10))
-    sparse_adata.obsm["X_umap"] = rng.standard_normal((sparse_adata.n_obs, 2))
-    sparse_adata.obsp["connectivities"] = sp.csr_matrix(
-        (sparse_adata.n_obs, sparse_adata.n_obs)
+
+    adata_h5ad.obsm["X_pca"] = rng.standard_normal((adata_h5ad.n_obs, 10))
+    adata_h5ad.obsm["X_umap"] = rng.standard_normal((adata_h5ad.n_obs, 2))
+    adata_h5ad.obsp["connectivities"] = sp.csr_matrix(
+        (adata_h5ad.n_obs, adata_h5ad.n_obs)
     )
-    sparse_adata.obsp["distances"] = sp.csr_matrix(
-        (sparse_adata.n_obs, sparse_adata.n_obs)
+    adata_h5ad.obsp["distances"] = sp.csr_matrix(
+        (adata_h5ad.n_obs, adata_h5ad.n_obs)
     )
-    sparse_adata.uns["neighbors"] = {
+    adata_h5ad.uns["neighbors"] = {
         "connectivities_key": "connectivities",
         "distances_key": "distances",
     }
-
     result = pla.is_preprocessed(
-        sparse_adata,
+        adata_h5ad,
         normalize=False,
         log1p=False,
         pca="error",
