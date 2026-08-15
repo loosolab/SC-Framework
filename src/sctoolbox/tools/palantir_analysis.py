@@ -879,10 +879,10 @@ def detect_and_plot_terminal_states(  # noqa: C901
     plt.tight_layout()
 
     if save is not None:
-        _save_figure(path=save, bbox_inches="tight")
+        _save_figure(path=save)
 
     if report_save is not None:
-        _save_figure(path=report_save, report=True, bbox_inches="tight")
+        _save_figure(path=report_save, report=True)
 
     plt.show()
 
