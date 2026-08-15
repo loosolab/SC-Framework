@@ -670,9 +670,9 @@ def detect_and_plot_terminal_states(  # noqa: C901
     show_excluded_boundaries : bool, default=True
         Whether to show excluded boundary cells from automatic detection as QC markers.
     save : str | None, default=None
-        Filename used to save the terminal-state plot to the regular figure directory.
+        Path and filename used to save the terminal-state plot relative to the regular figure directory.
     report_save : str | None, default=None
-        Relative path used to save the terminal-state plot to the report directory.
+        Path and filename used to save the terminal-state plot relative to the report directory.
 
     Returns
     -------
