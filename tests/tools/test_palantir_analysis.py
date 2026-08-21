@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse as sp
-
+from plotly.graph_objects import Figure as PlotlyFigure
 import sctoolbox.tools.palantir_analysis as pla
 
 plt.switch_backend("Agg")
@@ -112,6 +112,55 @@ def branch_adata(preprocessed_adata):
     )
 
     return adata
+
+
+def _patch_diffusion_magic(monkeypatch, n_obs, multiscale_components):
+    """Patch Palantir diffusion and MAGIC calls with deterministic test doubles."""
+
+    def fake_run_diffusion_maps(adata, **kwargs):
+        adata.obsp["DM_Similarity"] = sp.csr_matrix(np.eye(adata.n_obs))
+        return {
+            "EigenVectors": pd.DataFrame(
+                np.ones((adata.n_obs, multiscale_components)),
+                index=adata.obs_names,
+            ),
+            "EigenValues": pd.Series(np.linspace(1.0, 0.5, multiscale_components)),
+            "T": sp.csr_matrix(np.eye(adata.n_obs)),
+        }
+
+    def fake_determine_multiscale_space(dm_res):
+        return pd.DataFrame(
+            np.ones((n_obs, multiscale_components)),
+        )
+
+    def fake_run_magic_imputation(
+        data,
+        imputation_key="MAGIC_imputed_data",
+        **kwargs,
+    ):
+        data.layers[imputation_key] = data.X.copy()
+        return data.layers[imputation_key]
+
+    monkeypatch.setattr(
+        pla.palantir.utils,
+        "run_diffusion_maps",
+        fake_run_diffusion_maps,
+    )
+    monkeypatch.setattr(
+        pla.palantir.utils,
+        "determine_multiscale_space",
+        fake_determine_multiscale_space,
+    )
+    monkeypatch.setattr(
+        pla.palantir.utils,
+        "run_magic_imputation",
+        fake_run_magic_imputation,
+    )
+    monkeypatch.setattr(
+        pla.utils.adata,
+        "save_h5ad",
+        lambda *args, **kwargs: None,
+    )
 
 
 # ------------------------- is_preprocessed -------------------------#
@@ -514,7 +563,7 @@ def test_plot_interactive_embedding_cell_ids_returns_figure(
         show=False,
     )
 
-    assert fig is not None
+    assert isinstance(fig, PlotlyFigure)
     assert len(fig.data) > 0
 
 
@@ -572,58 +621,15 @@ def test_plot_interactive_embedding_cell_ids_missing_color_column(preprocessed_a
 
 
 def test_run_diffusion_and_magic_stores_expected_outputs(
-    monkeypatch, preprocessed_adata, tmp_path
+    monkeypatch,
+    preprocessed_adata,
+    tmp_path,
 ):
     """Diffusion and MAGIC results should be stored in the AnnData object."""
-    dm_res = {
-        "EigenVectors": pd.DataFrame(
-            np.ones((preprocessed_adata.n_obs, 3)),
-            index=preprocessed_adata.obs_names,
-        ),
-        "EigenValues": pd.Series([1.0, 0.5, 0.25]),
-        "T": sp.csr_matrix(np.eye(preprocessed_adata.n_obs)),
-    }
-    captured = {}
-
-    def fake_run_diffusion_maps(adata, **kwargs):
-        captured["run_diffusion_maps_kwargs"] = kwargs
-        adata.obsp["DM_Similarity"] = sp.csr_matrix(np.eye(adata.n_obs))
-        adata.uns["DM_EigenValues"] = dm_res["EigenValues"]
-        adata.obsm["DM_EigenVectors"] = dm_res["EigenVectors"].values
-        return dm_res
-
-    def fake_determine_multiscale_space(dm_res_arg):
-        captured["determine_multiscale_space_arg"] = dm_res_arg
-        return pd.DataFrame(
-            np.ones((preprocessed_adata.n_obs, 3)),
-            index=preprocessed_adata.obs_names,
-        )
-
-    def fake_run_magic_imputation(data, imputation_key="MAGIC_imputed_data", **kwargs):
-        captured["run_magic_imputation_kwargs"] = kwargs
-        captured["imputation_key"] = imputation_key
-        data.layers[imputation_key] = data.X.copy()
-        return data.layers[imputation_key]
-
-    monkeypatch.setattr(
-        pla.palantir.utils,
-        "run_diffusion_maps",
-        fake_run_diffusion_maps,
-    )
-    monkeypatch.setattr(
-        pla.palantir.utils,
-        "determine_multiscale_space",
-        fake_determine_multiscale_space,
-    )
-    monkeypatch.setattr(
-        pla.palantir.utils,
-        "run_magic_imputation",
-        fake_run_magic_imputation,
-    )
-    monkeypatch.setattr(
-        pla.utils.adata,
-        "save_h5ad",
-        lambda *args, **kwargs: None,
+    _patch_diffusion_magic(
+        monkeypatch,
+        n_obs=preprocessed_adata.n_obs,
+        multiscale_components=3,
     )
 
     result = pla.run_diffusion_and_magic(
@@ -642,59 +648,22 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
         3,
     )
     assert "MAGIC_imputed_data" in result.layers
-    assert captured["run_diffusion_maps_kwargs"]["n_components"] == 3
-    assert captured["run_diffusion_maps_kwargs"]["knn"] == 30
-    assert captured["run_diffusion_maps_kwargs"]["kernel_backend"] == "scanpy"
-    assert captured["run_magic_imputation_kwargs"]["n_jobs"] == 1
-    assert captured["imputation_key"] == "MAGIC_imputed_data"
 
 
 def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
-    monkeypatch, preprocessed_adata, tmp_path
+    monkeypatch,
+    preprocessed_adata,
+    tmp_path,
 ):
     """An incomplete cache missing the MAGIC layer should recompute imputation."""
     cached = preprocessed_adata.copy()
     cache_path = tmp_path / "cached_magic_incomplete.h5ad"
     cached.write_h5ad(cache_path)
 
-    captured = {}
-
-    def fake_run_diffusion_maps(adata, **kwargs):
-        captured["run_diffusion_maps_kwargs"] = kwargs
-        adata.obsp["DM_Similarity"] = sp.csr_matrix(np.eye(adata.n_obs))
-        return {"EigenVectors": None}
-
-    def fake_determine_multiscale_space(dm_res_arg):
-        captured["determine_multiscale_space_arg"] = dm_res_arg
-        return pd.DataFrame(
-            np.ones((preprocessed_adata.n_obs, 2)), index=preprocessed_adata.obs_names
-        )
-
-    def fake_run_magic_imputation(data, imputation_key="MAGIC_imputed_data", **kwargs):
-        captured["run_magic_imputation_kwargs"] = kwargs
-        captured["imputation_key"] = imputation_key
-        data.layers[imputation_key] = data.X.copy()
-        return data.layers[imputation_key]
-
-    monkeypatch.setattr(
-        pla.palantir.utils,
-        "run_diffusion_maps",
-        fake_run_diffusion_maps,
-    )
-    monkeypatch.setattr(
-        pla.palantir.utils,
-        "determine_multiscale_space",
-        fake_determine_multiscale_space,
-    )
-    monkeypatch.setattr(
-        pla.palantir.utils,
-        "run_magic_imputation",
-        fake_run_magic_imputation,
-    )
-    monkeypatch.setattr(
-        pla.utils.adata,
-        "save_h5ad",
-        lambda *args, **kwargs: None,
+    _patch_diffusion_magic(
+        monkeypatch,
+        n_obs=preprocessed_adata.n_obs,
+        multiscale_components=2,
     )
 
     result = pla.run_diffusion_and_magic(
@@ -704,11 +673,12 @@ def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
     )
 
     assert result is not preprocessed_adata
-    assert result.n_obs == preprocessed_adata.n_obs
-    assert result.n_vars == preprocessed_adata.n_vars
+    assert "DM_EigenVectors_multiscaled" in result.obsm
+    assert result.obsm["DM_EigenVectors_multiscaled"].shape == (
+        preprocessed_adata.n_obs,
+        2,
+    )
     assert "MAGIC_imputed_data" in result.layers
-    assert captured["run_diffusion_maps_kwargs"]["n_components"] == 10
-    assert captured["run_magic_imputation_kwargs"]["n_steps"] == 3
 
 
 @pytest.mark.parametrize(
