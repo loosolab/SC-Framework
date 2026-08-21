@@ -1949,7 +1949,7 @@ def plot_branch_gene_programs(  # noqa: C901
                 selected_genes,
                 n_neighbors=int(trend_knn_neighbors),
             ).astype(str)
-        except Exception as exc:
+        except (KeyError, ValueError) as exc:
             # When all branches are processed, one failing branch should not stop
             # the remaining branches.
             if branch is None:
@@ -2300,9 +2300,7 @@ def plot_branch_gene_programs(  # noqa: C901
             if isinstance(col, str) and col in metadata_columns:
                 renamed_columns.append(col)
             else:
-                renamed_columns.append(
-                    f"pt_{pt_index:04d}_{float(col):.8f}"
-                )
+                renamed_columns.append(f"pt_{pt_index}_{float(col):.8f}")
                 pt_index += 1
 
         export_df.columns = renamed_columns

@@ -210,9 +210,7 @@ def test_is_preprocessed_accepts_sparse_matrix(adata_h5ad):
     adata_h5ad.obsp["connectivities"] = sp.csr_matrix(
         (adata_h5ad.n_obs, adata_h5ad.n_obs)
     )
-    adata_h5ad.obsp["distances"] = sp.csr_matrix(
-        (adata_h5ad.n_obs, adata_h5ad.n_obs)
-    )
+    adata_h5ad.obsp["distances"] = sp.csr_matrix((adata_h5ad.n_obs, adata_h5ad.n_obs))
     adata_h5ad.uns["neighbors"] = {
         "connectivities_key": "connectivities",
         "distances_key": "distances",
@@ -1389,7 +1387,7 @@ def test_plot_branch_gene_programs_continues_after_branch_error(
 
     def fake_cluster_gene_trends(adata, branch, genes, n_neighbors=30):
         if branch == "BranchA":
-            raise RuntimeError("simulated branch failure")
+            raise ValueError("simulated branch failure")
 
         processed_branches.append(branch)
 
