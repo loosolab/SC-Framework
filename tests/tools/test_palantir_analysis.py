@@ -220,23 +220,26 @@ def test_remove_cells_by_label_removes_labels(
     assert result.n_vars == simple_adata.n_vars
 
 
-def test_remove_cells_by_label_missing_column_raises(simple_adata):
-    """A missing annotation column should raise a ValueError."""
-    with pytest.raises(ValueError, match="does not exist"):
+@pytest.mark.parametrize(
+    ("column_name", "labels_to_remove", "match"),
+    [
+        ("missing_column", "TypeA", "does not exist"),
+        ("celltype", "MissingType", "None of the requested labels"),
+    ],
+    ids=["missing-column", "missing-label"],
+)
+def test_remove_cells_by_label_invalid_input_raises(
+    simple_adata,
+    column_name,
+    labels_to_remove,
+    match,
+):
+    """Invalid removal inputs should raise a ValueError."""
+    with pytest.raises(ValueError, match=match):
         pla.remove_cells_by_label(
             simple_adata,
-            column_name="missing_column",
-            labels_to_remove="TypeA",
-        )
-
-
-def test_remove_cells_by_label_missing_label_raises(simple_adata):
-    """Removing labels that are not present should raise a ValueError."""
-    with pytest.raises(ValueError, match="None of the requested labels"):
-        pla.remove_cells_by_label(
-            simple_adata,
-            column_name="celltype",
-            labels_to_remove="MissingType",
+            column_name=column_name,
+            labels_to_remove=labels_to_remove,
         )
 
 
@@ -272,23 +275,24 @@ def test_branch_qc_cell_counts_match_masks(branch_adata):
         assert row["n_cells"] == masks[row["branch"]].sum()
 
 
-def test_branch_qc_missing_masks_key_returns_empty_table(branch_adata):
-    """Missing branch masks should result in an empty QC table."""
+@pytest.mark.parametrize(
+    ("masks_key", "pseudotime_key"),
+    [
+        ("missing_masks", "palantir_pseudotime"),
+        ("branch_masks", "missing_pseudotime"),
+    ],
+    ids=["missing-masks", "missing-pseudotime"],
+)
+def test_branch_qc_missing_input_returns_empty_table(
+    branch_adata,
+    masks_key,
+    pseudotime_key,
+):
+    """Missing required branch QC input should return an empty table."""
     qc = pla.branch_qc(
         branch_adata,
-        masks_key="missing_masks",
-        pseudotime_key="palantir_pseudotime",
-    )
-
-    assert qc.empty
-
-
-def test_branch_qc_missing_pseudotime_key_returns_empty_table(branch_adata):
-    """Missing pseudotime values should result in an empty QC table."""
-    qc = pla.branch_qc(
-        branch_adata,
-        masks_key="branch_masks",
-        pseudotime_key="missing_pseudotime",
+        masks_key=masks_key,
+        pseudotime_key=pseudotime_key,
     )
 
     assert qc.empty
@@ -321,69 +325,67 @@ def test_branch_qc_handles_empty_branch(branch_adata):
 # ------------------------- _classify_trend_pattern -------------------------#
 
 
-def test_classify_trend_pattern_stable():
-    """Constant curves should be classified as stable."""
-    curve = pd.Series([2.0, 2.0, 2.0, 2.0, 2.0])
-
-    assert pla._classify_trend_pattern(curve) == "stable"
-
-
-def test_classify_trend_pattern_transient_peak():
-    """Curves peaking in the middle should be classified as transient peak."""
-    pt = np.linspace(0, 1, 50)
-    curve = 1.0 - 4.0 * (pt - 0.5) ** 2
-
-    assert pla._classify_trend_pattern(pd.Series(curve)) == "transient peak"
-
-
-def test_classify_trend_pattern_transient_dip():
-    """Curves dipping in the middle should be classified as transient dip."""
-    pt = np.linspace(0, 1, 50)
-    curve = 4.0 * (pt - 0.5) ** 2
-
-    assert pla._classify_trend_pattern(pd.Series(curve)) == "transient dip"
-
-
-def test_classify_trend_pattern_late_increase():
-    """Curves with a late maximum should be classified as late increase."""
-    pt = np.linspace(0, 1, 50)
-    curve = pt**2
-
-    assert pla._classify_trend_pattern(pd.Series(curve)) == "late increase"
-
-
-def test_classify_trend_pattern_early_high_then_decrease():
-    """Curves starting high and decreasing should be classified accordingly."""
-    pt = np.linspace(0, 1, 50)
-    curve = 2.0 - 2.0 * pt
-
-    assert pla._classify_trend_pattern(pd.Series(curve)) == "early high, then decrease"
-
-
-def test_classify_trend_pattern_broad_increase():
-    """Broadly increasing curves should be classified as broad increase."""
-    curve = np.concatenate(
-        [
-            np.full(10, 0.4),
-            np.linspace(0.45, 1.1, 20),
-            np.linspace(1.05, 1.0, 20),
-        ]
-    )
-
-    assert pla._classify_trend_pattern(pd.Series(curve)) == "broad increase"
-
-
-def test_classify_trend_pattern_broad_decrease():
-    """Broadly decreasing curves should be classified as broad decrease."""
-    curve = np.concatenate(
-        [
-            np.full(10, 0.9),
-            np.linspace(1.0, 1.2, 10),
-            np.linspace(1.1, 0.2, 30),
-        ]
-    )
-
-    assert pla._classify_trend_pattern(pd.Series(curve)) == "broad decrease"
+@pytest.mark.parametrize(
+    ("curve", "expected"),
+    [
+        (
+            pd.Series([2.0, 2.0, 2.0, 2.0, 2.0]),
+            "stable",
+        ),
+        (
+            pd.Series(1.0 - 4.0 * (np.linspace(0, 1, 50) - 0.5) ** 2),
+            "transient peak",
+        ),
+        (
+            pd.Series(4.0 * (np.linspace(0, 1, 50) - 0.5) ** 2),
+            "transient dip",
+        ),
+        (
+            pd.Series(np.linspace(0, 1, 50) ** 2),
+            "late increase",
+        ),
+        (
+            pd.Series(2.0 - 2.0 * np.linspace(0, 1, 50)),
+            "early high, then decrease",
+        ),
+        (
+            pd.Series(
+                np.concatenate(
+                    [
+                        np.full(10, 0.4),
+                        np.linspace(0.45, 1.1, 20),
+                        np.linspace(1.05, 1.0, 20),
+                    ]
+                )
+            ),
+            "broad increase",
+        ),
+        (
+            pd.Series(
+                np.concatenate(
+                    [
+                        np.full(10, 0.9),
+                        np.linspace(1.0, 1.2, 10),
+                        np.linspace(1.1, 0.2, 30),
+                    ]
+                )
+            ),
+            "broad decrease",
+        ),
+    ],
+    ids=[
+        "stable",
+        "transient-peak",
+        "transient-dip",
+        "late-increase",
+        "early-high-then-decrease",
+        "broad-increase",
+        "broad-decrease",
+    ],
+)
+def test_classify_trend_pattern(curve, expected):
+    """Trend curves should be assigned to their expected pattern."""
+    assert pla._classify_trend_pattern(curve) == expected
 
 
 def test_classify_trend_pattern_handles_nan_values():
@@ -444,9 +446,6 @@ def test_compare_all_layers_can_exclude_layer(adata_h5ad):
 
     plt.close(fig)
 
-
-# ------------------------- small integration checks -------------------------#
-# No small integration checks remain in this file.
 
 # ------------------------- plot_branch_qc_distributions -------------------------#
 
@@ -751,33 +750,38 @@ def test_detect_and_plot_terminal_states_manual_duplicate_cluster_labels(
     assert list(result.values) == expected
 
 
-def test_detect_and_plot_terminal_states_missing_inputs_raise(gene_trend_adata):
-    """Missing required inputs should raise a ValueError."""
-    with pytest.raises(ValueError, match="Diffusion embedding"):
-        pla.detect_and_plot_terminal_states(
-            gene_trend_adata,
-            early_cell=gene_trend_adata.obs_names[0],
-            terminal_states=None,
-            embedding_key="X_umap",
-            eigvec_key="missing_key",
-        )
+@pytest.mark.parametrize(
+    ("parameter", "value", "match"),
+    [
+        ("eigvec_key", "missing_key", "Diffusion embedding"),
+        ("embedding_key", "missing_embedding", "Embedding"),
+        ("early_cell", "missing_cell", "Early cell"),
+    ],
+    ids=[
+        "missing-diffusion-embedding",
+        "missing-plot-embedding",
+        "missing-early-cell",
+    ],
+)
+def test_detect_and_plot_terminal_states_missing_inputs_raise(
+    gene_trend_adata,
+    parameter,
+    value,
+    match,
+):
+    """Missing required terminal-state inputs should raise a ValueError."""
+    kwargs = {
+        "early_cell": gene_trend_adata.obs_names[0],
+        "terminal_states": None,
+        "embedding_key": "X_umap",
+        "eigvec_key": "DM_EigenVectors_multiscaled",
+    }
+    kwargs[parameter] = value
 
-    with pytest.raises(ValueError, match="Embedding"):
+    with pytest.raises(ValueError, match=match):
         pla.detect_and_plot_terminal_states(
             gene_trend_adata,
-            early_cell=gene_trend_adata.obs_names[0],
-            terminal_states=None,
-            embedding_key="missing_embedding",
-            eigvec_key="DM_EigenVectors_multiscaled",
-        )
-
-    with pytest.raises(ValueError, match="Early cell"):
-        pla.detect_and_plot_terminal_states(
-            gene_trend_adata,
-            early_cell="missing_cell",
-            terminal_states=None,
-            embedding_key="X_umap",
-            eigvec_key="DM_EigenVectors_multiscaled",
+            **kwargs,
         )
 
 
@@ -1423,22 +1427,25 @@ def test_plot_branch_early_late_genes_smoke(monkeypatch, gene_trend_adata):
     assert result["BranchA"]["top_genes"]["late"][0] == "Gene0"
 
 
-def test_plot_branch_early_late_genes_invalid_parameters(monkeypatch, gene_trend_adata):
-    """Invalid quantile_cutoff or top_n values should raise ValueError."""
-    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
-
-    with pytest.raises(ValueError, match="quantile_cutoff"):
+@pytest.mark.parametrize(
+    ("top_n", "quantile_cutoff", "match"),
+    [
+        (2, 0.5, "quantile_cutoff"),
+        (0, 0.25, "top_n"),
+    ],
+    ids=["invalid-quantile-cutoff", "invalid-top-n"],
+)
+def test_plot_branch_early_late_genes_invalid_parameters(
+    gene_trend_adata,
+    top_n,
+    quantile_cutoff,
+    match,
+):
+    """Invalid early/late gene parameters should raise ValueError."""
+    with pytest.raises(ValueError, match=match):
         pla.plot_branch_early_late_genes(
             gene_trend_adata,
             branches=["BranchA"],
-            top_n=2,
-            quantile_cutoff=0.5,
-        )
-
-    with pytest.raises(ValueError, match="top_n"):
-        pla.plot_branch_early_late_genes(
-            gene_trend_adata,
-            branches=["BranchA"],
-            top_n=0,
-            quantile_cutoff=0.25,
+            top_n=top_n,
+            quantile_cutoff=quantile_cutoff,
         )
