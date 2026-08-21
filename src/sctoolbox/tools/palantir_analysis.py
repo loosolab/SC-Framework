@@ -1749,9 +1749,13 @@ def plot_branch_gene_programs(  # noqa: C901
 
     Raises
     ------
+    KeyError
+        If gene-trend clustering for an explicitly requested branch fails because
+        required trend data are missing.
     ValueError
-        If the requested branch is not found in ``adata.varm`` or if duplicate
-        export columns are created during pseudotime-column renaming.
+        If gene-trend clustering for an explicitly requested branch fails because
+        of invalid input, or if duplicate export columns are created during
+        pseudotime-column renaming.
     """
     # Build the prefix that identifies all branch-specific trend tables.
     # Example: "gene_trends_branchA", "gene_trends_branchB", ...
