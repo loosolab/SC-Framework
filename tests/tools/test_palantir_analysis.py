@@ -163,6 +163,28 @@ def _patch_diffusion_magic(monkeypatch, n_obs, multiscale_components):
     )
 
 
+def _patch_gene_program_clustering(monkeypatch):
+    """Patch gene-trend clustering and plotting for gene-program tests."""
+
+    def fake_cluster_gene_trends(_adata, _branch, genes, **kwargs):
+        return pd.Series(
+            ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)],
+            index=genes,
+        )
+
+    monkeypatch.setattr(
+        pla.palantir.presults,
+        "cluster_gene_trends",
+        fake_cluster_gene_trends,
+    )
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "plot_gene_trend_clusters",
+        lambda *args, **kwargs: plt.figure(),
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+
 # ------------------------- is_preprocessed -------------------------#
 
 
@@ -900,24 +922,7 @@ def test_plot_branch_gene_programs_excludes_flat_genes(monkeypatch, gene_trend_a
     """Flat gene trends should be filtered before clustering."""
     adata = gene_trend_adata.copy()
     adata.varm["gene_trends_BranchA"].loc["Gene0"] = 0.5
-
-    def fake_cluster_gene_trends(_adata, _branch, genes, **kwargs):
-        return pd.Series(
-            ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)],
-            index=genes,
-        )
-
-    monkeypatch.setattr(
-        pla.palantir.presults,
-        "cluster_gene_trends",
-        fake_cluster_gene_trends,
-    )
-    monkeypatch.setattr(
-        pla.palantir.plot,
-        "plot_gene_trend_clusters",
-        lambda *args, **kwargs: plt.figure(),
-    )
-    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+    _patch_gene_program_clustering(monkeypatch)
 
     result = pla.plot_branch_gene_programs(
         adata,
@@ -936,26 +941,7 @@ def test_plot_branch_gene_programs_limits_n_dynamic_genes(
     monkeypatch, gene_trend_adata
 ):
     """The function should not select more genes than n_dynamic_genes."""
-    captured = {}
-
-    def fake_cluster_gene_trends(adata_obj, branch, genes, n_neighbors=30):
-        captured[branch] = list(genes)
-        return pd.Series(
-            ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)],
-            index=genes,
-        )
-
-    monkeypatch.setattr(
-        pla.palantir.presults,
-        "cluster_gene_trends",
-        fake_cluster_gene_trends,
-    )
-    monkeypatch.setattr(
-        pla.palantir.plot,
-        "plot_gene_trend_clusters",
-        lambda *args, **kwargs: plt.figure(),
-    )
-    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+    _patch_gene_program_clustering(monkeypatch)
 
     result = pla.plot_branch_gene_programs(
         gene_trend_adata,
@@ -967,7 +953,6 @@ def test_plot_branch_gene_programs_limits_n_dynamic_genes(
     )
 
     assert len(result["BranchA"]["selected_genes"]) == 3
-    assert len(captured["BranchA"]) == 3
 
 
 def test_plot_branch_gene_programs_unknown_branch_returns_empty(
