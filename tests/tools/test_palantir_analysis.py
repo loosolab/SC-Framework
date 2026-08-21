@@ -494,10 +494,9 @@ def test_plot_branch_qc_distributions_missing_keys_returns_empty(branch_adata):
         pseudotime_key="palantir_pseudotime",
     )
 
-    assert fig is not None
+    assert fig is None
     assert isinstance(axes, np.ndarray)
     assert len(axes) == 0
-    plt.close(fig)
 
 
 # ------------------------- plot_interactive_embedding_cell_ids -------------------------#
