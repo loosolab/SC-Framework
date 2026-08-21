@@ -901,10 +901,7 @@ def test_plot_branch_gene_programs_excludes_flat_genes(monkeypatch, gene_trend_a
     adata = gene_trend_adata.copy()
     adata.varm["gene_trends_BranchA"].loc["Gene0"] = 0.5
 
-    captured = {}
-
-    def fake_cluster_gene_trends(adata_obj, branch, genes, n_neighbors=30):
-        captured[branch] = set(genes)
+    def fake_cluster_gene_trends(_adata, _branch, genes, **kwargs):
         return pd.Series(
             ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)],
             index=genes,
@@ -932,7 +929,7 @@ def test_plot_branch_gene_programs_excludes_flat_genes(monkeypatch, gene_trend_a
     )
 
     assert "BranchA" in result
-    assert "Gene0" not in captured["BranchA"]
+    assert "Gene0" not in result["BranchA"]["selected_genes"]
 
 
 def test_plot_branch_gene_programs_limits_n_dynamic_genes(
