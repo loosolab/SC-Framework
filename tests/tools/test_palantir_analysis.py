@@ -117,6 +117,37 @@ def branch_adata(preprocessed_adata):
 # ------------------------- is_preprocessed -------------------------#
 
 
+@pytest.mark.parametrize(
+    ("check_kwargs", "expected"),
+    [
+        ({"pca": "warn"}, True),
+        ({"pca": "error"}, False),
+        ({"embedding": "error"}, False),
+        ({}, True),
+    ],
+    ids=[
+        "missing-pca-warn",
+        "missing-pca-error",
+        "missing-embedding-error",
+        "all-checks-disabled",
+    ],
+)
+def test_is_preprocessed_configurable_checks(simple_adata, check_kwargs, expected):
+    """Configurable preprocessing checks should respect their severity."""
+    kwargs = {
+        "normalize": False,
+        "log1p": False,
+        "pca": False,
+        "embedding": False,
+        "neighbors": False,
+    }
+    kwargs.update(check_kwargs)
+
+    result = pla.is_preprocessed(simple_adata, **kwargs)
+
+    assert result is expected
+
+
 def test_is_preprocessed_accepts_project_test_data(adata_h5ad):
     """Check that the project RNA test object contains the required preprocessing."""
     result = pla.is_preprocessed(
@@ -129,48 +160,6 @@ def test_is_preprocessed_accepts_project_test_data(adata_h5ad):
     )
 
     assert result is True
-
-
-def test_is_preprocessed_missing_pca_warns_without_failing(simple_adata):
-    """A missing PCA should not fail when the severity is set to warn."""
-    result = pla.is_preprocessed(
-        simple_adata,
-        normalize=False,
-        log1p=False,
-        pca="warn",
-        embedding=False,
-        neighbors=False,
-    )
-
-    assert result is True
-
-
-def test_is_preprocessed_missing_pca_fails_with_error(simple_adata):
-    """A missing PCA should fail when the severity is set to error."""
-    result = pla.is_preprocessed(
-        simple_adata,
-        normalize=False,
-        log1p=False,
-        pca="error",
-        embedding=False,
-        neighbors=False,
-    )
-
-    assert result is False
-
-
-def test_is_preprocessed_missing_embedding_fails(simple_adata):
-    """The embedding check should fail if no embedding is present."""
-    result = pla.is_preprocessed(
-        simple_adata,
-        normalize=False,
-        log1p=False,
-        pca=False,
-        embedding="error",
-        neighbors=False,
-    )
-
-    assert result is False
 
 
 def test_is_preprocessed_detects_raw_counts(adata_raw_small):
@@ -187,12 +176,14 @@ def test_is_preprocessed_detects_raw_counts(adata_raw_small):
     assert result is False
 
 
-def test_is_preprocessed_all_checks_can_be_disabled(simple_adata):
-    """Disabled checks should not block the input object."""
+def test_is_preprocessed_accepts_sparse_matrix(adata_h5ad):
+    """Sparse expression matrices should be handled without failing."""
+    assert sp.issparse(adata_h5ad.X)
+
     result = pla.is_preprocessed(
-        simple_adata,
+        adata_h5ad,
         normalize=False,
-        log1p=False,
+        log1p="warn",
         pca=False,
         embedding=False,
         neighbors=False,
@@ -201,58 +192,31 @@ def test_is_preprocessed_all_checks_can_be_disabled(simple_adata):
     assert result is True
 
 
-def test_is_preprocessed_accepts_sparse_matrix(adata_h5ad):
-    """Sparse AnnData objects should pass when preprocessing keys are present."""
-    rng = np.random.default_rng(42)
-
-    adata_h5ad.obsm["X_pca"] = rng.standard_normal((adata_h5ad.n_obs, 10))
-    adata_h5ad.obsm["X_umap"] = rng.standard_normal((adata_h5ad.n_obs, 2))
-    adata_h5ad.obsp["connectivities"] = sp.csr_matrix(
-        (adata_h5ad.n_obs, adata_h5ad.n_obs)
-    )
-    adata_h5ad.obsp["distances"] = sp.csr_matrix((adata_h5ad.n_obs, adata_h5ad.n_obs))
-    adata_h5ad.uns["neighbors"] = {
-        "connectivities_key": "connectivities",
-        "distances_key": "distances",
-    }
-    result = pla.is_preprocessed(
-        adata_h5ad,
-        normalize=False,
-        log1p=False,
-        pca="error",
-        embedding="error",
-        neighbors="error",
-    )
-
-    assert result is True
-
-
 # ------------------------- remove_cells_by_label -------------------------#
 
 
-def test_remove_cells_by_label_removes_single_label(simple_adata):
-    """Cells with one selected label should be removed."""
+@pytest.mark.parametrize(
+    ("labels_to_remove", "removed_labels"),
+    [
+        ("TypeA", ["TypeA"]),
+        (["TypeA", "TypeB"], ["TypeA", "TypeB"]),
+    ],
+    ids=["single-label", "multiple-labels"],
+)
+def test_remove_cells_by_label_removes_labels(
+    simple_adata,
+    labels_to_remove,
+    removed_labels,
+):
+    """Selected cell labels should be removed."""
     result = pla.remove_cells_by_label(
         simple_adata,
         column_name="celltype",
-        labels_to_remove="TypeA",
+        labels_to_remove=labels_to_remove,
     )
 
     assert result.n_obs < simple_adata.n_obs
-    assert "TypeA" not in result.obs["celltype"].values
-    assert result.n_vars == simple_adata.n_vars
-
-
-def test_remove_cells_by_label_removes_multiple_labels(simple_adata):
-    """Cells with several selected labels should be removed."""
-    result = pla.remove_cells_by_label(
-        simple_adata,
-        column_name="celltype",
-        labels_to_remove=["TypeA", "TypeB"],
-    )
-
-    assert "TypeA" not in result.obs["celltype"].values
-    assert "TypeB" not in result.obs["celltype"].values
+    assert all(label not in result.obs["celltype"].values for label in removed_labels)
     assert result.n_vars == simple_adata.n_vars
 
 
