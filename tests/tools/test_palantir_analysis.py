@@ -955,21 +955,18 @@ def test_plot_branch_gene_programs_limits_n_dynamic_genes(
     assert len(result["BranchA"]["selected_genes"]) == 3
 
 
-def test_plot_branch_gene_programs_unknown_branch_returns_empty(
-    monkeypatch, gene_trend_adata
-):
+def test_plot_branch_gene_programs_unknown_branch_returns_empty(gene_trend_adata):
     """Requesting an unknown branch should return an empty result."""
-    assert (
-        pla.plot_branch_gene_programs(
-            gene_trend_adata,
-            branch="MissingBranch",
-            n_dynamic_genes=4,
-            gene_ranking_mode="union",
-            trend_knn_neighbors=2,
-            plot_representative_genes=False,
-        )
-        == {}
+    result = pla.plot_branch_gene_programs(
+        gene_trend_adata,
+        branch="MissingBranch",
+        n_dynamic_genes=4,
+        gene_ranking_mode="union",
+        trend_knn_neighbors=2,
+        plot_representative_genes=False,
     )
+
+    assert result == {}
 
 
 def test_plot_branch_gene_programs_invalid_mode_returns_empty(
