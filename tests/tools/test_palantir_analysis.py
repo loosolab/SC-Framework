@@ -414,15 +414,18 @@ def test_classify_trend_pattern_handles_nan_values():
 def test_compare_all_layers_returns_figure_for_project_test_data(adata_h5ad):
     """Layer comparison should create one subplot for adata.X and each layer."""
     fig, axs = pla.compare_all_layers(adata_h5ad)
-    axs_array = np.atleast_1d(axs)
 
-    expected_axes = 1 + len(adata_h5ad.layers)
+    try:
+        axs_array = np.atleast_1d(axs)
+        expected_axes = 1 + sum(
+            layer_name is not None for layer_name in adata_h5ad.layers.keys()
+        )
 
-    assert fig is not None
-    assert axs is not None
-    assert len(axs_array) == expected_axes
-
-    plt.close(fig)
+        assert fig is not None
+        assert axs is not None
+        assert len(axs_array) == expected_axes
+    finally:
+        plt.close(fig)
 
 
 def test_compare_all_layers_can_exclude_layer(adata_h5ad):
@@ -433,18 +436,20 @@ def test_compare_all_layers_can_exclude_layer(adata_h5ad):
         adata_h5ad,
         exclude_layers=excluded_layers,
     )
-    axs_array = np.atleast_1d(axs)
 
-    expected_axes = 1 + sum(
-        layer_name not in excluded_layers for layer_name in adata_h5ad.layers.keys()
-    )
+    try:
+        axs_array = np.atleast_1d(axs)
+        expected_axes = 1 + sum(
+            layer_name is not None and layer_name not in excluded_layers
+            for layer_name in adata_h5ad.layers.keys()
+        )
 
-    titles = [ax.get_title() for ax in axs_array]
+        titles = [ax.get_title() for ax in axs_array]
 
-    assert len(axs_array) == expected_axes
-    assert not any("layers['spliced']" in title for title in titles)
-
-    plt.close(fig)
+        assert len(axs_array) == expected_axes
+        assert not any("layers['spliced']" in title for title in titles)
+    finally:
+        plt.close(fig)
 
 
 # ------------------------- plot_branch_qc_distributions -------------------------#

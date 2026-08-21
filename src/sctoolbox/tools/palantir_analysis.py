@@ -390,6 +390,8 @@ def compare_all_layers(
     sums_dict = {"adata.X": row_sums(adata.X)}
 
     for layer_name, layer_matrix in adata.layers.items():
+        if layer_name is None:
+            continue
         if layer_name not in exclude_layers:
             sums_dict[f"layers['{layer_name}']"] = row_sums(layer_matrix)
 
