@@ -1088,16 +1088,18 @@ def test_run_diffusion_and_magic_uses_complete_cache(monkeypatch, preprocessed_a
 
 def test_detect_and_plot_terminal_states_manual(gene_trend_adata):
     """Manual terminal cells should be converted into a labeled Series."""
-    early_cell = gene_trend_adata.obs_names[0]
+    adata = gene_trend_adata.copy()
+
+    early_cell = adata.obs_names[0]
     terminal_cells = [
-        gene_trend_adata.obs_names[1],
-        gene_trend_adata.obs_names[2],
+        adata.obs_names[1],
+        adata.obs_names[2],
     ]
 
-    gene_trend_adata.obs["celltype"] = "TypeA"
+    adata.obs["celltype"] = "TypeA"
 
     result = pla.detect_and_plot_terminal_states(
-        gene_trend_adata,
+        adata,
         early_cell=early_cell,
         terminal_states=terminal_cells,
         clusters_to_analyze="celltype",
@@ -1234,11 +1236,20 @@ def test_plot_branch_gene_programs_smoke(monkeypatch, gene_trend_adata):
     )
 
     assert set(result) == {"BranchA", "BranchB"}
-    assert "selected_genes" in result["BranchA"]
-    assert len(result["BranchA"]["selected_genes"]) == 4
-    assert "trend_clusters" in result["BranchA"]
-    assert "centroid_z" in result["BranchA"]
-    assert "cluster_summary" in result["BranchA"]
+
+    expected_keys = {
+        "selected_genes",
+        "trend_clusters",
+        "centroid_z",
+        "cluster_patterns",
+        "cluster_summary",
+        "cluster_representatives",
+        "figures",
+    }
+
+    for branch in ("BranchA", "BranchB"):
+        assert expected_keys <= result[branch].keys()
+        assert len(result[branch]["selected_genes"]) == 4
 
 
 def test_detect_and_plot_terminal_states_supports_3d_embedding(
