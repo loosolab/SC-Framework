@@ -772,20 +772,22 @@ def test_detect_and_plot_terminal_states_manual_duplicate_cluster_labels(
     gene_trend_adata, terminal_labels, expected
 ):
     """Duplicate cluster labels on manual terminals should be uniquified."""
-    gene_trend_adata.obs["celltype"] = "Macrophage"
-    gene_trend_adata.obs.loc[
-        [gene_trend_adata.obs_names[1], gene_trend_adata.obs_names[2]],
+    adata = gene_trend_adata.copy()
+
+    adata.obs["celltype"] = "Macrophage"
+    adata.obs.loc[
+        [adata.obs_names[1], adata.obs_names[2]],
         "celltype",
     ] = terminal_labels
 
-    early_cell = gene_trend_adata.obs_names[0]
+    early_cell = adata.obs_names[0]
     terminal_cells = [
-        gene_trend_adata.obs_names[1],
-        gene_trend_adata.obs_names[2],
+        adata.obs_names[1],
+        adata.obs_names[2],
     ]
 
     result = pla.detect_and_plot_terminal_states(
-        gene_trend_adata,
+        adata,
         early_cell=early_cell,
         terminal_states=terminal_cells,
         clusters_to_analyze="celltype",
