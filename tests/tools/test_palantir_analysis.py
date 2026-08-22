@@ -1073,23 +1073,25 @@ def test_plot_branch_early_late_genes_skips_umap_when_missing(
     assert result["BranchA"]["umap_axes"].size == 0
 
 
-def test_run_diffusion_and_magic_uses_complete_cache(preprocessed_adata, tmp_path):
+def test_run_diffusion_and_magic_uses_complete_cache(
+    monkeypatch, preprocessed_adata
+):
     """A complete cached AnnData object should be loaded without recomputation."""
     cached = preprocessed_adata.copy()
     cached.layers["MAGIC_imputed_data"] = cached.X.copy()
 
-    cache_path = tmp_path / "cached_magic.h5ad"
-    cached.write_h5ad(cache_path)
+    monkeypatch.setattr(pla.os, "makedirs", lambda *args, **kwargs: None)
+    monkeypatch.setattr(pla.os.path, "exists", lambda _path: True)
+    monkeypatch.setattr(pla.sc, "read_h5ad", lambda _path: cached)
 
     result = pla.run_diffusion_and_magic(
         preprocessed_adata,
-        save_path=str(cache_path),
+        save_path="cached_magic.h5ad",
         recompute_magic=False,
     )
 
+    assert result is cached
     assert "MAGIC_imputed_data" in result.layers
-    assert result.n_obs == cached.n_obs
-    assert result.n_vars == cached.n_vars
 
 
 def test_detect_and_plot_terminal_states_manual(monkeypatch, gene_trend_adata):
