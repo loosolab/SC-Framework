@@ -732,12 +732,13 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
 def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
     monkeypatch,
     preprocessed_adata,
-    tmp_path,
 ):
     """An incomplete cache missing the MAGIC layer should recompute imputation."""
     cached = preprocessed_adata.copy()
-    cache_path = tmp_path / "cached_magic_incomplete.h5ad"
-    cached.write_h5ad(cache_path)
+
+    monkeypatch.setattr(pla.os, "makedirs", lambda *args, **kwargs: None)
+    monkeypatch.setattr(pla.os.path, "exists", lambda _path: True)
+    monkeypatch.setattr(pla.sc, "read_h5ad", lambda _path: cached)
 
     _patch_diffusion_magic(
         monkeypatch,
@@ -747,11 +748,11 @@ def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
 
     result = pla.run_diffusion_and_magic(
         preprocessed_adata,
-        save_path=str(cache_path),
+        save_path="cached_magic_incomplete.h5ad",
         recompute_magic=False,
     )
 
-    assert result is not preprocessed_adata
+    assert result is cached
     assert "DM_EigenVectors_multiscaled" in result.obsm
     assert result.obsm["DM_EigenVectors_multiscaled"].shape == (
         preprocessed_adata.n_obs,
