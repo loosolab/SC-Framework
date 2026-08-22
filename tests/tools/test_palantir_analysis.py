@@ -114,6 +114,63 @@ def branch_adata(preprocessed_adata):
     return adata
 
 
+@pytest.fixture
+def gene_trend_adata(preprocessed_adata):
+    """Create AnnData with small branch-specific gene trend tables.
+
+    Returns
+    -------
+    anndata.AnnData
+        Synthetic AnnData with branch-specific trend tables and Palantir metadata.
+    """
+    adata = preprocessed_adata.copy()
+
+    genes = [f"Gene{i}" for i in range(8)]
+    adata = adata[:, :8].copy()
+    adata.var_names = genes
+
+    pt = np.linspace(0.0, 1.0, 12)
+
+    trends = pd.DataFrame(
+        {
+            t: [
+                t,
+                1.0 - t,
+                np.sin(np.pi * t),
+                np.cos(np.pi * t) + 1.0,
+                t**2,
+                1.0 - t**2,
+                0.5 + t,
+                1.5 - t,
+            ]
+            for t in pt
+        },
+        index=adata.var_names,
+    )
+
+    branch_b_trends = trends.copy()
+    branch_b_trends.iloc[:, :] = trends.iloc[:, ::-1].to_numpy()
+
+    adata.varm["gene_trends_BranchA"] = trends
+    adata.varm["gene_trends_BranchB"] = branch_b_trends
+
+    adata.var["highly_variable"] = [
+        True,
+        True,
+        True,
+        True,
+        True,
+        False,
+        False,
+        False,
+    ]
+    adata.obs["palantir_pseudotime"] = np.linspace(0, 1, adata.n_obs)
+    adata.obs["palantir_entropy"] = np.linspace(1, 0, adata.n_obs)
+    adata.obsm["DM_EigenVectors_multiscaled"] = np.random.randn(adata.n_obs, 3)
+
+    return adata
+
+
 def _patch_diffusion_magic(monkeypatch, n_obs, multiscale_components):
     """Patch Palantir diffusion and MAGIC calls with deterministic test doubles."""
 
@@ -1014,63 +1071,6 @@ def test_plot_branch_early_late_genes_skips_umap_when_missing(
     assert result["BranchA"]["trend_fig"] is not None
     assert result["BranchA"]["umap_fig"] is None
     assert result["BranchA"]["umap_axes"].size == 0
-
-
-@pytest.fixture
-def gene_trend_adata(preprocessed_adata):
-    """Create AnnData with small branch-specific gene trend tables.
-
-    Returns
-    -------
-    anndata.AnnData
-        Synthetic AnnData with branch-specific trend tables and Palantir metadata.
-    """
-    adata = preprocessed_adata.copy()
-
-    genes = [f"Gene{i}" for i in range(8)]
-    adata = adata[:, :8].copy()
-    adata.var_names = genes
-
-    pt = np.linspace(0.0, 1.0, 12)
-
-    trends = pd.DataFrame(
-        {
-            t: [
-                t,
-                1.0 - t,
-                np.sin(np.pi * t),
-                np.cos(np.pi * t) + 1.0,
-                t**2,
-                1.0 - t**2,
-                0.5 + t,
-                1.5 - t,
-            ]
-            for t in pt
-        },
-        index=adata.var_names,
-    )
-
-    branch_b_trends = trends.copy()
-    branch_b_trends.iloc[:, :] = trends.iloc[:, ::-1].to_numpy()
-
-    adata.varm["gene_trends_BranchA"] = trends
-    adata.varm["gene_trends_BranchB"] = branch_b_trends
-
-    adata.var["highly_variable"] = [
-        True,
-        True,
-        True,
-        True,
-        True,
-        False,
-        False,
-        False,
-    ]
-    adata.obs["palantir_pseudotime"] = np.linspace(0, 1, adata.n_obs)
-    adata.obs["palantir_entropy"] = np.linspace(1, 0, adata.n_obs)
-    adata.obsm["DM_EigenVectors_multiscaled"] = np.random.randn(adata.n_obs, 3)
-
-    return adata
 
 
 def test_run_diffusion_and_magic_uses_complete_cache(preprocessed_adata, tmp_path):
