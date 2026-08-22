@@ -768,16 +768,9 @@ def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
     ],
 )
 def test_detect_and_plot_terminal_states_manual_duplicate_cluster_labels(
-    monkeypatch, gene_trend_adata, terminal_labels, expected
+    gene_trend_adata, terminal_labels, expected
 ):
     """Duplicate cluster labels on manual terminals should be uniquified."""
-    monkeypatch.setattr(
-        pla.palantir.plot,
-        "highlight_cells_on_umap",
-        lambda *args, **kwargs: None,
-    )
-    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
-
     gene_trend_adata.obs["celltype"] = "Macrophage"
     gene_trend_adata.obs.loc[
         [gene_trend_adata.obs_names[1], gene_trend_adata.obs_names[2]],
@@ -797,6 +790,7 @@ def test_detect_and_plot_terminal_states_manual_duplicate_cluster_labels(
         clusters_to_analyze="celltype",
         embedding_key="X_umap",
         eigvec_key="DM_EigenVectors_multiscaled",
+        plot=False,
     )
 
     assert list(result.index) == terminal_cells
@@ -1073,9 +1067,7 @@ def test_plot_branch_early_late_genes_skips_umap_when_missing(
     assert result["BranchA"]["umap_axes"].size == 0
 
 
-def test_run_diffusion_and_magic_uses_complete_cache(
-    monkeypatch, preprocessed_adata
-):
+def test_run_diffusion_and_magic_uses_complete_cache(monkeypatch, preprocessed_adata):
     """A complete cached AnnData object should be loaded without recomputation."""
     cached = preprocessed_adata.copy()
     cached.layers["MAGIC_imputed_data"] = cached.X.copy()
@@ -1094,15 +1086,8 @@ def test_run_diffusion_and_magic_uses_complete_cache(
     assert "MAGIC_imputed_data" in result.layers
 
 
-def test_detect_and_plot_terminal_states_manual(monkeypatch, gene_trend_adata):
+def test_detect_and_plot_terminal_states_manual(gene_trend_adata):
     """Manual terminal cells should be converted into a labeled Series."""
-    monkeypatch.setattr(
-        pla.palantir.plot,
-        "highlight_cells_on_umap",
-        lambda *args, **kwargs: None,
-    )
-    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
-
     early_cell = gene_trend_adata.obs_names[0]
     terminal_cells = [
         gene_trend_adata.obs_names[1],
@@ -1118,6 +1103,7 @@ def test_detect_and_plot_terminal_states_manual(monkeypatch, gene_trend_adata):
         clusters_to_analyze="celltype",
         embedding_key="X_umap",
         eigvec_key="DM_EigenVectors_multiscaled",
+        plot=False,
     )
 
     assert isinstance(result, pd.Series)
@@ -1146,12 +1132,6 @@ def test_detect_and_plot_terminal_states_auto(monkeypatch, gene_trend_adata):
         "identify_terminal_states",
         fake_identify_terminal_states,
     )
-    monkeypatch.setattr(
-        pla.palantir.plot,
-        "highlight_cells_on_umap",
-        lambda *args, **kwargs: None,
-    )
-    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
 
     result = pla.detect_and_plot_terminal_states(
         gene_trend_adata,
@@ -1163,6 +1143,7 @@ def test_detect_and_plot_terminal_states_auto(monkeypatch, gene_trend_adata):
         knn=10,
         num_waypoints=20,
         show_excluded_boundaries=True,
+        plot=False,
     )
 
     assert isinstance(result, pd.Series)

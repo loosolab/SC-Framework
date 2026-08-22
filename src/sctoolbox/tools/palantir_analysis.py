@@ -628,6 +628,7 @@ def detect_and_plot_terminal_states(  # noqa: C901
     show_excluded_boundaries: bool = True,
     save: str | None = None,
     report_save: str | None = None,
+    plot: bool = True,
 ) -> pd.Series:
     """Determine terminal states, plot them, and return the Series for ``run_palantir``.
 
@@ -675,6 +676,8 @@ def detect_and_plot_terminal_states(  # noqa: C901
         Path and filename appended to ``settings.full_figure_prefix``.
     report_save : str | None, default=None
         Path and filename appended to ``settings.report_dir``.
+    plot : bool, default=True
+        Whether to create and display the terminal-state plot.
 
     Returns
     -------
@@ -844,49 +847,50 @@ def detect_and_plot_terminal_states(  # noqa: C901
     # ------------------------------------------------------------------
     # Step 3: Plot terminal cells on the chosen 2D embedding
     # ------------------------------------------------------------------
-    palantir.plot.highlight_cells_on_umap(
-        plot_adata,
-        terminal_cells,
-        embedding_basis=embedding_key,
-    )
+    if plot:
+        palantir.plot.highlight_cells_on_umap(
+            plot_adata,
+            terminal_cells,
+            embedding_basis=embedding_key,
+        )
 
-    # Build a small coordinate table for easier annotation.
-    coords = pd.DataFrame(plot_embedding, index=adata.obs_names, columns=["x", "y"])
+        # Build a small coordinate table for easier annotation.
+        coords = pd.DataFrame(plot_embedding, index=adata.obs_names, columns=["x", "y"])
 
-    # Optional QC overlay:
-    # Show excluded boundaries as "x" markers.
-    # These cells were considered during automatic detection, but were not chosen
-    # as final terminal states by Palantir.
-    if show_excluded_boundaries and len(excluded_boundaries) > 0:
-        excluded_valid = [
-            cell_id for cell_id in excluded_boundaries if cell_id in coords.index
-        ]
-        if excluded_valid:
-            plt.scatter(
-                coords.loc[excluded_valid, "x"],
-                coords.loc[excluded_valid, "y"],
-                s=20,
-                marker="x",
-                alpha=0.8,
-            )
+        # Optional QC overlay:
+        # Show excluded boundaries as "x" markers.
+        # These cells were considered during automatic detection, but were not chosen
+        # as final terminal states by Palantir.
+        if show_excluded_boundaries and len(excluded_boundaries) > 0:
+            excluded_valid = [
+                cell_id for cell_id in excluded_boundaries if cell_id in coords.index
+            ]
+            if excluded_valid:
+                plt.scatter(
+                    coords.loc[excluded_valid, "x"],
+                    coords.loc[excluded_valid, "y"],
+                    s=20,
+                    marker="x",
+                    alpha=0.8,
+                )
 
-    # Annotate each selected terminal cell with:
-    # - the assigned terminal-state label
-    # - the corresponding cell ID
-    for cell_id, label in terminal_state_series.items():
-        x, y = coords.loc[cell_id, ["x", "y"]]
-        plt.text(x, y, f"{label}\n{cell_id}", fontsize=9)
+        # Annotate each selected terminal cell with:
+        # - the assigned terminal-state label
+        # - the corresponding cell ID
+        for cell_id, label in terminal_state_series.items():
+            x, y = coords.loc[cell_id, ["x", "y"]]
+            plt.text(x, y, f"{label}\n{cell_id}", fontsize=9)
 
-    plt.title("Terminal state identification" if title is None else title)
-    plt.tight_layout()
+        plt.title("Terminal state identification" if title is None else title)
+        plt.tight_layout()
 
-    if save is not None:
-        _save_figure(path=save)
+        if save is not None:
+            _save_figure(path=save)
 
-    if report_save is not None:
-        _save_figure(path=report_save, report=True)
+        if report_save is not None:
+            _save_figure(path=report_save, report=True)
 
-    plt.show()
+        plt.show()
 
     return terminal_state_series
 
