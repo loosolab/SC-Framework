@@ -1387,7 +1387,7 @@ def plot_branch_qc_distributions(  # noqa: C901
     bins: int = 30,
     ncols: int = 3,
     show_pt_bounds: bool = True,
-    figsize: tuple[float, float] = (10.0, 4.0),
+    figsize: tuple[float, float] = (4.8, 3.2),
     save: Optional[str] = None,
     report: bool = False,
     dpi: Optional[Union[int, float]] = None,
@@ -1423,8 +1423,8 @@ def plot_branch_qc_distributions(  # noqa: C901
         Number of subplot columns.
     show_pt_bounds : bool, default=True
         If True, draw vertical lines for ``pt_min`` and ``pt_max`` (if present in ``qc``).
-    figsize : tuple[float, float], default=(10.0, 4.0)
-        Base figure size. Internally, the figure scales with the grid size.
+    figsize : tuple[float, float], default=(4.8, 3.2)
+        Base size of one subplot. The total figure size scales with the grid.
     save : Optional[str], default=None
         If provided, save the figure via :func:`~sctoolbox.plotting.general._save_figure`.
         The file extension controls the format. If no extension is given, PNG is used.
@@ -1527,8 +1527,8 @@ def plot_branch_qc_distributions(  # noqa: C901
     fig, axes_grid = plt.subplots(
         nrows_eff,
         ncols_eff,
-        figsize=(4.8 * ncols_eff, 3.2 * nrows_eff),
-        sharex=True,  # important for comparability
+        figsize=(figsize[0] * ncols_eff, figsize[1] * nrows_eff),
+        sharex=True,
         constrained_layout=True,
     )
 
