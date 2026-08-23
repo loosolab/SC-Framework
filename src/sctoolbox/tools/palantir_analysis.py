@@ -654,7 +654,8 @@ def detect_and_plot_terminal_states(  # noqa: C901
         Column in ``adata.obs`` used to assign labels to terminal states. If
         ``None``, generic labels are used.
     embedding_key : str, default="X_umap"
-        Key in ``adata.obsm`` containing a 2D embedding for plotting.
+        Key in ``adata.obsm`` containing the embedding used for plotting.
+        Embeddings with more than two dimensions use the first two dimensions.
     eigvec_key : str, default="DM_EigenVectors_multiscaled"
         Key in ``adata.obsm`` containing the diffusion representation used for
         automatic terminal-state detection.
