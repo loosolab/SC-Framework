@@ -901,7 +901,7 @@ def test_analyze_top_genes_communities_marker_selection_and_pvals_adj(
 
 
 def test_analyze_top_genes_communities_marker_table_missing_columns_raises(
-    monkeypatch, gene_trend_adata
+    gene_trend_adata
 ):
     """Markers without required ranking columns should raise a ValueError."""
     marker_table = {
