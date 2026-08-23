@@ -944,7 +944,7 @@ def analyze_top_genes_communities(  # noqa: C901
         If set, write one Excel file with one sheet per exported table.
         Branch sheets can optionally include appended Palantir trend values.
     save_plots : str | None, default=None
-        If set, save Palantir cluster plots as ``{save_plots}_{branch}.png``.
+        If set, save Palantir cluster plots as ``{save_plots}_{branch}.pdf``.
         The value acts as a filename prefix and may include directories.
     store_key : str | None, default=None
         If set, store results in
@@ -1141,7 +1141,7 @@ def analyze_top_genes_communities(  # noqa: C901
         palantir.plot.plot_gene_trend_clusters(adata, br)
 
         if save_plots is not None:
-            filename = f"{save_plots}_{br}.png"
+            filename = f"{save_plots}_{br}.pdf"
             _save_figure(path=filename, bbox_inches="tight")
             logger.info("Saved plot for branch '%s' as '%s'.", br, filename)
 
@@ -1731,6 +1731,7 @@ def plot_branch_gene_programs(  # noqa: C901
         branches found in ``adata.varm``.
     save : str | None, default=None
         Filename prefix for saving figures. If None, figures are not written.
+        Generated figures are saved as PDF files.
     save_excel : str | None, default=None
         Output path for an optional Excel file. If provided, the file contains
         one sheet per branch with trend cluster, cluster pattern, representative
@@ -2008,7 +2009,7 @@ def plot_branch_gene_programs(  # noqa: C901
             f"Branch '{br}' — Palantir trend clusters (n={len(selected_genes)} genes)",
             y=1.02,
         )
-        _save_fig(fig_clusters, f"_branch-{br}_clusters.png")
+        _save_fig(fig_clusters, f"_branch-{br}_clusters.pdf")
         plt.show()
 
         # Compute one centroid curve per trend cluster using the median trend.
@@ -2084,7 +2085,7 @@ def plot_branch_gene_programs(  # noqa: C901
         ax_hm.set_ylabel("Trend cluster (hierarchical similarity)")
 
         cg.fig.suptitle(f"Branch '{br}' — centroid similarity", y=1.02)
-        _save_fig(cg.fig, f"_branch-{br}_centroid_heatmap.png")
+        _save_fig(cg.fig, f"_branch-{br}_centroid_heatmap.pdf")
         plt.show()
 
         # Select representative genes per trend cluster.
@@ -2268,7 +2269,7 @@ def plot_branch_gene_programs(  # noqa: C901
                     y=1.02,
                 )
                 fig_reps.tight_layout()
-                _save_fig(fig_reps, f"_branch-{br}_representatives.png")
+                _save_fig(fig_reps, f"_branch-{br}_representatives.pdf")
                 plt.show()
 
         # Build a gene-level export table for this branch.
@@ -2445,8 +2446,8 @@ def plot_branch_early_late_genes(  # noqa: C901
     save : str | None, default=None
         Filename prefix for saving figures. If None, no files are written.
         Files are saved as:
-        - `{save}_branch-<branch>_trends.png`
-        - `{save}_branch-<branch>_umap.png` (only if the UMAP panel was created)
+        - `{save}_branch-<branch>_trends.pdf`
+        - `{save}_branch-<branch>_umap.pdf` (only if the UMAP panel was created)
 
     Returns
     -------
@@ -2629,7 +2630,7 @@ def plot_branch_early_late_genes(  # noqa: C901
         ax_late.set_title(f"Top late genes (n={len(late_genes)})")
 
         if save is not None:
-            _save_current(trend_fig, f"{save}_branch-{br}_trends.png")
+            _save_current(trend_fig, f"{save}_branch-{br}_trends.pdf")
 
         plt.show()
 
@@ -2655,7 +2656,7 @@ def plot_branch_early_late_genes(  # noqa: C901
             umap_axes = np.array(umap_fig.axes, dtype=object)
 
             if save is not None:
-                _save_current(umap_fig, f"{save}_branch-{br}_umap.png")
+                _save_current(umap_fig, f"{save}_branch-{br}_umap.pdf")
 
             plt.show()
         else:
