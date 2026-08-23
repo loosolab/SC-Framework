@@ -1143,7 +1143,7 @@ def analyze_top_genes_communities(  # noqa: C901
 
         if save_plots is not None:
             filename = f"{save_plots}_{br}.pdf"
-            _save_figure(path=filename, bbox_inches="tight")
+            _save_figure(path=filename)
             logger.info("Saved plot for branch '%s' as '%s'.", br, filename)
 
         plt.show()
@@ -1806,7 +1806,7 @@ def plot_branch_gene_programs(  # noqa: C901
         path = f"{save}{suffix}"
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         plt.figure(fig.number)
-        _save_figure(path=path, bbox_inches="tight")
+        _save_figure(path=path)
 
     # Main outputs returned to the caller.
     results: dict[str, dict[str, Any]] = {}
@@ -2496,7 +2496,7 @@ def plot_branch_early_late_genes(  # noqa: C901
             return
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         plt.figure(fig.number)  # set current figure for stateful saver
-        _save_figure(path=path, bbox_inches="tight")
+        _save_figure(path=path)
 
     results: dict[str, dict[str, Any]] = {}
     logged_umap_skip = False  # avoid spamming the same info message
