@@ -9,7 +9,6 @@ from matplotlib.colors import rgb2hex
 from sctoolbox.plotting.general import _save_figure
 from beartype import beartype
 from beartype.typing import Literal, Any
-from numpy.typing import NDArray
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -42,18 +41,18 @@ def _count_greater_than_threshold(group: pd.Series,
 
 
 @beartype
-def _calculate_dot_sizes(values: pd.Series | NDArray,
+def _calculate_dot_sizes(values: pd.Series | np.ndarray,
                          min_value: int | float,
                          max_value: int | float,
                          min_dot_size: int,
                          max_dot_size: int,
-                         use_log_scale: bool = False) -> NDArray:
+                         use_log_scale: bool = False) -> np.ndarray:
     """
     Calculate the sizes of dots for plotting.
 
     Parameters
     ----------
-    values : pd.Series | NDArray
+    values : pd.Series | np.ndarray
         A series or an array containing the values to be plotted.
     min_value : int | float
         The smallest value observed to correspond to the min_dot_size.
@@ -68,7 +67,7 @@ def _calculate_dot_sizes(values: pd.Series | NDArray,
 
     Returns
     -------
-    sizes : NDArray
+    sizes : np.ndarray
         Returns a series or an array containing the sizes for the dots depending upon the input type for values.
 
     """
@@ -367,7 +366,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                        ORIENTATION_LEGEND_TITLE: str = 'Genes',
                        ORIENTATION_LEGEND_CENTER_LABEL: str = 'Aggregate value',
                        orientation_labels_array: list | None = None,
-                       save: str | None = None) -> NDArray[Axes]:
+                       save: str | None = None) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     r"""
     Render the planet plot on the basis of the preprocessed data.
 
@@ -487,7 +486,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
 
     Returns
     -------
-    NDArray[Axes]
+    np.ndarray[tuple[int, ...], np.dtype[Axes]]
         An array of axis objects.
 
     Raises
