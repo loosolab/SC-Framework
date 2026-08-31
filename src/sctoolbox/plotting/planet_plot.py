@@ -46,7 +46,7 @@ def _calculate_dot_sizes(values: pd.Series | np.ndarray,
                          max_value: int | float,
                          min_dot_size: int,
                          max_dot_size: int,
-                         use_log_scale: bool = False) -> np.ndarray:
+                         use_log_scale: bool = False) -> pd.Series | np.ndarray:
     """
     Calculate the sizes of dots for plotting.
 
@@ -67,7 +67,7 @@ def _calculate_dot_sizes(values: pd.Series | np.ndarray,
 
     Returns
     -------
-    sizes : np.ndarray
+    sizes : pd.Series | np.ndarray
         Returns a series or an array containing the sizes for the dots depending upon the input type for values.
 
     """
