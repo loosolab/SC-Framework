@@ -13,7 +13,7 @@ import pandas as pd
 
 from beartype.typing import Optional, Tuple, Any, Iterable, Union, Literal, Sequence
 from beartype import beartype
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import ArrayLike
 
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
@@ -395,7 +395,7 @@ def validate_regions(adata: sc.AnnData,
 
 @beartype
 def var_index_to_column(adata: sc.AnnData,
-                        coordinate_columns: NDArray[str] | Sequence[str] | pd.core.indexes.base.Index = ["chr", "start", "end"]) -> None:
+                        coordinate_columns: np.ndarray | Sequence[str] | pd.core.indexes.base.Index = ["chr", "start", "end"]) -> None:
     """
     Format ``adata.var`` index and add peak location columns (chr, start, end) if needed.
 
@@ -414,7 +414,7 @@ def var_index_to_column(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object containing features to annotate.
-    coordinate_columns : NDArray[str] | Sequence[str] | pd.core.indexes.base.Index, default ['chr', 'start', 'end']
+    coordinate_columns : np.ndarray | Sequence[str] | pd.core.indexes.base.Index, default ['chr', 'start', 'end']
         Sequence of length 3 specifying column names in ``adata.var`` for
         chromosome, start, and end coordinates.
 
