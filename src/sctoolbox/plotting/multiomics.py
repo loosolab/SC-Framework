@@ -16,7 +16,6 @@ import plotly.graph_objects as go
 
 from beartype import beartype
 from beartype.typing import Optional, Tuple, List
-from numpy.typing import NDArray
 
 from sctoolbox.plotting.general import _save_figure, plot_heatmap
 from sctoolbox import settings
@@ -52,7 +51,7 @@ def visualize_cluster_comparison(mdata: mu.MuData,  # noqa: C901
                                  embedding: str = "X_umap",
                                  save: Optional[str] = None,
                                  title: str = "Cluster comparison",
-                                 title_size: int = 16) -> Tuple[matplotlib.figure.Figure, NDArray[Axes]]:
+                                 title_size: int = 16) -> Tuple[matplotlib.figure.Figure, np.ndarray[tuple[int, ...], np.dtype[Axes]]]:
     """
     Create multiple UMAP plots.
 
@@ -85,7 +84,7 @@ def visualize_cluster_comparison(mdata: mu.MuData,  # noqa: C901
 
     Returns
     -------
-    Tuple[matplotlib.figure.Figure, NDArray[Axes]]
+    Tuple[matplotlib.figure.Figure, np.ndarray[tuple[int, ...], np.dtype[Axes]]]
         Figure object and array of axes objects containing the plots.
 
     Raises
@@ -189,11 +188,11 @@ def visualize_cluster_comparison(mdata: mu.MuData,  # noqa: C901
 
 @beartype
 def compare_cluster_heatmap(mdata: mu.MuData,
-                            dfs_heatmaps: NDArray[pd.DataFrame],
+                            dfs_heatmaps: np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]],
                             save: Optional[str] = None,
                             title_heatmaps: str = "Cluster comparison heatmap",
                             title_size: int = 16,
-                            cmap: str = "Greys") -> Tuple[matplotlib.figure.Figure, NDArray[Axes]]:
+                            cmap: str = "Greys") -> Tuple[matplotlib.figure.Figure, np.ndarray[tuple[int, ...], np.dtype[Axes]]]:
     """
     Plot one heatmap for each modality to show percentage overlap of cells per cluster.
 
@@ -201,7 +200,7 @@ def compare_cluster_heatmap(mdata: mu.MuData,
     ----------
     mdata : mu.MuData
         Muon object containing both modalities with clustering information.
-    dfs_heatmaps : NDArray[pd.DataFrame]
+    dfs_heatmaps : np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]]
         Array of cluster comparison scores for each modality.
     save: Optional[str], default None
         If given, save the figure to this path.
@@ -214,7 +213,7 @@ def compare_cluster_heatmap(mdata: mu.MuData,
 
     Returns
     -------
-    Tuple[matplotlib.figure.Figure, NDArray[Axes]]
+    Tuple[matplotlib.figure.Figure, np.ndarray[tuple[int, ...], np.dtype[Axes]]]
         Figure and axes of the heatmap plots showing best matches for both modalities
         and the combined match score.
 
@@ -339,7 +338,7 @@ def visualize_modality_grid(mdata: mu.MuData,
                             title: str = "",
                             title_size: int = 16,
                             save: Optional[str] = None
-                            ) -> Tuple[matplotlib.figure.Figure, NDArray[Axes]]:
+                            ) -> Tuple[matplotlib.figure.Figure, np.ndarray[tuple[int, ...], np.dtype[Axes]]]:
     """
     Plot grid umaps highlighting best fitting cluster pair.
 
@@ -367,7 +366,7 @@ def visualize_modality_grid(mdata: mu.MuData,
 
     Returns
     -------
-    Tuple[matplotlib.figure.Figure, NDArray[Axes]]
+    Tuple[matplotlib.figure.Figure, np.ndarray[tuple[int, ...], np.dtype[Axes]]]
         Figure and axes of the UMAP plots.
 
     Raises

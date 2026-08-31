@@ -9,7 +9,6 @@ from scipy.stats import zscore
 
 from beartype import beartype
 from beartype.typing import Literal, Optional, Tuple, List, Iterable
-from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
 from sctoolbox.utils.general import remove_suffix
@@ -490,7 +489,9 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
 
 def compare_clusters(mdata: mu.MuData,
                      clusters_mod1: str,
-                     clusters_mod2: str,) -> Tuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]:
+                     clusters_mod2: str,) -> Tuple[np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]],
+                                                   np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]],
+                                                   np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]]]:
     """
     Calculate comparison matrices of clusters between modalities.
 
@@ -510,7 +511,7 @@ def compare_clusters(mdata: mu.MuData,
 
     Returns
     -------
-    Tuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]
+    Tuple[np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]], np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]], np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]]]
         Tuple of comparison matrices
 
     Raises
