@@ -24,7 +24,7 @@ def named_var_adata(adata_atac):
     adata = adata_atac.copy()
     adata.var['coordinate_col'] = ('prefix-' + adata.var['chr'].astype(str)
                                    + ':' + adata.var['start'].astype(str)
-                                   + '-' + adata.var['stop'].astype(str))
+                                   + '-' + adata.var['end'].astype(str))
     adata.var.index = [str(i) for i in range(adata.n_vars)]
     return adata
 

@@ -228,7 +228,7 @@ def test_sort_bed(unsorted_fragments, tmp_path):
 #     # no Ensembl IDs in output column
 #     assert not any(adata2.var[mixed_name].str.startswith("ENS"))
 
-@pytest.mark.parametrize("var_map", ({}, {"Chromosome": "chr", "Start": "start", "End": "stop"}))
+@pytest.mark.parametrize("var_map", ({}, {"Chromosome": "chr", "Start": "start", "End": "end"}))
 def test_peaks_to_bins(adata_atac, var_map):
     """Test peaks_to_bins."""
     bin_size = 5000

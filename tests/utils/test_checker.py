@@ -128,7 +128,7 @@ def test_var_column_to_index_coordinate_cols(adata_atac):
     adata.var = adata.var.reset_index(drop=True)
 
     # test if the function formats the var index correctly from the coordinate columns
-    ch.var_column_to_index(adata, coordinate_cols=['chr', 'start', 'stop'])
+    ch.var_column_to_index(adata, coordinate_cols=['chr', 'start', 'end'])
 
     # check if the first var index is in the correct format
     assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))
@@ -178,8 +178,8 @@ def test_normalize_coordinate_columns(coordinate_columns, expected):
         assert ch._normalize_coordinate_columns(coordinate_columns) == expected
 
 
-@pytest.mark.parametrize("coordinate_columns, expected", [(['chr', 'start', 'stop'], True),  # expects var tables to be unchanged
-                                                          (['chr', 'stop', 'start'], False)])  # expects a valueerror due to format of columns
+@pytest.mark.parametrize("coordinate_columns, expected", [(['chr', 'start', 'end'], True),  # expects var tables to be unchanged
+                                                          (['chr', 'end', 'start'], False)])  # expects a valueerror due to format of columns
 def test_validate_regions(adata_atac, coordinate_columns, expected):
     """Test if validate_regions works correctly."""
 
@@ -198,6 +198,12 @@ def test_validate_regions_normalization(adata_atac, n_names, expected):
 
     else:
         assert ch.validate_regions(adata_atac, coordinate_columns=coordinate_columns) is expected
+
+
+def test_validate_regions_default(adata_atac):
+    """Test that validate_regions defaults to the coordinate columns ['chr', 'start', 'end']."""
+
+    assert ch.validate_regions(adata_atac) is True
 
 
 def test_validate_regions_error(adata_atac, adata_atac_invalid, adata_atac_emptyvar):
@@ -219,7 +225,7 @@ def test_validate_regions_error(adata_atac, adata_atac_invalid, adata_atac_empty
     assert ch.validate_regions(adata_atac, tuple(adata_atac.var.columns[:3]), error=True) is True
 
 
-def test_validate_regions_verbose(adata_atac_invalid, caplog):
+def test_validate_regions_verbose(adata_atac_invalid, caplog, add_logger_handler):
     """Test that verbose=False silences the invalid region message."""
     coordinate_columns = list(adata_atac_invalid.var.columns[:3])
 
@@ -229,6 +235,18 @@ def test_validate_regions_verbose(adata_atac_invalid, caplog):
 
         assert ch.validate_regions(adata_atac_invalid, coordinate_columns) is False
         assert "is not a valid genome region" in caplog.text
+
+
+# TODO(0.18.0): remove together with the 'stop' acceptance in sctoolbox.utils.checker.validate_regions
+def test_validate_regions_verbose_deprecated(adata_atac_stop, caplog, add_logger_handler):
+    """Test that verbose=False silences the 'stop' deprecation warning."""
+
+    with caplog.at_level(logging.INFO), add_logger_handler(ch.logger, caplog.handler):
+        assert ch.validate_regions(adata_atac_stop, ["chr", "start", "stop"], verbose=False) is True
+        assert "deprecated" not in caplog.text
+
+        assert ch.validate_regions(adata_atac_stop, ["chr", "start", "stop"]) is True
+        assert len([msg for _, level, msg in caplog.record_tuples if level == logging.WARNING]) == 1
 
 
 def test_get_index_type():
@@ -241,13 +259,13 @@ def test_get_index_type():
 
 def test_check_columns(adata_atac, adata_atac_invalid):
     """Test if check_columns works correctly."""
-    assert ch.check_columns(adata_atac.var, ['chr', 'start', 'stop'], error=False)
+    assert ch.check_columns(adata_atac.var, ['chr', 'start', 'end'], error=False)
     assert ch.check_columns(adata_atac.var, 'chr', error=False)
 
-    assert ch.validate_regions(adata_atac_invalid, ['chr', 'start', 'stop']) is False
+    assert ch.validate_regions(adata_atac_invalid, ['chr', 'start', 'end']) is False
 
     with pytest.raises(KeyError):
-        ch.check_columns(adata_atac.var, ['chr', 'start', 'stop', 'name'], error=True)
+        ch.check_columns(adata_atac.var, ['chr', 'start', 'end', 'name'], error=True)
 
     with pytest.raises(KeyError):
         ch.check_columns(adata_atac.var, 'name', error=True)
@@ -268,10 +286,10 @@ def test_var_index_to_column(fixture, expected, request):
 
     if isinstance(expected, type):
         with pytest.raises(expected):
-            ch.var_index_to_column(adata_cp, coordinate_columns=["chr", "start", "stop"])
+            ch.var_index_to_column(adata_cp, coordinate_columns=["chr", "start", "end"])
 
     else:
-        ch.var_index_to_column(adata_cp, coordinate_columns=["chr", "start", "stop"])
+        ch.var_index_to_column(adata_cp, coordinate_columns=["chr", "start", "end"])
 
         assert np.array_equal(adata_orig.var.values,
                               adata_cp.var.values) == expected  # check if the original adata was changed or not
@@ -302,3 +320,29 @@ def test_var_index_to_column_unchanged(adata_atac):
 
     assert list(adata_atac.var.columns) == list(var_before.columns)
     assert np.array_equal(var_before.values, adata_atac.var.values)
+
+
+def test_var_index_to_column_no_deprecation(adata_atac, caplog, add_logger_handler):
+    """Test that the 'end' coordinate column does not emit a deprecation warning."""
+
+    with caplog.at_level(logging.INFO), add_logger_handler(ch.logger, caplog.handler):
+        ch.var_index_to_column(adata_atac)
+
+    assert list(adata_atac.var.columns) == ['chr', 'start', 'end']
+    assert not [msg for _, level, msg in caplog.record_tuples if level == logging.WARNING]
+
+
+# TODO(0.18.0): remove together with the 'stop' acceptance in sctoolbox.utils.checker.validate_regions
+@pytest.mark.parametrize("coordinate_columns, expected", [(["chr", "start", "stop"], ['chr', 'start', 'stop']),  # expects the deprecated columns to be honoured
+                                                          (["chr", "start", "end"], ['chr', 'start', 'end', 'stop'])])  # expects the deprecated column to be kept alongside
+def test_var_index_to_column_deprecated(adata_atac_stop, coordinate_columns, expected, caplog, add_logger_handler):
+    """Test that the deprecated 'stop' coordinate column still works and warns exactly once."""
+
+    with caplog.at_level(logging.INFO), add_logger_handler(ch.logger, caplog.handler):
+        ch.var_index_to_column(adata_atac_stop, coordinate_columns=coordinate_columns)
+
+    assert list(adata_atac_stop.var.columns) == expected
+
+    warnings = [msg for _, level, msg in caplog.record_tuples if level == logging.WARNING]
+    assert len(warnings) == 1
+    assert "stop" in warnings[0] and "end" in warnings[0] and "0.18.0" in warnings[0]

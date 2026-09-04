@@ -1,6 +1,7 @@
 """Test functions related to peak annotation required by scATAC-seq."""
 
 import argparse
+import logging
 import pytest
 import sctoolbox.tools.peak_annotation as anno
 import scanpy as sc
@@ -19,7 +20,7 @@ uropa_config = {"queries": [{"distance": [10000, 1000]}]}
 
 @pytest.mark.parametrize("inplace, threads, config, best, coordinate_cols",
                          [(True, 1, None, True, None),
-                          (False, 2, uropa_config, False, ["chr", "start", "stop"])])
+                          (False, 2, uropa_config, False, ["chr", "start", "end"])])
 def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_cols):
     """Test annotate_adata success."""
 
@@ -35,6 +36,23 @@ def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_c
     else:
         assert isinstance(out, sc.AnnData)
         assert 'gene_id' in out.var.columns
+
+
+# TODO(0.18.0): remove together with the 'stop' acceptance in sctoolbox.utils.checker.validate_regions
+def test_annotate_adata_deprecated_coordinates(adata_atac_stop, caplog, add_logger_handler):
+    """Test annotate_adata success with the deprecated 'stop' coordinate column."""
+
+    gtf_path = os.path.join(ATAC_DATA_DIR, 'chr4_mm10_genes.gtf')
+
+    with caplog.at_level(logging.INFO), add_logger_handler(anno.logger, caplog.handler):
+        anno.annotate_adata(adata_atac_stop, gtf=gtf_path, coordinate_cols=["chr", "start", "stop"])
+
+    assert 'gene_id' in adata_atac_stop.var.columns
+
+    # scoped to the deprecation message, as uropa emits warnings of its own
+    warnings = [msg for _, level, msg in caplog.record_tuples if level == logging.WARNING and "deprecated" in msg]
+    assert len(warnings) == 1
+    assert "stop" in warnings[0] and "end" in warnings[0] and "0.18.0" in warnings[0]
 
 
 @pytest.mark.parametrize("config", [None, uropa_config])

@@ -3,6 +3,7 @@
 import os
 import re
 import anndata
+import logging
 import numpy as np
 import pytest
 import sctoolbox.utils.assemblers as assemblers
@@ -105,12 +106,12 @@ def test_from_h5ad(files, request):
 
 
 @pytest.mark.parametrize("fixture, expected, coordinate_cols",
-                         [("adata_atac", True, ["chr", "start", "stop"]),  # expects var tables to be unchanged
-                          ("adata_atac_emptyvar", KeyError, ["chr", "start", "stop"]),
+                         [("adata_atac", True, ["chr", "start", "end"]),  # expects var tables to be unchanged
+                          ("adata_atac_emptyvar", KeyError, ["chr", "start", "end"]),
                           # expects var tables to be changed
-                          ("adata", KeyError, ["chr", "start", "stop"]),
+                          ("adata", KeyError, ["chr", "start", "end"]),
                           # expects a valueerror due to missing columns
-                          ("adata_atac_invalid", False, ["chr", "start", "stop"]),
+                          ("adata_atac_invalid", False, ["chr", "start", "end"]),
                           ("named_var_adata", True, 'coordinate_col')])  # expects coordinate_col to be parsed into a valid chr:start-stop var index
 def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
     """Test prepare_atac_anndata success."""
@@ -118,7 +119,7 @@ def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
     adata_orig = request.getfixturevalue(fixture)  # fix for using fixtures in parametrize
     adata_cp = adata_orig.copy()  # make a copy to avoid changing the fixture
 
-    expected_coordinates = ['chr', 'start', 'stop']
+    expected_coordinates = ['chr', 'start', 'end']
     index_pattern = r"^(chr[0-9XYM]+)[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+$"
 
     if isinstance(expected, type):
@@ -127,11 +128,23 @@ def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
 
     else:
         assemblers.prepare_atac_anndata(adata_cp, coordinate_cols=coordinate_cols)
-        # check for the existence of the coordinate columns ['chr','start','stop'] in the var table
+        # check for the existence of the coordinate columns ['chr','start','end'] in the var table
         assert all(item in adata_cp.var.columns for item in expected_coordinates)
 
         # check if the first var index is in the correct format
         assert bool(re.fullmatch(index_pattern, adata_cp.var.index[0])) is True
+
+
+def test_prepare_atac_anndata_default_coordinates(adata_atac, caplog, add_logger_handler):
+    """Test that prepare_atac_anndata leaves valid default coordinate columns untouched."""
+
+    adata = adata_atac.copy()
+
+    with caplog.at_level(logging.INFO), add_logger_handler(assemblers.logger, caplog.handler):
+        assemblers.prepare_atac_anndata(adata, coordinate_cols=None)
+
+    assert list(adata.var.columns) == ['chr', 'start', 'end']
+    assert not [msg for _, level, msg in caplog.record_tuples if level == logging.WARNING]
 
 
 def test_from_single_starsolo():
