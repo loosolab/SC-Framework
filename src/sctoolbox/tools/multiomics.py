@@ -281,9 +281,9 @@ def join_modalities(adata_list: List[sc.AnnData],
 
     Returns
     -------
-    mudata :
-        Muon mudata object containnig both modalities. The obs columns of the
-        modalities are propagated to mdata.obs as `<modality>:<column>`.
+    mu.MuData
+        Muon mudata object containing both modalities. The obs columns of the
+        modalities are propagated to MuData.obs as `<modality>:<column>`.
 
     Raises
     ------
@@ -436,7 +436,7 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
 
     Returns
     -------
-    TTuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
+    Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
         df_final, df_heatmap, df_sankey
         As described above
 
