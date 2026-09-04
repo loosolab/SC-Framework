@@ -131,7 +131,7 @@ def annotate_adata(adata: sc.AnnData,  # noqa: C901
         utils.checker.check_columns(adata.var, coordinate_cols, name="coordinate_cols")  # Check that coordinate_cols are in adata.var)
 
     # Test the coordinate columns
-    utils.checker.var_index_to_column(adata, coordinate_cols)  # will raise an error if not valid or try to convert from index
+    utils.checker.validate_regions(adata, coordinate_cols, error=True)  # raises if the coordinate columns are not valid genome regions
 
     # Convert regions to dict for uropa
     idx2name = {i: name for i, name in enumerate(regions.index)}
