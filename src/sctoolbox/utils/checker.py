@@ -384,7 +384,9 @@ def _normalize_coordinate_columns(coordinate_columns: np.ndarray | Sequence[str]
 
 @beartype
 def validate_regions(adata: sc.AnnData,
-                     coordinate_columns: Iterable[str]) -> bool:
+                     coordinate_columns: np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None = ["chr", "start", "end"],
+                     error: bool = False,
+                     verbose: bool = True) -> bool:
     """
     Check if the regions in adata.var are valid.
 
@@ -394,33 +396,54 @@ def validate_regions(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object containing the regions to be checked.
-    coordinate_columns : Iterable[str]
-        List of length 3 for column names in adata.var containing chr, start, end coordinates (in this order).
+    coordinate_columns : np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None, default ['chr', 'start', 'end']
+        Sequence of length 3 for column names in adata.var containing chr, start, end coordinates (in this order).
+        None or a single string falls back to the default names ['chr', 'start', 'end'].
+    error : bool, default False
+        If True, raise instead of returning False. A KeyError (from `check_columns`) is raised if the columns
+        are absent from adata.var, a ValueError if they are present but do not hold valid regions.
+    verbose : bool, default True
+        If True, emit log output. Set to False when re-checking already reported regions.
 
     Returns
     -------
     bool
         True if all regions are valid.
+
+    Raises
+    ------
+    ValueError
+        If the coordinate columns do not contain valid genome regions and error is set to True.
     """
+
+    coordinate_columns = _normalize_coordinate_columns(coordinate_columns)
 
     # Test whether the three columns are in the right format
     chr, start, end = coordinate_columns
 
     valid = False
-    # Test if coordinate columns are in adata.var
-    if utils.checker.check_columns(adata.var, coordinate_columns, name="adata.var", error=False):
+    # Test if coordinate columns are in adata.var - raises KeyError when error=True
+    if utils.checker.check_columns(adata.var, coordinate_columns, name="adata.var", error=error) is False:
+        return False
 
-        # Test whether the three columns are in the right format
-        for _, line in adata.var.to_dict(orient="index").items():
-            valid = False
+    # Test whether the three columns are in the right format
+    for _, line in adata.var.to_dict(orient="index").items():
+        valid = False
 
-            if isinstance(line[chr], str) and isinstance(line[start], int) and isinstance(line[end], int):
-                if line[start] <= line[end]:  # start must be smaller than end
-                    valid = True  # if all tests passed, the line is valid
+        if isinstance(line[chr], str) and isinstance(line[start], int) and isinstance(line[end], int):
+            if line[start] <= line[end]:  # start must be smaller than end
+                valid = True  # if all tests passed, the line is valid
 
-            if valid is False:
+        if valid is False:
+            if verbose:
                 logger.info("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
-                return valid
+            break
+
+    if not valid and error:
+        raise ValueError(f"The coordinate columns {coordinate_columns} in adata.var do not contain valid genome "
+                         "regions. Expected chromosome (str), start (int) and end (int) with start <= end. "
+                         "Fix the columns, or rebuild them from adata.var.index with "
+                         "sctoolbox.utils.checker.var_index_to_column(adata).")
 
     return valid
 
