@@ -472,7 +472,7 @@ def umap_parameter_sweep(mdata: mu.MuData,
                          min_dist_range: Tuple[float, float, float],
                          spread_range: Tuple[float, float, float],
                          n_cols: int = 3
-                         ) -> Tuple[matplotlib.figure.Figure, np.ndarray]:
+                         ) -> Tuple[matplotlib.figure.Figure, np.ndarray[tuple[int, ...], np.dtype[Axes]]]:
     """
     Iterate over a range of UMAP parameters and plot the results in a grid.
 
@@ -490,7 +490,7 @@ def umap_parameter_sweep(mdata: mu.MuData,
 
     Returns
     -------
-    Tuple[matplotlib.figure.Figure, np.ndarray]
+    Tuple[matplotlib.figure.Figure, np.ndarray[tuple[int, ...], np.dtype[Axes]]]
         Figure and axes of the UMAP plots.
     """
     # Generate ranges from tuples

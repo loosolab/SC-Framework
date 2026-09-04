@@ -517,7 +517,10 @@ def compare_clusters(mdata: mu.MuData,
     Returns
     -------
     Tuple[np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]], np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]], np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]]]
-        Tuple of comparison matrices
+        Tuple of comparison matrices: the two heatmap frames, the modality frames and the two sankey frames.
+        The modality array holds `[df, df, Styler, df]` - elements 0 and 1 are the per-modality overlap
+        frames, element 2 is the mean percent `Styler` returned by `mean_percent_data_frame` and element 3
+        is a copy of the first sankey frame.
 
     Raises
     ------
