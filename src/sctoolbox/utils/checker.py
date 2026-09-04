@@ -166,7 +166,7 @@ def var_column_to_index(adata: sc.AnnData,  # noqa: C901
     r"""
     Format adata.var index from a specified column or multiple coordinate columns.
 
-    This formats the index of adata.var according to the pattern ["chr", "start", "stop"].
+    This formats the index of adata.var according to the pattern ["chr", "start", "end"].
     The adata is changed inplace.
 
     Parameters
@@ -417,6 +417,17 @@ def validate_regions(adata: sc.AnnData,
     """
 
     coordinate_columns = _normalize_coordinate_columns(coordinate_columns)
+
+    # TODO(0.18.0): remove the 'stop' acceptance. To delete at 0.18.0: this warning and
+    # its `if`; the `verbose=False` on the post-insert re-validation in
+    # `var_index_to_column` (checker.py:540) if nothing else needs it; the
+    # `adata_atac_stop` fixture in tests/conftest.py; and the tests built on it (the
+    # grace-path cases in tests/utils/test_checker.py and
+    # tests/tools/test_peak_annotation.py).
+    # 'stop' is deprecated in favour of the canonical 'end' (GFF/BED)
+    if verbose and ('stop' in coordinate_columns or 'stop' in adata.var.columns):
+        logger.warning("The adata.var coordinate column name 'stop' is deprecated and will be "
+                       "removed in 0.18.0. Please use 'end' instead.")
 
     # Test whether the three columns are in the right format
     chr, start, end = coordinate_columns
