@@ -450,7 +450,7 @@ def validate_regions(adata: sc.AnnData,
 
 @beartype
 def var_index_to_column(adata: sc.AnnData,
-                        coordinate_columns: np.ndarray | Sequence[str] | pd.core.indexes.base.Index = ["chr", "start", "end"]) -> None:
+                        coordinate_columns: np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None = ["chr", "start", "end"]) -> None:
     """
     Format ``adata.var`` index and add peak location columns (chr, start, end) if needed.
 
@@ -469,9 +469,10 @@ def var_index_to_column(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object containing features to annotate.
-    coordinate_columns : np.ndarray | Sequence[str] | pd.core.indexes.base.Index, default ['chr', 'start', 'end']
+    coordinate_columns : np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None, default ['chr', 'start', 'end']
         Sequence of length 3 specifying column names in ``adata.var`` for
-        chromosome, start, and end coordinates.
+        chromosome, start, and end coordinates. None or a single string falls
+        back to the default names ['chr', 'start', 'end'].
 
     Raises
     ------
@@ -485,11 +486,10 @@ def var_index_to_column(adata: sc.AnnData,
 
     # Test whether the three columns are in the right format
     format_index = True
-    if not isinstance(coordinate_columns, list):
-        coordinate_columns = ['chr', 'start', 'end']
+    fallback = coordinate_columns is None or isinstance(coordinate_columns, str)  # mirrors _normalize_coordinate_columns
+    coordinate_columns = _normalize_coordinate_columns(coordinate_columns)
+    if fallback:
         logger.info("No column names supplied falling back to default names ['chr', 'start', 'end']")
-    elif isinstance(coordinate_columns, list) and len(coordinate_columns) != 3:
-        raise ValueError("The coordinate_columns must be a list of length 3 containing the column names for chr, start, end.")
     else:
         logger.info(f"The coordinate columns are: {coordinate_columns}")
 
@@ -526,7 +526,7 @@ def var_index_to_column(adata: sc.AnnData,
         adata.var.insert(0, coordinate_columns[0], peak_chr_list)
 
         # Check whether the newly added columns are in the right format
-        if validate_regions(adata, coordinate_columns):
+        if validate_regions(adata, coordinate_columns, verbose=False):
             logger.info('The newly added coordinate columns are in the correct format.')
 
 
