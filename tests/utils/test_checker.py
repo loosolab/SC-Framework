@@ -143,6 +143,29 @@ def test_var_column_to_index(adata_atac):
     assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))
 
 
+@pytest.mark.parametrize("container", [list, tuple, np.array, pd.Index])
+def test_normalize_coordinate_columns(container):
+    """Test that _normalize_coordinate_columns converts any container to a list of names."""
+    names = ("chr", "start", "end")
+
+    assert ch._normalize_coordinate_columns(container(names)) == list(names)
+
+
+@pytest.mark.parametrize("coordinate_columns", [None, "coordinate_col"])
+def test_normalize_coordinate_columns_fallback(coordinate_columns):
+    """Test that _normalize_coordinate_columns falls back to the defaults for None and a single string."""
+
+    assert ch._normalize_coordinate_columns(coordinate_columns) == ['chr', 'start', 'end']
+
+
+@pytest.mark.parametrize("names", [("chr", "start"), ("chr", "start", "end", "name")])
+def test_normalize_coordinate_columns_length(names):
+    """Test that _normalize_coordinate_columns rejects a coordinate_columns of the wrong length."""
+
+    with pytest.raises(ValueError, match="length 3"):
+        ch._normalize_coordinate_columns(names)
+
+
 @pytest.mark.parametrize("coordinate_columns, expected", [(['chr', 'start', 'stop'], True),  # expects var tables to be unchanged
                                                           (['chr', 'stop', 'start'], False)])  # expects a valueerror due to format of columns
 def test_validate_regions(adata_atac, coordinate_columns, expected):

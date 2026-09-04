@@ -351,6 +351,38 @@ def _get_index_type(entry: str, regex: str) -> Optional[str]:
 
 
 @beartype
+def _normalize_coordinate_columns(coordinate_columns: np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None) -> list[str]:
+    """
+    Convert a coordinate column specification into a list of three column names.
+
+    Parameters
+    ----------
+    coordinate_columns : np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None
+        Sequence of length 3 specifying column names for chromosome, start and end coordinates.
+        None or a single string falls back to the default names ['chr', 'start', 'end'].
+
+    Returns
+    -------
+    list[str]
+        List of length 3 containing the column names for chr, start, end.
+
+    Raises
+    ------
+    ValueError
+        If the given coordinate columns are not of length 3.
+    """
+
+    if coordinate_columns is None or isinstance(coordinate_columns, str):
+        return ['chr', 'start', 'end']
+
+    coordinate_columns = list(coordinate_columns)
+    if len(coordinate_columns) != 3:
+        raise ValueError("The coordinate_columns must be a list of length 3 containing the column names for chr, start, end.")
+
+    return coordinate_columns
+
+
+@beartype
 def validate_regions(adata: sc.AnnData,
                      coordinate_columns: Iterable[str]) -> bool:
     """
