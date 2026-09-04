@@ -3,9 +3,25 @@
 import pytest
 import sctoolbox.utils.checker as ch
 import numpy as np
+import pandas as pd
+import logging
 import os
 import re
 import sys
+from contextlib import contextmanager
+
+
+# --------------------------- HELPER -------------------------------- #
+
+
+@contextmanager
+def add_logger_handler(logger, handler):
+    """Temporarily add a handler to the given logger."""
+    logger.addHandler(handler)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
 
 
 # --------------------------- FIXTURES ------------------------------ #
@@ -143,27 +159,23 @@ def test_var_column_to_index(adata_atac):
     assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))
 
 
-@pytest.mark.parametrize("container", [list, tuple, np.array, pd.Index])
-def test_normalize_coordinate_columns(container):
-    """Test that _normalize_coordinate_columns converts any container to a list of names."""
-    names = ("chr", "start", "end")
+@pytest.mark.parametrize("coordinate_columns, expected", [(["chr", "start", "end"], ['chr', 'start', 'end']),  # expects any container to become a list
+                                                          (("chr", "start", "end"), ['chr', 'start', 'end']),
+                                                          (np.array(["chr", "start", "end"]), ['chr', 'start', 'end']),
+                                                          (pd.Index(["chr", "start", "end"]), ['chr', 'start', 'end']),
+                                                          (None, ['chr', 'start', 'end']),  # expects a fallback to the default names
+                                                          ("coordinate_col", ['chr', 'start', 'end']),  # a single string is not a three column spec
+                                                          (("chr", "start"), ValueError),  # expects a valueerror due to length
+                                                          (("chr", "start", "end", "name"), ValueError)])
+def test_normalize_coordinate_columns(coordinate_columns, expected):
+    """Test that _normalize_coordinate_columns converts any accepted input into three column names."""
 
-    assert ch._normalize_coordinate_columns(container(names)) == list(names)
+    if isinstance(expected, type):
+        with pytest.raises(expected, match="length 3"):
+            ch._normalize_coordinate_columns(coordinate_columns)
 
-
-@pytest.mark.parametrize("coordinate_columns", [None, "coordinate_col"])
-def test_normalize_coordinate_columns_fallback(coordinate_columns):
-    """Test that _normalize_coordinate_columns falls back to the defaults for None and a single string."""
-
-    assert ch._normalize_coordinate_columns(coordinate_columns) == ['chr', 'start', 'end']
-
-
-@pytest.mark.parametrize("names", [("chr", "start"), ("chr", "start", "end", "name")])
-def test_normalize_coordinate_columns_length(names):
-    """Test that _normalize_coordinate_columns rejects a coordinate_columns of the wrong length."""
-
-    with pytest.raises(ValueError, match="length 3"):
-        ch._normalize_coordinate_columns(names)
+    else:
+        assert ch._normalize_coordinate_columns(coordinate_columns) == expected
 
 
 @pytest.mark.parametrize("coordinate_columns, expected", [(['chr', 'start', 'stop'], True),  # expects var tables to be unchanged
@@ -172,6 +184,51 @@ def test_validate_regions(adata_atac, coordinate_columns, expected):
     """Test if validate_regions works correctly."""
 
     assert ch.validate_regions(adata_atac, coordinate_columns=coordinate_columns) == expected
+
+
+@pytest.mark.parametrize("n_names, expected", [(3, True),  # expects a non-list container to be honoured
+                                               (2, ValueError)])  # expects the length check to be delegated
+def test_validate_regions_normalization(adata_atac, n_names, expected):
+    """Test that validate_regions delegates coordinate_columns to _normalize_coordinate_columns."""
+    coordinate_columns = tuple(adata_atac.var.columns[:3])[:n_names]
+
+    if isinstance(expected, type):
+        with pytest.raises(expected, match="length 3"):
+            ch.validate_regions(adata_atac, coordinate_columns=coordinate_columns)
+
+    else:
+        assert ch.validate_regions(adata_atac, coordinate_columns=coordinate_columns) is expected
+
+
+def test_validate_regions_error(adata_atac, adata_atac_invalid, adata_atac_emptyvar):
+    """Test that validate_regions raises the matching error type per invalidity."""
+    coordinate_columns = list(adata_atac_invalid.var.columns[:3])
+
+    # the default is unchanged; malformed regions are reported as False
+    assert ch.validate_regions(adata_atac_invalid, coordinate_columns) is False
+
+    # malformed regions raise a ValueError
+    with pytest.raises(ValueError, match="do not contain valid genome regions"):
+        ch.validate_regions(adata_atac_invalid, coordinate_columns, error=True)
+
+    # columns absent from adata.var raise a KeyError
+    with pytest.raises(KeyError, match="are not found in adata.var"):
+        ch.validate_regions(adata_atac_emptyvar, error=True)
+
+    # a valid object must not raise
+    assert ch.validate_regions(adata_atac, tuple(adata_atac.var.columns[:3]), error=True) is True
+
+
+def test_validate_regions_verbose(adata_atac_invalid, caplog):
+    """Test that verbose=False silences the invalid region message."""
+    coordinate_columns = list(adata_atac_invalid.var.columns[:3])
+
+    with caplog.at_level(logging.INFO), add_logger_handler(ch.logger, caplog.handler):
+        assert ch.validate_regions(adata_atac_invalid, coordinate_columns, verbose=False) is False
+        assert "is not a valid genome region" not in caplog.text
+
+        assert ch.validate_regions(adata_atac_invalid, coordinate_columns) is False
+        assert "is not a valid genome region" in caplog.text
 
 
 def test_get_index_type():
@@ -218,3 +275,30 @@ def test_var_index_to_column(fixture, expected, request):
 
         assert np.array_equal(adata_orig.var.values,
                               adata_cp.var.values) == expected  # check if the original adata was changed or not
+
+
+@pytest.mark.parametrize("coordinate_columns, expected", [(("seqname", "begin", "finish"), ['seqname', 'begin', 'finish']),  # expects a non-list container to be honoured
+                                                          (None, ['chr', 'start', 'end']),  # expects a fallback to the default names
+                                                          (("chr", "start"), ValueError)])  # expects the length check to be delegated
+def test_var_index_to_column_normalization(adata_atac_emptyvar, coordinate_columns, expected):
+    """Test that var_index_to_column delegates coordinate_columns to _normalize_coordinate_columns."""
+
+    if isinstance(expected, type):
+        with pytest.raises(expected, match="length 3"):
+            ch.var_index_to_column(adata_atac_emptyvar, coordinate_columns=coordinate_columns)
+
+    else:
+        ch.var_index_to_column(adata_atac_emptyvar, coordinate_columns=coordinate_columns)
+
+        assert list(adata_atac_emptyvar.var.columns) == expected
+
+
+def test_var_index_to_column_unchanged(adata_atac):
+    """Test that var_index_to_column leaves valid coordinate columns untouched."""
+    coordinate_columns = tuple(adata_atac.var.columns[:3])
+    var_before = adata_atac.var.copy()
+
+    ch.var_index_to_column(adata_atac, coordinate_columns=coordinate_columns)
+
+    assert list(adata_atac.var.columns) == list(var_before.columns)
+    assert np.array_equal(var_before.values, adata_atac.var.values)
