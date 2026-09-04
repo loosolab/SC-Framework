@@ -282,7 +282,8 @@ def join_modalities(adata_list: List[sc.AnnData],
     Returns
     -------
     mudata :
-        Muon mudata object containnig both modalities.
+        Muon mudata object containnig both modalities. The obs columns of the
+        modalities are propagated to mdata.obs as `<modality>:<column>`.
 
     Raises
     ------
@@ -309,6 +310,10 @@ def join_modalities(adata_list: List[sc.AnnData],
 
     # Create mudata object from anndata objects for modality 1 and modality 2
     mdata = mu.MuData(dict(zip(modality_list, adata_list)))
+
+    # Propagate the modality obs columns to mdata.obs. Since muon 0.1.9 this is no
+    # longer done implicitly when the MuData is built and has to be requested.
+    mdata.pull_obs()
 
     return mdata
 
