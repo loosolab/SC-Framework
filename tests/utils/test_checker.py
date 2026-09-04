@@ -8,20 +8,6 @@ import logging
 import os
 import re
 import sys
-from contextlib import contextmanager
-
-
-# --------------------------- HELPER -------------------------------- #
-
-
-@contextmanager
-def add_logger_handler(logger, handler):
-    """Temporarily add a handler to the given logger."""
-    logger.addHandler(handler)
-    try:
-        yield
-    finally:
-        logger.removeHandler(handler)
 
 
 # --------------------------- FIXTURES ------------------------------ #
