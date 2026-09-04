@@ -57,6 +57,7 @@ def annotate_adata(adata: sc.AnnData,  # noqa: C901
     coordinate_cols : Optional[list[str]], default None
         A list of column names in the regions DataFrame that contain the chromosome, start and end coordinates.
         If None the first three columns are taken.
+        A ValueError is raised if the columns do not contain valid genome regions.
     temp_dir : str, default ''
         Path to a directory to store files. Is only used if input .gtf-file needs sorting.
     remove_temp : boolean, default True
@@ -71,6 +72,11 @@ def annotate_adata(adata: sc.AnnData,  # noqa: C901
     Optional[sc.AnnData]
         If inplace == True, the annotation is added to adata.var in place.
         Else, a copy of the adata object is returned with the annotations added.
+
+    Raises
+    ------
+    KeyError
+        If coordinate_cols is None and adata.var has fewer than three columns to infer the coordinates from.
 
     References
     ----------
@@ -126,6 +132,11 @@ def annotate_adata(adata: sc.AnnData,  # noqa: C901
 
     # Establish columns for coordinates
     if coordinate_cols is None:
+        if len(adata.var.columns) < 3:
+            raise KeyError("Cannot infer the coordinate columns: adata.var has fewer than three columns "
+                           f"({list(adata.var.columns)}). Please supply 'coordinate_cols', or add chromosome, "
+                           "start and end columns first, e.g. with "
+                           "sctoolbox.utils.checker.var_index_to_column(adata).")
         coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
     else:
         utils.checker.check_columns(adata.var, coordinate_cols, name="coordinate_cols")  # Check that coordinate_cols are in adata.var)

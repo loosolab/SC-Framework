@@ -38,6 +38,15 @@ def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_c
         assert 'gene_id' in out.var.columns
 
 
+def test_annotate_adata_missing_coordinates(adata_atac_emptyvar):
+    """Test annotate_adata failure for an adata.var without coordinate columns."""
+
+    gtf_path = os.path.join(ATAC_DATA_DIR, 'chr4_mm10_genes.gtf')
+
+    with pytest.raises(KeyError, match="fewer than three columns"):
+        anno.annotate_adata(adata_atac_emptyvar, gtf=gtf_path)
+
+
 # TODO(0.18.0): remove together with the 'stop' acceptance in sctoolbox.utils.checker.validate_regions
 def test_annotate_adata_deprecated_coordinates(adata_atac_stop, caplog, add_logger_handler):
     """Test annotate_adata success with the deprecated 'stop' coordinate column."""
