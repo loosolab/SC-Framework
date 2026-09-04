@@ -25,9 +25,10 @@
 - document the `dev` dependency group in `development.rst`
 - migrate to muon 0.1.9's explicit pull_obs for modality obs propagation and raise the muon floor
 - vendor liana's explode_complexes, which is private as of liana 1.10.0
-- add error and verbose parameters to validate_regions, which now owns the coordinate column normalisation
+- add error and verbose parameters to validate_regions, which now owns the coordinate column normalization
+- narrow validate_regions' coordinate_columns from Iterable[str] to np.ndarray | Sequence[str] | pd.Index | None
 - annotate_adata: validate the coordinate columns instead of repairing adata.var
-- rename the adata.var coordinate column stop to end; stop is accepted with a deprecation warning until 0.18.0 and leaves end alongside it
+- rename the adata.var coordinate column stop to end (deprecated, removed in 0.18.0); a pre-rename object gains end alongside its retained stop
 - annotate_adata: raise an explicit error when adata.var has fewer than three columns to infer coordinates from
 
 ## 0.15.1 (15-05-2026)

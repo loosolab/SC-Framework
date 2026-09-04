@@ -416,7 +416,7 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
 
     1. One that can be used to generate the heatmap for visualization.
     2. One for display of cluster comparison between modalities.
-    3. One that can be usedto generate the sankey diagram.
+    3. One that can be used to generate the sankey diagram.
     The second matrix shows per column:
         - Cluster name from modality one as index.
         - Number of cells total assigned to modality 1 cluster.
@@ -437,7 +437,7 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
     Returns
     -------
     Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
-        df_final, df_heatmap, df_sankey
+        df_heatmap, df_final, df_sankey
         As described above
 
     TODO Dataframes 1 and 3 are almost identical. Merge into one.
@@ -520,7 +520,7 @@ def compare_clusters(mdata: mu.MuData,
         Tuple of comparison matrices: the two heatmap frames, the modality frames and the two sankey frames.
         The modality array holds `[df, df, Styler, df]` - elements 0 and 1 are the per-modality overlap
         frames, element 2 is the mean percent `Styler` returned by `mean_percent_data_frame` and element 3
-        is a copy of the first sankey frame.
+        is the first sankey frame.
 
     Raises
     ------

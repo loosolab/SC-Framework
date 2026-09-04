@@ -30,22 +30,6 @@ def named_var_adata(adata_atac):
 
 
 @pytest.fixture
-def adata_atac_invalid(adata_atac):
-    """Create adata with invalid index.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with invalid index.
-    """
-    adata = adata_atac.copy()
-    adata.var.iloc[0, 1] = 500  # start
-    adata.var.iloc[0, 2] = 100  # end
-    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-stop index
-    return adata
-
-
-@pytest.fixture
 def na_dataframe():
     """Return DataFrame with columns of multiple types containing NA.
 

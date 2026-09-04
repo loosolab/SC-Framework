@@ -47,6 +47,15 @@ def test_annotate_adata_missing_coordinates(adata_atac_emptyvar):
         anno.annotate_adata(adata_atac_emptyvar, gtf=gtf_path)
 
 
+def test_annotate_adata_invalid_coordinates(adata_atac_invalid):
+    """Test annotate_adata failure for an adata.var with malformed coordinate columns."""
+
+    gtf_path = os.path.join(ATAC_DATA_DIR, 'chr4_mm10_genes.gtf')
+
+    with pytest.raises(ValueError, match="do not contain valid genome regions"):
+        anno.annotate_adata(adata_atac_invalid, gtf=gtf_path)
+
+
 # TODO(0.18.0): remove together with the 'stop' acceptance in sctoolbox.utils.checker.validate_regions
 def test_annotate_adata_deprecated_coordinates(adata_atac_stop, caplog, add_logger_handler):
     """Test annotate_adata success with the deprecated 'stop' coordinate column."""

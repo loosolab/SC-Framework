@@ -309,6 +309,22 @@ def adata_atac_emptyvar(adata_atac):
     return adata
 
 
+@pytest.fixture
+def adata_atac_invalid(adata_atac):
+    """Create adata with invalid index.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with invalid index.
+    """
+    adata = adata_atac.copy()
+    adata.var.iloc[0, 1] = 500  # start
+    adata.var.iloc[0, 2] = 100  # end
+    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-end index
+    return adata
+
+
 # TODO(0.18.0): remove together with the 'stop' acceptance in
 # sctoolbox.utils.checker.validate_regions, along with every test using this fixture
 @pytest.fixture

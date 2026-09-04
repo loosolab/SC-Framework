@@ -57,7 +57,8 @@ def annotate_adata(adata: sc.AnnData,  # noqa: C901
     coordinate_cols : Optional[list[str]], default None
         A list of column names in the regions DataFrame that contain the chromosome, start and end coordinates.
         If None the first three columns are taken.
-        A ValueError is raised if the columns do not contain valid genome regions.
+        A KeyError is raised if a given column is not in adata.var, a ValueError if the columns
+        do not contain valid genome regions.
     temp_dir : str, default ''
         Path to a directory to store files. Is only used if input .gtf-file needs sorting.
     remove_temp : boolean, default True

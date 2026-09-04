@@ -174,9 +174,10 @@ def test_validate_regions(adata_atac, coordinate_columns, expected):
 
 @pytest.mark.parametrize("n_names, expected", [(3, True),  # expects a non-list container to be honoured
                                                (2, ValueError)])  # expects the length check to be delegated
-def test_validate_regions_normalization(adata_atac, n_names, expected):
+@pytest.mark.parametrize("container", [tuple, np.array, pd.Index])
+def test_validate_regions_normalization(adata_atac, container, n_names, expected):
     """Test that validate_regions delegates coordinate_columns to _normalize_coordinate_columns."""
-    coordinate_columns = tuple(adata_atac.var.columns[:3])[:n_names]
+    coordinate_columns = container(list(adata_atac.var.columns[:3])[:n_names])
 
     if isinstance(expected, type):
         with pytest.raises(expected, match="length 3"):
@@ -281,20 +282,29 @@ def test_var_index_to_column(fixture, expected, request):
                               adata_cp.var.values) == expected  # check if the original adata was changed or not
 
 
-@pytest.mark.parametrize("coordinate_columns, expected", [(("seqname", "begin", "finish"), ['seqname', 'begin', 'finish']),  # expects a non-list container to be honoured
-                                                          (None, ['chr', 'start', 'end']),  # expects a fallback to the default names
-                                                          (("chr", "start"), ValueError)])  # expects the length check to be delegated
-def test_var_index_to_column_normalization(adata_atac_emptyvar, coordinate_columns, expected):
+@pytest.mark.parametrize("names, expected", [(("seqname", "begin", "finish"), ['seqname', 'begin', 'finish']),  # expects a non-list container to be honoured
+                                             (("chr", "start"), ValueError),  # expects the length check to be delegated
+                                             (("chr", "start", "end", "name"), ValueError)])
+@pytest.mark.parametrize("container", [tuple, np.array, pd.Index])
+def test_var_index_to_column_normalization(adata_atac_emptyvar, container, names, expected):
     """Test that var_index_to_column delegates coordinate_columns to _normalize_coordinate_columns."""
 
     if isinstance(expected, type):
         with pytest.raises(expected, match="length 3"):
-            ch.var_index_to_column(adata_atac_emptyvar, coordinate_columns=coordinate_columns)
+            ch.var_index_to_column(adata_atac_emptyvar, coordinate_columns=container(names))
 
     else:
-        ch.var_index_to_column(adata_atac_emptyvar, coordinate_columns=coordinate_columns)
+        ch.var_index_to_column(adata_atac_emptyvar, coordinate_columns=container(names))
 
         assert list(adata_atac_emptyvar.var.columns) == expected
+
+
+def test_var_index_to_column_none(adata_atac_emptyvar):
+    """Test that var_index_to_column falls back to the default names for None."""
+
+    ch.var_index_to_column(adata_atac_emptyvar, coordinate_columns=None)
+
+    assert list(adata_atac_emptyvar.var.columns) == ['chr', 'start', 'end']
 
 
 def test_var_index_to_column_unchanged(adata_atac):
@@ -310,11 +320,13 @@ def test_var_index_to_column_unchanged(adata_atac):
 
 def test_var_index_to_column_no_deprecation(adata_atac, caplog, add_logger_handler):
     """Test that the 'end' coordinate column does not emit a deprecation warning."""
+    var_before = adata_atac.var.copy()
 
     with caplog.at_level(logging.INFO), add_logger_handler(ch.logger, caplog.handler):
         ch.var_index_to_column(adata_atac)
 
     assert list(adata_atac.var.columns) == ['chr', 'start', 'end']
+    assert np.array_equal(var_before.values, adata_atac.var.values)  # the var table is not reformatted
     assert not [msg for _, level, msg in caplog.record_tuples if level == logging.WARNING]
 
 

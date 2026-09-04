@@ -139,11 +139,13 @@ def test_prepare_atac_anndata_default_coordinates(adata_atac, caplog, add_logger
     """Test that prepare_atac_anndata leaves valid default coordinate columns untouched."""
 
     adata = adata_atac.copy()
+    var_before = adata.var.copy()
 
     with caplog.at_level(logging.INFO), add_logger_handler(assemblers.logger, caplog.handler):
         assemblers.prepare_atac_anndata(adata, coordinate_cols=None)
 
     assert list(adata.var.columns) == ['chr', 'start', 'end']
+    assert np.array_equal(var_before.values, adata.var.values)  # the var table is not reformatted
     assert not [msg for _, level, msg in caplog.record_tuples if level == logging.WARNING]
 
 

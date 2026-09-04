@@ -51,6 +51,7 @@ def _explode_complexes(resource: pd.DataFrame,
     Splits the underscore separated subunits of a complex (e.g. 'ITGA4_ITGB1') into one row per subunit
     and keeps the original complex names in the added `<source>_complex` and `<target>_complex` columns.
     Vendored from LIANA, which no longer exposes this functionality publicly.
+    Copyright (c) the LIANA authors, BSD-3-Clause.
 
     Parameters
     ----------
