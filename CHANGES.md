@@ -22,6 +22,15 @@
 - fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
 - bump palantir floor to >=1.4.5 for pandas 3 / anndata 0.13 compatibility (!533)
 - save_h5ad: normalise uns '*_colors' to hex so Palantir results are writable (#470)
+- replace `numpy.typing.NDArray` type hints with the expanded `np.ndarray[shape, dtype]` generic to fix beartype PEP 484 errors under numpy 2.5 (#469)
+- document the `dev` dependency group in `development.rst`
+- migrate to muon 0.1.9's explicit pull_obs for modality obs propagation and raise the muon floor
+- vendor liana's explode_complexes, which is private as of liana 1.10.0
+- add error and verbose parameters to validate_regions, which now owns the coordinate column normalization
+- narrow validate_regions' coordinate_columns from Iterable[str] to np.ndarray | Sequence[str] | pd.Index | None
+- annotate_adata: validate the coordinate columns instead of repairing adata.var
+- rename the adata.var coordinate column stop to end (deprecated, removed in 0.18.0); a pre-rename object gains end alongside its retained stop
+- annotate_adata: raise an explicit error when adata.var has fewer than three columns to infer coordinates from
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict

@@ -5,7 +5,6 @@ import scanpy as sc
 import scipy
 import os
 import numpy as np
-from contextlib import contextmanager
 
 import sctoolbox.utils.adata as utils
 
@@ -36,6 +35,7 @@ def color_values(colors):
         The color values.
     """
     return list(colors.values()) if isinstance(colors, dict) else list(colors)
+
 
 # --------------------------- FIXTURES ------------------------------ #
 
@@ -91,7 +91,7 @@ def test_get_adata_subsets(adata):
 
 
 @pytest.mark.parametrize("raw", [True, False])
-def test_save_and_load_h5ad(adata, raw, caplog, tmp_path):
+def test_save_and_load_h5ad(adata, raw, caplog, tmp_path, add_logger_handler):
     """Test if h5ad file is saved correctly. Then test loading."""
     path = str(tmp_path / "test.h5ad")
 

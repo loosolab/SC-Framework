@@ -171,7 +171,7 @@ pilot = [
     'palantir>=1.4.5'
 ]
 multiome = [
-    'muon>=0.1.7',
+    'muon>=0.1.9',
     'mofapy2'
 ]
 # core and downstream are intended to install commonly used dependencies
@@ -266,8 +266,6 @@ filterwarnings = [
     "ignore::FutureWarning:pydeseq2.dds",
     # qnorm: pandas "incompatible dtype" FutureWarning in quantile_normalize
     "ignore::FutureWarning:qnorm.quantile_normalize",
-    # mudata: .update() pull_on_update behaviour-change FutureWarning
-    "ignore::FutureWarning:mudata._core.mudata",
     # muon: deprecated `__version__` access FutureWarning
     "ignore::FutureWarning:muon._core.preproc",
     # matplotlib: pyparsing parseString/enablePackrat PyparsingDeprecationWarning
