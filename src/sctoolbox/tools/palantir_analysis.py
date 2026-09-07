@@ -647,7 +647,7 @@ def plot_interactive_embedding_cell_ids(
     title : str, default="Interactive embedding (hover to see cell ID)"
         Title shown above the plot.
     renderer : str | None, default=None
-        Plotly renderer used only for this figure. If ``None``, Plotly uses the
+        Plotly renderer used only when ``show=True``. If ``None``, Plotly uses the
         currently configured default renderer.
     show : bool, default=True
         Whether to display the figure immediately.
@@ -669,14 +669,10 @@ def plot_interactive_embedding_cell_ids(
 
     embedding = np.asarray(adata.obsm[embedding_key])
 
-    if embedding.ndim != 2:
+    if embedding.ndim != 2 or embedding.shape[1] < 2:
         raise ValueError(
-            f"Embedding '{embedding_key}' must be a two-dimensional array."
-        )
-
-    if embedding.shape[1] < 2:
-        raise ValueError(
-            f"Embedding '{embedding_key}' must contain at least two dimensions."
+            f"Embedding '{embedding_key}' must be a 2D array with at least two "
+            "coordinate dimensions."
         )
 
     if embedding.shape[1] > 3:

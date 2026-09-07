@@ -800,7 +800,7 @@ def test_plot_interactive_embedding_cell_ids_rejects_one_dimension(simple_adata)
     """Embeddings with fewer than two dimensions should raise a ValueError."""
     simple_adata.obsm["X_1d"] = np.random.randn(simple_adata.n_obs, 1)
 
-    with pytest.raises(ValueError, match="at least two dimensions"):
+    with pytest.raises(ValueError, match="at least two coordinate dimensions"):
         pla.plot_interactive_embedding_cell_ids(
             simple_adata,
             embedding_key="X_1d",
