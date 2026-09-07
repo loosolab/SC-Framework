@@ -500,6 +500,125 @@ def remove_cells_by_label(
 
 @deco.log_anndata
 @beartype
+def select_early_cell(
+    adata: AnnData,
+    celltype: str,
+    celltype_column: str,
+    early_cell: str | None = None,
+    fallback_seed: int = 42,
+) -> str:
+    """Select or validate the early cell used for Palantir.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    celltype : str
+        Cell type used for automatic early-cell selection.
+    celltype_column : str
+        Column in ``adata.obs`` containing the cell-type labels.
+    early_cell : str | None, default=None
+        Manually selected early-cell ID. If ``None``, Palantir selects
+        the cell automatically.
+    fallback_seed : int, default=42
+        Seed used by Palantir for fallback early-cell selection.
+
+    Returns
+    -------
+    str
+        Selected early-cell ID.
+
+    Raises
+    ------
+    ValueError
+        If a manually provided early-cell ID is not found in ``adata.obs_names``.
+    """
+    if early_cell is None:
+        return palantir.utils.early_cell(
+            adata,
+            celltype=celltype,
+            celltype_column=celltype_column,
+            fallback_seed=fallback_seed,
+        )
+
+    if early_cell not in adata.obs_names:
+        raise ValueError(
+            f"Provided early_cell '{early_cell}' not found in adata.obs_names."
+        )
+
+    return early_cell
+
+
+@deco.log_anndata
+@beartype
+def plot_early_cell(
+    adata: AnnData,
+    early_cell: str,
+    embedding_key: str = "X_umap",
+    save: str | None = None,
+    report_save: str | None = None,
+    show: bool = True,
+) -> tuple[Figure, Any]:
+    """Highlight the selected Palantir early cell on an embedding.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    early_cell : str
+        Cell ID to highlight.
+    embedding_key : str, default="X_umap"
+        Key in ``adata.obsm`` containing the embedding.
+    save : str | None, default=None
+        Path and filename appended to ``settings.full_figure_prefix``.
+    report_save : str | None, default=None
+        Path and filename appended to ``settings.report_dir``.
+    show : bool, default=True
+        Whether to display the figure.
+
+    Returns
+    -------
+    tuple[Figure, Any]
+        Matplotlib figure and axis containing the highlighted early cell.
+
+    Raises
+    ------
+    ValueError
+        If ``early_cell`` or ``embedding_key`` is not present in ``adata``.
+    """
+    if early_cell not in adata.obs_names:
+        raise ValueError(f"Early cell '{early_cell}' not found in adata.obs_names.")
+
+    if embedding_key not in adata.obsm:
+        raise ValueError(f"Embedding '{embedding_key}' not found in adata.obsm.")
+
+    fig, ax = palantir.plot.highlight_cells_on_umap(
+        adata,
+        [early_cell],
+        embedding_basis=embedding_key,
+        figsize=(6, 6),
+        annotation_offset=0.03,
+        s=1,
+        s_highlighted=20,
+    )
+
+    ax.set_title(f"Early cell identification\nCell ID: {early_cell}")
+    fig.tight_layout()
+
+    if save is not None:
+        _save_figure(path=save)
+
+    if report_save is not None:
+        _save_figure(path=report_save, report=True)
+
+    if show:
+        plt.show()
+
+    return fig, ax
+
+
+@deco.log_anndata
+@beartype
 def plot_interactive_embedding_cell_ids(
     adata: AnnData,
     color_by: str | None = None,

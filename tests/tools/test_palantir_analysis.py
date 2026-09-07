@@ -627,6 +627,132 @@ def test_plot_branch_qc_distributions_missing_keys_returns_empty(branch_adata):
     assert len(axes) == 0
 
 
+# ------------------------- select_early_cell -------------------------#
+
+
+def test_select_early_cell_auto(monkeypatch, simple_adata):
+    """Automatic early-cell selection should use Palantir with the fallback seed."""
+    expected = simple_adata.obs_names[0]
+    captured = {}
+
+    def fake_early_cell(adata, celltype, celltype_column, fallback_seed):
+        captured["celltype"] = celltype
+        captured["celltype_column"] = celltype_column
+        captured["fallback_seed"] = fallback_seed
+        return expected
+
+    monkeypatch.setattr(
+        pla.palantir.utils,
+        "early_cell",
+        fake_early_cell,
+    )
+
+    result = pla.select_early_cell(
+        simple_adata,
+        celltype="TypeA",
+        celltype_column="celltype",
+        fallback_seed=42,
+    )
+
+    assert result == expected
+    assert captured["celltype"] == "TypeA"
+    assert captured["celltype_column"] == "celltype"
+    assert captured["fallback_seed"] == 42
+
+
+def test_select_early_cell_manual(simple_adata):
+    """A valid manually provided early cell should be returned unchanged."""
+    early_cell = simple_adata.obs_names[0]
+
+    result = pla.select_early_cell(
+        simple_adata,
+        celltype="TypeA",
+        celltype_column="celltype",
+        early_cell=early_cell,
+    )
+
+    assert result == early_cell
+
+
+def test_select_early_cell_invalid_manual_cell_raises(simple_adata):
+    """An unknown manual early cell should raise a ValueError."""
+    with pytest.raises(ValueError, match="not found"):
+        pla.select_early_cell(
+            simple_adata,
+            celltype="TypeA",
+            celltype_column="celltype",
+            early_cell="missing_cell",
+        )
+
+
+def test_plot_early_cell(monkeypatch, preprocessed_adata):
+    """Early-cell plotting should highlight, save, and return the figure."""
+    early_cell = preprocessed_adata.obs_names[0]
+    fig, ax = plt.subplots()
+    captured = {"saved": []}
+
+    def fake_highlight_cells_on_umap(adata, cells, **kwargs):
+        captured["cells"] = list(cells)
+        captured["embedding_basis"] = kwargs["embedding_basis"]
+        return fig, ax
+
+    def fake_save_figure(path, report=False, **kwargs):
+        captured["saved"].append((path, report))
+
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "highlight_cells_on_umap",
+        fake_highlight_cells_on_umap,
+    )
+    monkeypatch.setattr(pla, "_save_figure", fake_save_figure)
+
+    result_fig, result_ax = pla.plot_early_cell(
+        preprocessed_adata,
+        early_cell=early_cell,
+        save="early_cell.pdf",
+        report_save="01_early_cell.png",
+        show=False,
+    )
+
+    assert result_fig is fig
+    assert result_ax is ax
+    assert captured["cells"] == [early_cell]
+    assert captured["embedding_basis"] == "X_umap"
+    assert captured["saved"] == [
+        ("early_cell.pdf", False),
+        ("01_early_cell.png", True),
+    ]
+
+    plt.close(fig)
+
+
+@pytest.mark.parametrize(
+    ("early_cell", "embedding_key", "match"),
+    [
+        ("missing_cell", "X_umap", "Early cell"),
+        (None, "missing_embedding", "Embedding"),
+    ],
+    ids=["missing-early-cell", "missing-embedding"],
+)
+def test_plot_early_cell_invalid_input_raises(
+    preprocessed_adata,
+    early_cell,
+    embedding_key,
+    match,
+):
+    """Invalid early-cell plotting inputs should raise ValueError."""
+    if early_cell is None:
+        early_cell = preprocessed_adata.obs_names[0]
+
+    with pytest.raises(ValueError, match=match):
+        pla.plot_early_cell(
+            preprocessed_adata,
+            early_cell=early_cell,
+            embedding_key=embedding_key,
+            show=False,
+        )
+
+
 # ------------------------- plot_interactive_embedding_cell_ids -------------------------#
 
 
