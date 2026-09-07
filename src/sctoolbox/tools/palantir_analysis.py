@@ -661,8 +661,8 @@ def plot_interactive_embedding_cell_ids(
     ------
     ValueError
         If ``embedding_key`` is missing in ``adata.obsm``, if the embedding is
-        not a two-dimensional array, if it contains fewer than two dimensions,
-        or if ``color_by`` is not found in ``adata.obs``.
+        not a 2D array of cells by coordinates, if it contains fewer than two
+        coordinate dimensions, or if ``color_by`` is not found in ``adata.obs``.
     """
     if embedding_key not in adata.obsm:
         raise ValueError(f"Embedding '{embedding_key}' not found in adata.obsm.")
@@ -833,7 +833,7 @@ def detect_and_plot_terminal_states(  # noqa: C901
 
     if embedding.ndim != 2:
         raise ValueError(
-            f"Embedding '{embedding_key}' must be a two-dimensional array."
+            f"Embedding '{embedding_key}' must be a 2D array of cells by coordinates."
         )
 
     if embedding.shape[1] < 2:

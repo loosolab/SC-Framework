@@ -453,53 +453,39 @@ def test_branch_qc_handles_empty_branch(branch_adata):
 # ------------------------- _classify_trend_pattern -------------------------#
 
 
+pt = np.linspace(0, 1, 50)
+
+broad_increase_curve = pd.Series(
+    np.concatenate(
+        [
+            np.full(10, 0.4),
+            np.linspace(0.45, 1.1, 20),
+            np.linspace(1.05, 1.0, 20),
+        ]
+    )
+)
+
+broad_decrease_curve = pd.Series(
+    np.concatenate(
+        [
+            np.full(10, 0.9),
+            np.linspace(1.0, 1.2, 10),
+            np.linspace(1.1, 0.2, 30),
+        ]
+    )
+)
+
+
 @pytest.mark.parametrize(
     ("curve", "expected"),
     [
-        (
-            pd.Series([2.0, 2.0, 2.0, 2.0, 2.0]),
-            "stable",
-        ),
-        (
-            pd.Series(1.0 - 4.0 * (np.linspace(0, 1, 50) - 0.5) ** 2),
-            "transient peak",
-        ),
-        (
-            pd.Series(4.0 * (np.linspace(0, 1, 50) - 0.5) ** 2),
-            "transient dip",
-        ),
-        (
-            pd.Series(np.linspace(0, 1, 50) ** 2),
-            "late increase",
-        ),
-        (
-            pd.Series(2.0 - 2.0 * np.linspace(0, 1, 50)),
-            "early high, then decrease",
-        ),
-        (
-            pd.Series(
-                np.concatenate(
-                    [
-                        np.full(10, 0.4),
-                        np.linspace(0.45, 1.1, 20),
-                        np.linspace(1.05, 1.0, 20),
-                    ]
-                )
-            ),
-            "broad increase",
-        ),
-        (
-            pd.Series(
-                np.concatenate(
-                    [
-                        np.full(10, 0.9),
-                        np.linspace(1.0, 1.2, 10),
-                        np.linspace(1.1, 0.2, 30),
-                    ]
-                )
-            ),
-            "broad decrease",
-        ),
+        (pd.Series([2.0] * 5), "stable"),
+        (pd.Series(1.0 - 4.0 * (pt - 0.5) ** 2), "transient peak"),
+        (pd.Series(4.0 * (pt - 0.5) ** 2), "transient dip"),
+        (pd.Series(pt**2), "late increase"),
+        (pd.Series(2.0 - 2.0 * pt), "early high, then decrease"),
+        (broad_increase_curve, "broad increase"),
+        (broad_decrease_curve, "broad decrease"),
     ],
     ids=[
         "stable",
@@ -541,9 +527,11 @@ def test_classify_trend_pattern_handles_nan_values():
 
 def test_compare_all_layers_returns_figure_for_project_test_data(adata_h5ad):
     """Layer comparison should create one subplot for adata.X and each layer."""
-    fig, axs = pla.compare_all_layers(adata_h5ad)
+    fig = None
 
     try:
+        fig, axs = pla.compare_all_layers(adata_h5ad)
+
         axs_array = np.atleast_1d(axs)
         expected_axes = 1 + sum(
             layer_name is not None for layer_name in adata_h5ad.layers.keys()
@@ -553,19 +541,21 @@ def test_compare_all_layers_returns_figure_for_project_test_data(adata_h5ad):
         assert axs is not None
         assert len(axs_array) == expected_axes
     finally:
-        plt.close(fig)
+        if fig is not None:
+            plt.close(fig)
 
 
 def test_compare_all_layers_can_exclude_layer(adata_h5ad):
     """Excluded layers should not be plotted."""
     excluded_layers = ["spliced"]
-
-    fig, axs = pla.compare_all_layers(
-        adata_h5ad,
-        exclude_layers=excluded_layers,
-    )
+    fig = None
 
     try:
+        fig, axs = pla.compare_all_layers(
+            adata_h5ad,
+            exclude_layers=excluded_layers,
+        )
+
         axs_array = np.atleast_1d(axs)
         expected_axes = 1 + sum(
             layer_name is not None and layer_name not in excluded_layers
@@ -577,7 +567,8 @@ def test_compare_all_layers_can_exclude_layer(adata_h5ad):
         assert len(axs_array) == expected_axes
         assert not any("layers['spliced']" in title for title in titles)
     finally:
-        plt.close(fig)
+        if fig is not None:
+            plt.close(fig)
 
 
 # ------------------------- plot_branch_qc_distributions -------------------------#
@@ -754,13 +745,28 @@ def test_plot_early_cell_invalid_input_raises(
 # ------------------------- plot_interactive_embedding_cell_ids -------------------------#
 
 
-def test_plot_interactive_embedding_cell_ids_returns_figure(
+@pytest.mark.parametrize(
+    ("n_dimensions", "trace_type"),
+    [
+        (2, "scatter"),
+        (3, "scatter3d"),
+        (4, "scatter3d"),
+    ],
+    ids=["2d", "3d", "4d"],
+)
+def test_plot_interactive_embedding_cell_ids_supports_dimensions(
     preprocessed_adata,
+    n_dimensions,
+    trace_type,
 ):
-    """Interactive embedding plots should return a Plotly figure."""
+    """Interactive embedding plots should handle 2D, 3D, and higher-dimensional inputs."""
+    adata = preprocessed_adata.copy()
+    rng = np.random.default_rng(42)
+    adata.obsm["X_test"] = rng.standard_normal((adata.n_obs, n_dimensions))
+
     fig = pla.plot_interactive_embedding_cell_ids(
-        preprocessed_adata,
-        embedding_key="X_umap",
+        adata,
+        embedding_key="X_test",
         color_by="celltype",
         renderer=None,
         show=False,
@@ -768,6 +774,7 @@ def test_plot_interactive_embedding_cell_ids_returns_figure(
 
     assert isinstance(fig, PlotlyFigure)
     assert len(fig.data) > 0
+    assert all(trace.type == trace_type for trace in fig.data)
 
 
 def test_plot_interactive_embedding_cell_ids_missing_embedding(simple_adata):
@@ -778,22 +785,6 @@ def test_plot_interactive_embedding_cell_ids_missing_embedding(simple_adata):
             embedding_key="missing_embedding",
             renderer=None,
         )
-
-
-def test_plot_interactive_embedding_cell_ids_supports_3d_embedding(simple_adata):
-    """Three-dimensional embeddings should create a Plotly 3D scatter plot."""
-    simple_adata.obsm["X_3d"] = np.random.randn(simple_adata.n_obs, 3)
-
-    fig = pla.plot_interactive_embedding_cell_ids(
-        simple_adata,
-        embedding_key="X_3d",
-        renderer=None,
-        show=False,
-    )
-
-    assert fig is not None
-    assert len(fig.data) > 0
-    assert all(trace.type == "scatter3d" for trace in fig.data)
 
 
 def test_plot_interactive_embedding_cell_ids_rejects_one_dimension(simple_adata):
@@ -1025,7 +1016,7 @@ def test_analyze_top_genes_communities_marker_selection_and_pvals_adj(
 
 
 def test_analyze_top_genes_communities_marker_table_missing_columns_raises(
-    gene_trend_adata
+    gene_trend_adata,
 ):
     """Markers without required ranking columns should raise a ValueError."""
     marker_table = {
