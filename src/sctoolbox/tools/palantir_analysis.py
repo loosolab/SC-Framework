@@ -684,11 +684,10 @@ def plot_interactive_embedding_cell_ids(
         )
 
     used_dimensions = min(embedding.shape[1], 3)
-    columns = [f"Dim{i}" for i in range(1, used_dimensions + 1)]
 
     df = pd.DataFrame(
         embedding[:, :used_dimensions],
-        columns=columns,
+        columns=[f"Dim{i}" for i in range(1, used_dimensions + 1)],
         index=adata.obs_names,
     )
 
