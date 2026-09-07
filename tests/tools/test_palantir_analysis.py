@@ -607,24 +607,22 @@ def test_plot_branch_qc_distributions_returns_figure(branch_adata):
     plt.close(fig)
 
 
-def test_plot_branch_qc_distributions_missing_keys_returns_empty(branch_adata):
-    """Missing branch masks should return an empty plot without crashing."""
+def test_plot_branch_qc_distributions_missing_keys_returns_none(branch_adata):
+    """Missing branch masks should return None without creating a plot."""
     qc = pla.branch_qc(
         branch_adata,
         masks_key="branch_masks",
         pseudotime_key="palantir_pseudotime",
     )
 
-    fig, axes = pla.plot_branch_qc_distributions(
+    result = pla.plot_branch_qc_distributions(
         branch_adata,
         qc,
         masks_key="missing_masks",
         pseudotime_key="palantir_pseudotime",
     )
 
-    assert fig is None
-    assert isinstance(axes, np.ndarray)
-    assert len(axes) == 0
+    assert result is None
 
 
 # ------------------------- select_early_cell -------------------------#

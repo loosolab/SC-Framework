@@ -1513,7 +1513,7 @@ def plot_branch_qc_distributions(  # noqa: C901
     dpi: Optional[Union[int, float]] = None,
     rasterize: bool = False,
     savefig_kwargs: Optional[dict[str, Any]] = None,
-) -> tuple[Figure | None, np.ndarray]:
+) -> tuple[Figure, np.ndarray] | None:
     """Plot pseudotime distributions per branch for QC inspection.
 
     This function visualizes branch-wise pseudotime histograms to assess whether
@@ -1559,9 +1559,8 @@ def plot_branch_qc_distributions(  # noqa: C901
 
     Returns
     -------
-    tuple[Figure | None, np.ndarray]
-        Matplotlib figure and a flat array of axes. If no plot can be created,
-        the figure is ``None`` and the axes array is empty.
+    tuple[Figure, np.ndarray] | None
+        Matplotlib figure and a flat array of axes, or ``None`` if no plot can be created.
     """
     # ------------------------------------------------------------------
     # Step 0 — Initialize optional save arguments
@@ -1582,12 +1581,12 @@ def plot_branch_qc_distributions(  # noqa: C901
     if pseudotime_key not in adata.obs:
         missing.append(f"adata.obs['{pseudotime_key}']")
 
-    # If anything is missing → do not crash, return empty figure
+    # If anything is missing, do not crash and return without creating a figure.
     if missing:
         logger.warning(
             "Missing required key(s): %s. Nothing to plot.", ", ".join(missing)
         )
-        return None, np.array([], dtype=object)
+        return None
 
     pt = adata.obs[pseudotime_key]  # pseudotime vector
     masks = adata.obsm[masks_key]  # boolean cell × branch matrix
@@ -1618,7 +1617,7 @@ def plot_branch_qc_distributions(  # noqa: C901
     n = int(len(qc_plot))
     if n == 0:
         logger.warning("No branches available for plotting (after filtering).")
-        return None, np.array([], dtype=object)
+        return None
 
     # ------------------------------------------------------------------
     # Step 3 — Compute global pseudotime range
@@ -1629,7 +1628,7 @@ def plot_branch_qc_distributions(  # noqa: C901
         logger.warning(
             "Pseudotime column '%s' contains no finite values.", pseudotime_key
         )
-        return None, np.array([], dtype=object)
+        return None
 
     x_min = float(np.min(pt_all))
     x_max = float(np.max(pt_all))
