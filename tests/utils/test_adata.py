@@ -11,16 +11,6 @@ import sctoolbox.utils.adata as utils
 # ---------------------------- HELPER ------------------------------- #
 
 
-@contextmanager
-def add_logger_handler(logger, handler):
-    """Temporarily add a handler to the given logger."""
-    logger.addHandler(handler)
-    try:
-        yield
-    finally:
-        logger.removeHandler(handler)
-
-
 def color_values(colors):
     """Return the color values of a dict- or list-shaped '*_colors' uns entry.
 
@@ -164,7 +154,7 @@ def test_save_h5ad_colors_unchanged(adata, key, value, tmp_path):
     ("bad_colors", [(255, 0, 0)]),  # int RGB is not color like
     ("badstr_colors", {"a": "not-a-color"})
 ])
-def test_save_h5ad_colors_not_color_like(adata, key, value, caplog, tmp_path):
+def test_save_h5ad_colors_not_color_like(adata, key, value, caplog, tmp_path, add_logger_handler):
     """Test if non-color-like adata.uns['*_colors'] values are skipped with a warning."""
     path = str(tmp_path / "test.h5ad")
 
