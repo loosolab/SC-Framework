@@ -8,6 +8,25 @@ import numpy as np
 
 import sctoolbox.utils.adata as utils
 
+# ---------------------------- HELPER ------------------------------- #
+
+
+def color_values(colors):
+    """Return the color values of a dict- or list-shaped '*_colors' uns entry.
+
+    Parameters
+    ----------
+    colors : dict | list | np.ndarray
+        Value of an adata.uns['*_colors'] entry.
+
+    Returns
+    -------
+    list
+        The color values.
+    """
+    return list(colors.values()) if isinstance(colors, dict) else list(colors)
+
+
 # --------------------------- FIXTURES ------------------------------ #
 
 
@@ -85,6 +104,71 @@ def test_save_and_load_h5ad(adata, raw, caplog, tmp_path, add_logger_handler):
         # assume the last record is the warning
         log_rec = caplog.records[-1]
         assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
+
+
+@pytest.mark.parametrize("key,value,expected", [
+    # dict of RGB tuples as stored by palantir.plot.plot_trajectories
+    ("palantir_fates_colors", {"2": (0.12156862745098039, 0.4666666666666667, 0.7058823529411765),
+                               "3": (1.0, 0.4980392156862745, 0.054901960784313725)}, ["#1f77b4", "#ff7f0e"]),
+    # list of RGBA tuples as written by scanpy for a categorical .obs column
+    ("group_colors", [(0.1, 0.2, 0.3, 1.0), (0.4, 0.5, 0.6, 1.0)], ["#1a334c", "#668099"]),
+    ("alpha_colors", [(0.1, 0.2, 0.3, 0.5)], ["#1a334c"])  # alpha is dropped
+])
+def test_save_h5ad_colors_to_hex(adata, key, value, expected, tmp_path):
+    """Test if matplotlib color values in adata.uns['*_colors'] are converted to hex."""
+    path = str(tmp_path / "test.h5ad")
+
+    adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
+    adata.uns[key] = value.copy()  # copy to keep the parametrization untouched
+
+    utils.save_h5ad(adata, path)  # raises IORegistryError as long as the values are tuples
+
+    loaded = utils.load_h5ad(path)
+
+    assert isinstance(loaded.uns[key], dict) == isinstance(value, dict)  # the container shape survives the write
+
+    # save_h5ad converts in place, so the in-memory and the written colors are both expected to be hex
+    for colors in [adata.uns[key], loaded.uns[key]]:
+        assert color_values(colors) == expected
+        assert all(len(color) == 7 and color.startswith("#") for color in color_values(colors))  # 6-digit hex
+
+
+@pytest.mark.parametrize("key,value", [
+    ("hex_colors", ["#1f77b4", "#ff7f0e"]),  # canonical hex is left as is
+    ("hexdict_colors", {"a": "#1f77b4"}),
+    ("not_a_color_map", [(0.1, 0.2, 0.3)])  # keys not ending in '_colors' are not converted
+])
+def test_save_h5ad_colors_unchanged(adata, key, value, tmp_path):
+    """Test if canonical hex and non-'*_colors' uns entries are left unchanged."""
+    path = str(tmp_path / "test.h5ad")
+
+    adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
+    adata.uns[key] = value.copy()  # copy to keep the parametrization untouched
+
+    utils.save_h5ad(adata, path)
+
+    assert adata.uns[key] == value
+
+
+@pytest.mark.parametrize("key,value", [
+    ("bad_colors", [(255, 0, 0)]),  # int RGB is not color like
+    ("badstr_colors", {"a": "not-a-color"})
+])
+def test_save_h5ad_colors_not_color_like(adata, key, value, caplog, tmp_path, add_logger_handler):
+    """Test if non-color-like adata.uns['*_colors'] values are skipped with a warning."""
+    path = str(tmp_path / "test.h5ad")
+
+    adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
+    adata.uns[key] = value.copy()  # copy to keep the parametrization untouched
+
+    with add_logger_handler(utils.logger, caplog.handler):
+        utils.save_h5ad(adata, path)  # must not raise a ValueError from the color conversion
+
+    assert adata.uns[key] == value  # non-color-like values are not converted
+
+    # one warning per uns key, naming that key
+    warnings = [log_rec for log_rec in caplog.records if log_rec.levelname == "WARNING"]
+    assert len(warnings) == 1 and key in warnings[0].message
 
 
 @pytest.fixture(scope="session")

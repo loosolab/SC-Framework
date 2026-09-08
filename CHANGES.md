@@ -21,6 +21,7 @@
 - fix get_variable_features subsampling for pandas 3 (Series positional access via .iloc) and expose subsample_target (!533)
 - fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
 - bump palantir floor to >=1.4.5 for pandas 3 / anndata 0.13 compatibility (!533)
+- save_h5ad: normalise uns '*_colors' to hex so Palantir results are writable (#470)
 - replace `numpy.typing.NDArray` type hints with the expanded `np.ndarray[shape, dtype]` generic to fix beartype PEP 484 errors under numpy 2.5 (#469)
 - document the `dev` dependency group in `development.rst`
 - migrate to muon 0.1.9's explicit pull_obs for modality obs propagation and raise the muon floor
