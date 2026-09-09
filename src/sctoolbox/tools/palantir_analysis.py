@@ -1928,17 +1928,27 @@ def plot_branch_gene_programs(  # noqa: C901
         # Select dynamic genes according to the chosen ranking strategy.
         if mode == "range":
             # Select genes with the largest total amplitude.
-            selected_genes = (dynamic_range.sort_values(ascending=False).head(n_select).index.tolist())
+            selected_genes = (
+                dynamic_range.sort_values(ascending=False)
+                .head(n_select)
+                .index
+                .tolist()
+            )
         elif mode == "var":
             # Select genes with the largest variance across pseudotime.
-            selected_genes = (dynamic_var.sort_values(ascending=False).head(n_select).index.tolist())
+            selected_genes = (
+                dynamic_var.sort_values(ascending=False)
+                .head(n_select)
+                .index
+                .tolist()
+            )
         elif mode == "union":
             # Combine both rankings so that both strong monotonic trends
             # and more complex patterns can be captured.
             n_by_range = n_select // 2
             n_by_var = n_select - n_by_range
 
-            top_range = (dynamic_range.sort_values(ascending=False).head(n_by_range).index)
+            top_range = dynamic_range.sort_values(ascending=False).head(n_by_range).index
             top_var = dynamic_var.sort_values(ascending=False).head(n_by_var).index
             selected = pd.Index(top_range).union(pd.Index(top_var)).tolist()
 
@@ -1952,7 +1962,8 @@ def plot_branch_gene_programs(  # noqa: C901
                 fill = (
                     combined.loc[~combined.index.isin(selected)]
                     .head(missing)
-                    .index.tolist()
+                    .index
+                    .tolist()
                 )
                 selected.extend(fill)
 
@@ -2177,7 +2188,8 @@ def plot_branch_gene_programs(  # noqa: C901
                 x_gene = gene_z.loc[genes_in_cluster].values
                 centroid = centroid_z.loc[cl].values
                 sim = (x_gene @ centroid) / (
-                    np.linalg.norm(x_gene, axis=1) * (np.linalg.norm(centroid) + 1e-12)
+                    np.linalg.norm(x_gene, axis=1)
+                    * (np.linalg.norm(centroid) + 1e-12)
                     + 1e-12
                 )
                 sim_series = pd.Series(sim, index=genes_in_cluster)
@@ -2200,7 +2212,8 @@ def plot_branch_gene_programs(  # noqa: C901
                 best = (
                     representative_score.sort_values(ascending=True)
                     .head(int(representatives_per_cluster))
-                    .index.tolist()
+                    .index
+                    .tolist()
                 )
                 cluster_representatives[str(cl)] = best
 
@@ -2291,7 +2304,9 @@ def plot_branch_gene_programs(  # noqa: C901
         # Build a gene-level export table for this branch.
         # Each row contains one gene, cluster metadata, and the full trend curve.
         representative_genes = {
-            gene for genes in cluster_representatives.values() for gene in genes
+            gene
+            for genes in cluster_representatives.values()
+            for gene in genes
         }
 
         export_df = trend_df_sel.copy()
@@ -2591,10 +2606,10 @@ def plot_branch_early_late_genes(  # noqa: C901
         for g in early_genes:
             if g in df.index:  # defensive check: only plot if gene exists in the trend table
                 ax_early.plot(
-                    pt_vals,  # x-axis: pseudotime grid (sorted)
-                    df.loc[g].to_numpy(),  # y-axis: smoothed trend values for this gene
-                    label=g,  # legend entry = gene name
-                    linewidth=trend_linewidth,  # consistent line thickness across genes
+                    pt_vals,                      # x-axis: pseudotime grid (sorted)
+                    df.loc[g].to_numpy(),         # y-axis: smoothed trend values for this gene
+                    label=g,                      # legend entry = gene name
+                    linewidth=trend_linewidth,    # consistent line thickness across genes
                 )
 
         # Plot the trend curves for the top "late" genes
