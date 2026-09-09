@@ -2024,7 +2024,18 @@ def plot_branch_gene_programs(  # noqa: C901
 
         # Plot Palantir's original trend-cluster panels.
         # The plot titles are updated to also show the number of genes per cluster.
-        palantir.plot.plot_gene_trend_clusters(adata, br)
+        try:
+            palantir.plot.plot_gene_trend_clusters(adata, br)
+        except (KeyError, ValueError) as exc:
+            if branch is None:
+                logger.exception(
+                    "Branch '%s' failed during gene-trend plotting and will be skipped: %s",
+                    br,
+                    exc,
+                )
+                continue
+
+            raise
 
         fig_clusters = plt.gcf()
         axes_clusters = [ax for ax in fig_clusters.axes if ax.has_data()]

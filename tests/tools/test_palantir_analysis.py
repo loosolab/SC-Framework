@@ -1087,6 +1087,49 @@ def test_plot_branch_gene_programs_ranking_modes(monkeypatch, gene_trend_adata, 
     assert len(captured["BranchA"]["genes"]) <= 4
 
 
+def test_plot_branch_gene_programs_continues_after_plot_error(
+    monkeypatch,
+    gene_trend_adata,
+):
+    """A plotting error should not stop later branches when branch=None."""
+    processed_branches = []
+
+    def fake_plot_gene_trend_clusters(adata, branch):
+        if branch == "BranchA":
+            raise ValueError("simulated plot failure")
+
+        processed_branches.append(branch)
+        return plt.figure()
+
+    monkeypatch.setattr(
+        pla.palantir.presults,
+        "cluster_gene_trends",
+        lambda adata, branch, genes, n_neighbors=30: pd.Series(
+            ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)],
+            index=genes,
+        ),
+    )
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "plot_gene_trend_clusters",
+        fake_plot_gene_trend_clusters,
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    result = pla.plot_branch_gene_programs(
+        gene_trend_adata,
+        branch=None,
+        n_dynamic_genes=4,
+        gene_ranking_mode="union",
+        trend_knn_neighbors=2,
+        plot_representative_genes=False,
+    )
+
+    assert "BranchA" not in result
+    assert "BranchB" in result
+    assert processed_branches == ["BranchB"]
+
+
 def test_plot_branch_gene_programs_excludes_flat_genes(monkeypatch, gene_trend_adata):
     """Flat gene trends should be filtered before clustering."""
     adata = gene_trend_adata.copy()
