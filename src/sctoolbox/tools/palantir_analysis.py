@@ -1243,9 +1243,7 @@ def analyze_top_genes_communities(  # noqa: C901
                 "top_n": top_n,
                 "n_neighbors": n_neighbors,
                 "gene_source": gene_source,
-                "marker_source": marker_key
-                if marker_key is not None
-                else "dict_or_none",
+                "marker_source": marker_key if marker_key is not None else "dict_or_none",
                 "trend_branches": trend_branch_list,
             },
         }
@@ -1509,8 +1507,8 @@ def plot_branch_qc_distributions(  # noqa: C901
         logger.warning("Missing required key(s): %s. Nothing to plot.", ", ".join(missing))
         return None
 
-    pt = adata.obs[pseudotime_key]  # pseudotime vector
-    masks = adata.obsm[masks_key]  # boolean cell × branch matrix
+    pt = adata.obs[pseudotime_key]      # pseudotime vector
+    masks = adata.obsm[masks_key]      # boolean cell × branch matrix
 
     # ------------------------------------------------------------------
     # Step 2 — Decide which branches to visualize
@@ -1654,7 +1652,7 @@ def _classify_trend_pattern(curve: pd.Series) -> str:
 
     # Summarize the beginning, middle, and end of the curve.
     start = float(np.nanmean(y[: max(1, y.size // 5)]))
-    end = float(np.nanmean(y[-max(1, y.size // 5) :]))
+    end = float(np.nanmean(y[-max(1, y.size // 5):]))
     mid_start = y.size // 3
     mid_end = max(mid_start + 1, (2 * y.size) // 3)
     middle = float(np.nanmean(y[mid_start:mid_end]))
@@ -1800,7 +1798,7 @@ def plot_branch_gene_programs(  # noqa: C901
     # These tables are later reused to estimate branch specificity when
     # choosing representative genes.
     branch_trend_tables = {
-        key[len(varm_prefix) :]: value
+        key[len(varm_prefix):]: value
         for key, value in adata.varm.items()
         if key.startswith(varm_prefix) and isinstance(value, pd.DataFrame)
     }
@@ -1822,7 +1820,8 @@ def plot_branch_gene_programs(  # noqa: C901
         branches_to_process = sorted(branch_trend_tables.keys())
         if not branches_to_process:
             logger.warning(
-                "No branches found in adata.varm with prefix '%s'.", varm_prefix
+                "No branches found in adata.varm with prefix '%s'.",
+                varm_prefix
             )
             return {}
 
@@ -2168,7 +2167,7 @@ def plot_branch_gene_programs(  # noqa: C901
 
                     other_ranges.append(float(other_curve.max() - other_curve.min()))
 
-                other_branch_ranges[gene] = (float(np.mean(other_ranges)) if other_ranges else 0.0)
+                other_branch_ranges[gene] = float(np.mean(other_ranges)) if other_ranges else 0.0
 
             branch_specificity = pd.Series(
                 {
@@ -2195,7 +2194,10 @@ def plot_branch_gene_programs(  # noqa: C901
                 sim_series = pd.Series(sim, index=genes_in_cluster)
 
                 # Additional criteria describing dynamic strength and specificity.
-                gene_range = trend_df_sel.loc[genes_in_cluster].max(axis=1) - trend_df_sel.loc[genes_in_cluster].min(axis=1)
+                gene_range = (
+                    trend_df_sel.loc[genes_in_cluster].max(axis=1)
+                    - trend_df_sel.loc[genes_in_cluster].min(axis=1)
+                )
                 gene_var = trend_df_sel.loc[genes_in_cluster].var(axis=1)
                 gene_specificity = branch_specificity.loc[genes_in_cluster]
 
@@ -2600,7 +2602,7 @@ def plot_branch_early_late_genes(  # noqa: C901
 
         # Create the two subplots: early panel (left) and late panel (right)
         ax_early = trend_fig.add_subplot(grid[0, 0])  # early-high genes
-        ax_late = trend_fig.add_subplot(grid[0, 1])  # late-high genes
+        ax_late = trend_fig.add_subplot(grid[0, 1])   # late-high genes
 
         # Plot the trend curves for the top "early" genes
         for g in early_genes:
