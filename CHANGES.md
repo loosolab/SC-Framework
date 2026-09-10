@@ -31,6 +31,9 @@
 - annotate_adata: validate the coordinate columns instead of repairing adata.var
 - rename the adata.var coordinate column stop to end (deprecated, removed in 0.18.0); a pre-rename object gains end alongside its retained stop
 - annotate_adata: raise an explicit error when adata.var has fewer than three columns to infer coordinates from
+- refresh the pytest filterwarnings allowlist (!541)
+- fix the always-true assertion in test_bed_is_sorted (bitwise ~ instead of not) (!541)
+- grouped_violin: implement the missing style="bar" branch (!541)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
