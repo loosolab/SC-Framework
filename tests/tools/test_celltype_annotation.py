@@ -50,6 +50,25 @@ def test_run_scsa(test_adata, column):
     adata = celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=False, column_added=column)
     assert column in adata.obs.columns
 
+    # derive the cluster -> celltype mapping from the returned adata; with inplace=False
+    # the input object carries neither column_added nor uns['SCSA']['results']
+    groupby = adata.uns['rank_genes_groups']['params']['groupby']
+    annotated = adata.obs[[groupby, column]].dropna().drop_duplicates()  # clusters 5 and 6 get no SCSA row
+    mapping = dict(zip(annotated[groupby].astype(str), annotated[column]))
+
+    # Golden-output pin, captured from a run on the adata_scsa fixture with the bundled
+    # cellmarker_mouse.tsv: a mismatch means the annotations changed, not that these are stale
+    assert mapping == {'1': 'Fibroblast',
+                       '2': 'Stage I neutrophil',
+                       '3': 'Hepatocellular cell',
+                       '4': 'Endothelial cell',
+                       '7': 'Epithelial cell',
+                       '8': 'Podocyte'}
+
+    results = adata.uns['SCSA']['results']
+    assert list(results.columns) == ['Cell Type', 'Z-score', 'Cluster']
+    assert len(results) == 8604
+
 
 def test_add_cellxgene_annotation(adata_fun_scope, tmp_path):
     """Test if 'cellxgene' column is added to adata.obs."""
