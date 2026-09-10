@@ -134,7 +134,7 @@ def test_bed_is_sorted(unsorted_fragments, sorted_fragments):
     """Test if the _bed_is_sorted() function works as expected."""
 
     assert utils.bioutils._bed_is_sorted(sorted_fragments)
-    assert ~utils.bioutils._bed_is_sorted(unsorted_fragments)
+    assert not utils.bioutils._bed_is_sorted(unsorted_fragments)
 
 
 def test_sort_bed(unsorted_fragments, tmp_path):
