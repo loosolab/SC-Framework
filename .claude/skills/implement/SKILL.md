@@ -1,13 +1,13 @@
 ---
 name: implement
-description: Stage 3 of the dev workflow. Main-loop orchestrator: spawns the implementer (TDD, per-task commits) and code-reviewer sub-agents, runs the regression + codespell gates, updates CHANGES.md.
+description: Stage 3 of the dev workflow. Main-loop orchestrator: spawns the implementer (TDD, per-task commits) and code-reviewer sub-agents, runs the regression + codespell gates, updates CHANGES.md, then offers to advance to /retro.
 ---
 
 # implement
 
-Third and final stage of the sc-framework development workflow
-(design → plan → implement). Runs in the **main loop** and orchestrates two
-sub-agents. Executes an approved `plan.md` under its TDD (test-driven
+Third stage of the sc-framework development workflow
+(design → plan → implement → retro). Runs in the **main loop** and orchestrates
+two sub-agents. Executes an approved `plan.md` under its TDD (test-driven
 development) gate, reviews the result, and records the work item in
 `CHANGES.md`.
 
@@ -131,6 +131,14 @@ without a path, ask for one.
 9. **Done.** Report what shipped and the final test result. In `manual` commit
    mode, also list every changed file (`git status --short`) and remind the user
    that nothing was staged or committed — they stage and commit it themselves.
+10. **Offer to advance to `/retro`.** Ask the user whether to run the
+    retrospective now, while the session still holds the evidence it needs (the
+    reviewer findings, the deviations, and the friction from this conversation).
+    - If yes: invoke the `retro` skill via the Skill tool, passing
+      `.work/<date>-<slug>/plan.md` as args.
+    - If no: tell the user to run `/retro .work/<date>-<slug>/` when ready, and
+      note that its session-friction input (Process step 2) is weaker once this
+      conversation is gone.
 
 ## Constraints
 
