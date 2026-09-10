@@ -256,7 +256,8 @@ addopts = """
 testpaths = [
     "./tests"
 ]
-# Curated allowlist for residual, unfixable third-party deprecation noise. Each
+# Curated allowlist for residual, unfixable third-party warning noise — upstream
+# deprecations plus numeric warnings the tiny test data provokes. Each
 # entry is scoped by warning category AND emitting module (narrowly targeted) so
 # sctoolbox-origin warnings stay visible and new ones surface. No broad catch-all
 # ignore and no global `error`. Grouped by source.
