@@ -4,6 +4,7 @@ import pandas as pd
 import importlib_resources
 import copy
 import subprocess
+import tempfile
 import scanpy as sc
 from pathlib import Path
 
@@ -347,55 +348,56 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
         dups = dat[col].duplicated(keep='first')
         dat[col] = dat[col].mask(dups, other="_NA")  # replace all duplicates with _NA
 
-    # Save to file
-    csv = './scsa_input.csv'
-    dat.to_csv(csv)
+    # Save input and results within a temporary directory unique to this call
+    temp_dir = tempfile.mkdtemp()
+    try:
+        # Save to file
+        csv = Path(temp_dir) / 'scsa_input.csv'
+        dat.to_csv(csv)
 
-    # ---- building the SCSA command ---- #
-    results_path = "./scsa_results.txt"
-    utils.io.create_dir(results_path)  # make sure the full path to results exists
+        # ---- building the SCSA command ---- #
+        results_path = Path(temp_dir) / 'scsa_results.txt'
 
-    scsa_cmd = f"{python_path} {scsa_path} -i {csv} -f {fc} -p {pvalue} -o {results_path} -m txt "
-    scsa_cmd += f"--db {marker_db} "
-    scsa_cmd += f"--cellcol {celltype_column} --genecol {gene_column}"
+        scsa_cmd = f"{python_path} {scsa_path} -i {csv} -f {fc} -p {pvalue} -o {results_path} -m txt "
+        scsa_cmd += f"--db {marker_db} "
+        scsa_cmd += f"--cellcol {celltype_column} --genecol {gene_column}"
 
-    # ---- run SCSA command ---- #
-    logger.info('Running SCSA...')
-    p = subprocess.run(scsa_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stderr = p.stderr
-    stdout = p.stdout
+        # ---- run SCSA command ---- #
+        logger.info('Running SCSA...')
+        p = subprocess.run(scsa_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stderr = p.stderr
+        stdout = p.stdout
 
-    logger.debug(stdout.decode('utf-8'))
+        logger.debug(stdout.decode('utf-8'))
 
-    if p.returncode != 0:
-        logger.error(stdout.decode('utf-8'))
-        raise ValueError(f"SCSA failed with error: {stderr.decode('utf-8')}")
+        if p.returncode != 0:
+            logger.error(stdout.decode('utf-8'))
+            raise ValueError(f"SCSA failed with error: {stderr.decode('utf-8')}")
 
-    # ---- read results_path and assign to adata.obs ---- #
-    df = pd.read_csv(results_path, sep='\t', engine='python')
-    adata.uns["SCSA"] = df
+        # ---- read results_path and assign to adata.obs ---- #
+        df = pd.read_csv(results_path, sep='\t', engine='python')
+        adata.uns["SCSA"] = df
 
-    # Save the celltype with the best z-score to adata.obs
-    df_max1 = df.groupby('Cluster').first()
-    df_max = df_max1.drop(columns=['Z-score'])
-    df_max = df_max.reset_index()
-    df_max = df_max.rename(columns={'Cell Type': 'Cell_Type'})
-    df_max = df_max.astype(str)
-    dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
+        # Save the celltype with the best z-score to adata.obs
+        df_max1 = df.groupby('Cluster').first()
+        df_max = df_max1.drop(columns=['Z-score'])
+        df_max = df_max.reset_index()
+        df_max = df_max.rename(columns={'Cell Type': 'Cell_Type'})
+        df_max = df_max.astype(str)
+        dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
 
-    logger.info(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['SCSA']")
-    for _, row in df.drop_duplicates(subset='Cluster', keep='first').iterrows():
-        logger.info(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
+        logger.info(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['SCSA']")
+        for _, row in df.drop_duplicates(subset='Cluster', keep='first').iterrows():
+            logger.info(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
 
-    # Save results to uns dictionary
-    scsa_uns_dict = {"SCSA": {"results": df,
-                              "stderr": stderr.decode('utf-8'),
-                              "stdout": stdout.decode('utf-8'),
-                              "cmd": scsa_cmd}}
-
-    # Remove the temporary files
-    files = [csv, results_path]
-    utils.io.rm_tmp(temp_files=files, rm_dir=False)
+        # Save results to uns dictionary
+        scsa_uns_dict = {"SCSA": {"results": df,
+                                  "stderr": stderr.decode('utf-8'),
+                                  "stdout": stdout.decode('utf-8'),
+                                  "cmd": scsa_cmd}}
+    finally:
+        # Remove the temporary files and the directory itself
+        utils.io.rm_tmp(temp_dir=temp_dir, all=True, rm_dir=True)
 
     # Add the annotated celltypes to the anndata-object
     if inplace:
