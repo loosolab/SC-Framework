@@ -243,7 +243,7 @@ def grouped_violin(adata: sc.AnnData,  # noqa: C901
     save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
     **kwargs : Any
-        Additional arguments passed to seaborn.violinplot or seaborn.boxplot.
+        Additional arguments passed to seaborn.violinplot or seaborn.boxplot or seaborn.barplot.
 
     Returns
     -------
@@ -338,11 +338,9 @@ def grouped_violin(adata: sc.AnnData,  # noqa: C901
     elif style == "boxplot":
         sns.boxplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     elif style == "bar":
-
-        pass
-
+        sns.barplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     else:
-        raise ValueError(f"Style '{style}' is not valid for this function. Style must be one of 'violin' or 'boxplot'")
+        raise ValueError(f"Style '{style}' is not valid for this function. Style must be one of 'violin' or 'boxplot' or 'bar'")
 
     if groupby is not None:
         ax.legend(title=groupby, loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)  # Set location of legend
