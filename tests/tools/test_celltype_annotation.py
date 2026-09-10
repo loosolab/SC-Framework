@@ -1,5 +1,8 @@
 """Test functions related to cell type annotation."""
 
+import subprocess
+from pathlib import Path
+
 import pytest
 from sctoolbox.tools import celltype_annotation
 from tests.conftest import _load_adata_scsa_h5ad
@@ -68,6 +71,54 @@ def test_run_scsa(test_adata, column):
     results = adata.uns['SCSA']['results']
     assert list(results.columns) == ['Cell Type', 'Z-score', 'Cluster']
     assert len(results) == 8604
+
+
+def test_run_scsa_no_cwd_residue(test_adata, monkeypatch, tmp_path):
+    """Test run_scsa leaves no files in the working directory."""
+    monkeypatch.chdir(tmp_path)
+
+    # record the per-call temp directory to check it is removed again
+    created = []
+    mkdtemp = celltype_annotation.tempfile.mkdtemp
+
+    def recording_mkdtemp(*args, **kwargs):
+        created.append(mkdtemp(*args, **kwargs))
+        return created[-1]
+
+    monkeypatch.setattr(celltype_annotation.tempfile, "mkdtemp", recording_mkdtemp)
+
+    celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=False)
+
+    assert list(tmp_path.iterdir()) == []
+    assert len(created) == 1
+    assert not Path(created[0]).exists()
+
+
+def test_run_scsa_no_cwd_residue_on_error(test_adata, monkeypatch, tmp_path):
+    """Test run_scsa leaves no files in the working directory if SCSA fails."""
+    monkeypatch.chdir(tmp_path)
+
+    created = []
+    mkdtemp = celltype_annotation.tempfile.mkdtemp
+
+    def recording_mkdtemp(*args, **kwargs):
+        created.append(mkdtemp(*args, **kwargs))
+        return created[-1]
+
+    monkeypatch.setattr(celltype_annotation.tempfile, "mkdtemp", recording_mkdtemp)
+
+    # a monkeypatched subprocess.run keeps this test independent of how the command is built
+    def failing_run(*args, **kwargs):
+        return subprocess.CompletedProcess(args=[], returncode=1, stdout=b'', stderr=b'boom')
+
+    monkeypatch.setattr(celltype_annotation.subprocess, "run", failing_run)
+
+    with pytest.raises(ValueError):
+        celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=False)
+
+    assert list(tmp_path.iterdir()) == []
+    assert len(created) == 1
+    assert not Path(created[0]).exists()
 
 
 def test_add_cellxgene_annotation(adata_fun_scope, tmp_path):
