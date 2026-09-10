@@ -262,18 +262,15 @@ testpaths = [
 # ignore and no global `error`. Grouped by source.
 # Periodically check if they are resolved.
 filterwarnings = [
-    # pydeseq2: pandas "incompatible dtype" FutureWarning during DESeq2 fitting
-    "ignore::FutureWarning:pydeseq2.dds",
-    # qnorm: pandas "incompatible dtype" FutureWarning in quantile_normalize
-    "ignore::FutureWarning:qnorm.quantile_normalize",
     # muon: deprecated `__version__` access FutureWarning
     "ignore::FutureWarning:muon._core.preproc",
-    # matplotlib: pyparsing parseString/enablePackrat PyparsingDeprecationWarning
-    # (a DeprecationWarning subclass) emitted while parsing font/mathtext patterns
-    "ignore::DeprecationWarning:matplotlib._fontconfig_pattern",
-    "ignore::DeprecationWarning:matplotlib._mathtext",
-    # scanpy: bitwise-inversion-on-bool DeprecationWarning in score_genes
-    "ignore::DeprecationWarning:scanpy.tools._score_genes",
+    # scanpy: invalid value encountered in log2 RuntimeWarning when ranking genes
+    # on the tiny test data
+    "ignore::RuntimeWarning:scanpy.tools._rank_genes_groups",
+    # seaborn: deprecated `vert: bool` parameter PendingDeprecationWarning
+    "ignore::PendingDeprecationWarning:seaborn.categorical",
+    # mizani: deprecated numpy timedelta "generic" unit DeprecationWarning
+    "ignore::DeprecationWarning:mizani._datetime.utils",
     # stdlib multiprocessing: fork()-in-multithreaded-process DeprecationWarning
     # raised by scanpy's parallel UMAP parameter search
     "ignore::DeprecationWarning:multiprocessing.popen_fork",
