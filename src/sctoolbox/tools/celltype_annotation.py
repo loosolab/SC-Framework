@@ -458,8 +458,9 @@ def run_scsa(adata: sc.AnnData,
 
     Notes
     -----
-    SCSA sometimes gives ValueError: MultiIndex (as covered in https://github.com/bioinfo-ibms-pumc/SCSA/issues/19).
-    This can be solved by downgrading pandas to 1.2.4.
+    SCSA is run as a subprocess of the bundled 'sctoolbox/data/SCSA_custom.py' script.
+    Its input table and raw output are written to a temporary directory unique to the call,
+    which is removed again once the results are read.
     """
 
     if species is not None:
