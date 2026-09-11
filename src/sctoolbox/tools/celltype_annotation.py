@@ -221,7 +221,7 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
     function and generates input matrix for SCSA, then runs SCSA and assigns cell types to clusters
     in adata.obs.
 
-    Also adds adata.uns['SCSA'] as a dictionary with the following keys:
+    Also adds adata.uns['sctoolbox']['SCSA'] as a dictionary with the following keys:
     - 'results': SCSA result table
     - 'stderr': SCSA stderr
     - 'stdout': SCSA stdout
@@ -288,14 +288,14 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
         species = species.capitalize()
 
     # ---- checking if columns exist in adata ---- #
-    if key not in adata.uns.keys():
+    if not utils.adata.in_uns(adata, [key]):
         raise KeyError(f'{key} was not found in adata.uns! Run rank_genes_groups first')
 
     # Get groupby from adata.uns
     try:
-        groupby = adata.uns[key]['params']['groupby']
-    except Exception:
-        raise KeyError(f"Could not find 'params' within adata.uns[{key}]. Please ensure that this key contains results of rank_genes_groups.")
+        groupby = utils.adata.get_uns(adata, [key, 'params', 'groupby'])
+    except ValueError as e:
+        raise KeyError(f"Could not find 'params' within adata.uns[{key}]. Please ensure that this key contains results of rank_genes_groups.") from e
 
     # Check user.db
     if not user_db and not species:
@@ -391,15 +391,15 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
         df_max = df_max.astype(str)
         dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
 
-        logger.info(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['SCSA']")
+        logger.info(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['sctoolbox']['SCSA']")
         for _, row in df.drop_duplicates(subset='Cluster', keep='first').iterrows():
             logger.info(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
 
         # Save results to uns dictionary
-        scsa_uns_dict = {"SCSA": {"results": df,
-                                  "stderr": stderr.decode('utf-8'),
-                                  "stdout": stdout.decode('utf-8'),
-                                  "cmd": " ".join(scsa_cmd)}}
+        scsa_uns_dict = {"results": df,
+                         "stderr": stderr.decode('utf-8'),
+                         "stdout": stdout.decode('utf-8'),
+                         "cmd": " ".join(scsa_cmd)}
     finally:
         # Remove the temporary files and the directory itself
         utils.io.rm_tmp(temp_dir=temp_dir, all=True, rm_dir=True)
@@ -407,11 +407,11 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
     # Add the annotated celltypes to the anndata-object
     if inplace:
         adata.obs[column_added] = adata.obs[groupby].map(dictMax)
-        adata.uns.update(scsa_uns_dict)
+        utils.adata.add_uns_info(adata, "SCSA", scsa_uns_dict)
     else:
         assigned_adata = adata.copy()
         assigned_adata.obs[column_added] = assigned_adata.obs[groupby].map(dictMax)
-        assigned_adata.uns.update(scsa_uns_dict)
+        utils.adata.add_uns_info(assigned_adata, "SCSA", scsa_uns_dict)
         return assigned_adata
 
 
