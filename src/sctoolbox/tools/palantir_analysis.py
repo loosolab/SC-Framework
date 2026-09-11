@@ -1715,6 +1715,7 @@ def plot_branch_gene_programs(  # noqa: C901
     branch: str | None = None,
     save: str | None = None,
     save_excel: str | None = None,
+    plot_format: str = "pdf",
 ) -> dict[str, dict[str, Any]]:
     """Identify and visualize branch-wise gene programs from Palantir gene trends.
 
@@ -1759,12 +1760,14 @@ def plot_branch_gene_programs(  # noqa: C901
         branches found in ``adata.varm``.
     save : str | None, default=None
         Filename prefix for saving figures. If None, figures are not written.
-        Generated figures are saved as PDF files.
+        Generated figures use the format specified by ``plot_format``.
     save_excel : str | None, default=None
         Output path for an optional Excel file. If provided, the file contains
         one sheet per branch with trend cluster, cluster pattern, representative
         flag, and full gene-level trend values, plus one summary sheet with
         cluster-level information across branches.
+    plot_format : str, default="pdf"
+        File format used when saving plots.
 
     Returns
     -------
@@ -2054,7 +2057,7 @@ def plot_branch_gene_programs(  # noqa: C901
             f"Branch '{br}' — Palantir trend clusters (n={len(selected_genes)} genes)",
             y=1.02,
         )
-        _save_fig(fig_clusters, f"_branch-{br}_clusters.pdf")
+        _save_fig(fig_clusters, f"_branch-{br}_clusters.{plot_format}")
         plt.show()
 
         # Compute one centroid curve per trend cluster using the median trend.
@@ -2130,7 +2133,7 @@ def plot_branch_gene_programs(  # noqa: C901
         ax_hm.set_ylabel("Trend cluster (hierarchical similarity)")
 
         cg.fig.suptitle(f"Branch '{br}' — centroid similarity", y=1.02)
-        _save_fig(cg.fig, f"_branch-{br}_centroid_heatmap.pdf")
+        _save_fig(cg.fig, f"_branch-{br}_centroid_heatmap.{plot_format}")
         plt.show()
 
         # Select representative genes per trend cluster.
@@ -2311,7 +2314,7 @@ def plot_branch_gene_programs(  # noqa: C901
                     y=1.02,
                 )
                 fig_reps.tight_layout()
-                _save_fig(fig_reps, f"_branch-{br}_representatives.pdf")
+                _save_fig(fig_reps, f"_branch-{br}_representatives.{plot_format}")
                 plt.show()
 
         # Build a gene-level export table for this branch.

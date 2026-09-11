@@ -1361,7 +1361,7 @@ def test_analyze_top_genes_communities_hvg_smoke(monkeypatch, gene_trend_adata):
     )
 
 
-def test_plot_branch_gene_programs_smoke(monkeypatch, gene_trend_adata):
+def test_plot_branch_gene_programs_smoke(monkeypatch, gene_trend_adata, tmp_path):
     """Branch gene programs should be generated from small synthetic trends."""
 
     def fake_cluster_gene_trends(adata, branch, genes, n_neighbors=30):
@@ -1395,6 +1395,8 @@ def test_plot_branch_gene_programs_smoke(monkeypatch, gene_trend_adata):
         gene_ranking_mode="union",
         trend_knn_neighbors=2,
         plot_representative_genes=False,
+        save=str(tmp_path / "gene_programs"),
+        plot_format="png",
     )
 
     assert set(result) == {"BranchA", "BranchB"}
@@ -1412,6 +1414,10 @@ def test_plot_branch_gene_programs_smoke(monkeypatch, gene_trend_adata):
     for branch in ("BranchA", "BranchB"):
         assert expected_keys <= result[branch].keys()
         assert len(result[branch]["selected_genes"]) == 4
+        assert (tmp_path / f"gene_programs_branch-{branch}_clusters.png").exists()
+        assert (
+            tmp_path / f"gene_programs_branch-{branch}_centroid_heatmap.png"
+        ).exists()
 
 
 def test_detect_and_plot_terminal_states_supports_3d_embedding(
