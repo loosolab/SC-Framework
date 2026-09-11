@@ -382,7 +382,6 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
 
         # ---- read results_path and assign to adata.obs ---- #
         df = pd.read_csv(results_path, sep='\t', engine='python')
-        adata.uns["SCSA"] = df
 
         # Save the celltype with the best z-score to adata.obs
         df_max1 = df.groupby('Cluster').first()
