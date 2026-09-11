@@ -1639,7 +1639,16 @@ def _classify_trend_pattern(curve: pd.Series) -> str:
     Returns
     -------
     str
-        Pattern label describing the overall shape of the trend.
+        Pattern label describing the overall shape of the trend. Possible values are:
+
+        - ``"stable"``: little overall change across pseudotime.
+        - ``"transient peak"``: intermediate increase followed by a decrease.
+        - ``"transient dip"``: intermediate decrease followed by a recovery.
+        - ``"late increase"``: expression increases mainly at late pseudotime.
+        - ``"early high, then decrease"``: high early expression followed by a decline.
+        - ``"broad increase"``: expression increases broadly across pseudotime.
+        - ``"broad decrease"``: expression decreases broadly across pseudotime.
+        - ``"complex"``: no simpler pattern above applies.
     """
     y = np.asarray(curve, dtype=float)
 
