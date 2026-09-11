@@ -198,9 +198,187 @@ def _get_rank_genes(d: dict[str, Any]) -> list[str]:
     return genes
 
 
+@beartype
+def _fetch_ranked_genes(adata: sc.AnnData,
+                        key: str,
+                        gene_column: Optional[str] = None) -> dict[str, Any]:
+    """
+    Get a copy of the ranked genes in adata.uns, with the gene names optionally translated.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Adata object containing ranked genes in adata.uns.
+    key : str
+        The key in adata.uns where ranked genes are stored.
+    gene_column : Optional[str], default None
+        Name of the column in adata.var the gene names are translated to.
+        If None, the gene names are kept as they are.
+
+    Returns
+    -------
+    dict[str, Any]
+        A copy of the dictionary in adata.uns[key].
+
+    Raises
+    ------
+    KeyError
+        If gene_column is not in adata.var
+    """
+
+    result = copy.deepcopy(adata.uns[key])
+    if gene_column is not None:
+
+        # gene_column must be in adata.var
+        if gene_column not in adata.var.columns:
+            raise KeyError(f'{gene_column} was not found in adata.var')
+
+        # Translate index names to names from gene_column
+        idx2name = dict(zip(adata.var.index, adata.var[gene_column]))
+        for i in range(len(result["names"])):
+            for j in range(len(result["names"][i])):
+                result["names"][i][j] = idx2name[result["names"][i][j]]
+
+    return result
+
+
+@beartype
+def _build_scsa_input(result: dict[str, Any]) -> pd.DataFrame:
+    """
+    Build the SCSA input table from an adata.uns["rank_genes_groups"] dictionary.
+
+    Parameters
+    ----------
+    result : dict[str, Any]
+        The dictionary in adata.uns["rank_genes_groups"]
+
+    Returns
+    -------
+    pd.DataFrame
+        Table of names, logfoldchanges, scores and pvals per group, with uppercase
+        gene names and duplicated genes replaced by "_NA".
+    """
+
+    groups = result['names'].dtype.names
+    dat = pd.DataFrame({group + '_' + key[:1]: result[key][group] for group in groups for key in ['names', 'logfoldchanges', 'scores', 'pvals']})
+    # set gene name columns to uppercase
+    for col in dat.columns:
+        if col.endswith('_n'):
+            dat[col] = dat[col].str.upper()
+
+    # Fill duplicate genes with _NA
+    name_columns = [col for col in dat if col.endswith("_n")]
+    for col in name_columns:
+        dups = dat[col].duplicated(keep='first')
+        dat[col] = dat[col].mask(dups, other="_NA")  # replace all duplicates with _NA
+
+    return dat
+
+
+@beartype
+def _run_scsa_command(python_path: str,
+                      scsa_path: str | Path,
+                      csv: str | Path,
+                      results_path: str | Path,
+                      fc: float | int,
+                      pvalue: float,
+                      marker_db: str | Path,
+                      celltype_column: str,
+                      db_gene_column: str) -> tuple[str, str, str]:
+    """
+    Run the SCSA script on a prepared input table.
+
+    Parameters
+    ----------
+    python_path : str
+        Path to the python executable used to run SCSA.
+    scsa_path : str | Path
+        Path to the SCSA script.
+    csv : str | Path
+        Path to the SCSA input table.
+    results_path : str | Path
+        Path the SCSA results are written to.
+    fc : float | int
+        SCSA parameter: Fold change threshold to filter genes.
+    pvalue : float
+        SCSA parameter: P-value threshold to filter genes.
+    marker_db : str | Path
+        Path to the marker database.
+    celltype_column : str
+        Name of the column in the marker database that contains the cell type annotation.
+    db_gene_column : str
+        Name of the column in the marker database that contains the gene names.
+
+    Returns
+    -------
+    tuple[str, str, str]
+        The decoded stdout, the decoded stderr and the executed command.
+
+    Raises
+    ------
+    ValueError
+        If the SCSA run fails.
+    """
+
+    scsa_cmd = [python_path, str(scsa_path),
+                '-i', str(csv),
+                '-f', str(fc),
+                '-p', str(pvalue),
+                '-o', str(results_path),
+                '-m', 'txt',
+                '--db', str(marker_db),
+                '--cellcol', celltype_column,
+                '--genecol', db_gene_column]
+
+    logger.info('Running SCSA...')
+    p = subprocess.run(scsa_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stderr = p.stderr.decode('utf-8')
+    stdout = p.stdout.decode('utf-8')
+
+    logger.debug(stdout)
+
+    if p.returncode != 0:
+        logger.error(stdout)
+        raise ValueError(f"SCSA failed with error: {stderr}")
+
+    return stdout, stderr, " ".join(scsa_cmd)
+
+
+@beartype
+def _parse_scsa_results(results_path: str | Path) -> tuple[pd.DataFrame, dict[str, str]]:
+    """
+    Read the SCSA results table and get the best scoring celltype per cluster.
+
+    Parameters
+    ----------
+    results_path : str | Path
+        Path to the SCSA results table.
+
+    Returns
+    -------
+    tuple[pd.DataFrame, dict[str, str]]
+        The full SCSA results table and a cluster-to-celltype mapping
+        (key: cluster name, value: cell type).
+    """
+
+    df = pd.read_csv(results_path, sep='\t', engine='python')
+
+    # SCSA writes each cluster block sorted by descending Z-score, so the top row is the best scoring one
+    df_max = df.groupby('Cluster', sort=False).head(1)
+    df_max = df_max.drop(columns=['Z-score'])
+    df_max = df_max.rename(columns={'Cell Type': 'Cell_Type'})
+    df_max = df_max.astype(str)
+    dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
+
+    for _, row in df.drop_duplicates(subset='Cluster', keep='first').iterrows():
+        logger.info(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
+
+    return df, dictMax
+
+
 @deco.log_anndata
 @beartype
-def run_scsa(adata: sc.AnnData,  # noqa: C901
+def run_scsa(adata: sc.AnnData,
              gene_column: Optional[str] = None,
              gene_symbol: Literal['auto', 'symbol', 'id'] = 'auto',
              key: str = 'rank_genes_groups',
@@ -313,18 +491,7 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
         marker_db = user_db
 
     # ---- fetching ranked genes from adata.uns ---- #
-    result = copy.deepcopy(adata.uns[key])
-    if gene_column is not None:
-
-        # gene_column must be in adata.var
-        if gene_column not in adata.var.columns:
-            raise KeyError(f'{gene_column} was not found in adata.var')
-
-        # Translate index names to names from gene_column
-        idx2name = dict(zip(adata.var.index, adata.var[gene_column]))
-        for i in range(len(result["names"])):
-            for j in range(len(result["names"][i])):
-                result["names"][i][j] = idx2name[result["names"][i][j]]
+    result = _fetch_ranked_genes(adata, key, gene_column)
 
     # ---- Find out which gene symbol to use ---- #
     all_genes = [g.upper() for g in _get_rank_genes(result)]
@@ -335,18 +502,7 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
     db_gene_column = _match_database(marker_db, all_genes)
 
     # ---- Setup table for SCSA input ---- #
-    groups = result['names'].dtype.names
-    dat = pd.DataFrame({group + '_' + key[:1]: result[key][group] for group in groups for key in ['names', 'logfoldchanges', 'scores', 'pvals']})
-    # set gene name columns to uppercase
-    for col in dat.columns:
-        if col.endswith('_n'):
-            dat[col] = dat[col].str.upper()
-
-    # Fill duplicate genes with _NA
-    name_columns = [col for col in dat if col.endswith("_n")]
-    for col in name_columns:
-        dups = dat[col].duplicated(keep='first')
-        dat[col] = dat[col].mask(dups, other="_NA")  # replace all duplicates with _NA
+    dat = _build_scsa_input(result)
 
     # Save input and results within a temporary directory unique to this call
     temp_dir = tempfile.mkdtemp()
@@ -355,51 +511,22 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
         csv = Path(temp_dir) / 'scsa_input.csv'
         dat.to_csv(csv)
 
-        # ---- building the SCSA command ---- #
-        results_path = Path(temp_dir) / 'scsa_results.txt'
-
-        scsa_cmd = [python_path, str(scsa_path),
-                    '-i', str(csv),
-                    '-f', str(fc),
-                    '-p', str(pvalue),
-                    '-o', str(results_path),
-                    '-m', 'txt',
-                    '--db', str(marker_db),
-                    '--cellcol', celltype_column,
-                    '--genecol', db_gene_column]
-
         # ---- run SCSA command ---- #
-        logger.info('Running SCSA...')
-        p = subprocess.run(scsa_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stderr = p.stderr
-        stdout = p.stdout
-
-        logger.debug(stdout.decode('utf-8'))
-
-        if p.returncode != 0:
-            logger.error(stdout.decode('utf-8'))
-            raise ValueError(f"SCSA failed with error: {stderr.decode('utf-8')}")
+        results_path = Path(temp_dir) / 'scsa_results.txt'
+        stdout, stderr, cmd = _run_scsa_command(python_path, scsa_path, csv, results_path, fc, pvalue,
+                                                marker_db, celltype_column, db_gene_column)
 
         # ---- read results_path and assign to adata.obs ---- #
-        df = pd.read_csv(results_path, sep='\t', engine='python')
-
         # Save the celltype with the best z-score to adata.obs
-        # SCSA writes each cluster block sorted by descending Z-score, so the top row is the best scoring one
-        df_max = df.groupby('Cluster', sort=False).head(1)
-        df_max = df_max.drop(columns=['Z-score'])
-        df_max = df_max.rename(columns={'Cell Type': 'Cell_Type'})
-        df_max = df_max.astype(str)
-        dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
+        df, dictMax = _parse_scsa_results(results_path)
 
         logger.info(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['sctoolbox']['SCSA']")
-        for _, row in df.drop_duplicates(subset='Cluster', keep='first').iterrows():
-            logger.info(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
 
         # Save results to uns dictionary
         scsa_uns_dict = {"results": df,
-                         "stderr": stderr.decode('utf-8'),
-                         "stdout": stdout.decode('utf-8'),
-                         "cmd": " ".join(scsa_cmd)}
+                         "stderr": stderr,
+                         "stdout": stdout,
+                         "cmd": cmd}
     finally:
         # Remove the temporary files and the directory itself
         utils.io.rm_tmp(temp_dir=temp_dir, all=True, rm_dir=True)
