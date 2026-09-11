@@ -68,7 +68,7 @@ def test_run_scsa(test_adata, column):
                        '7': 'Epithelial cell',
                        '8': 'Podocyte'}
 
-    results = adata.uns['SCSA']['results']
+    results = adata.uns['sctoolbox']['SCSA']['results']
     assert list(results.columns) == ['Cell Type', 'Z-score', 'Cluster']
     assert len(results) == 8604
 
@@ -78,11 +78,14 @@ def test_run_scsa_not_inplace(test_adata):
     column = "SCSA_pred_celltype"
     adata = celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=False, column_added=column)
 
-    # the results must only land on the returned copy, never on the caller's object
+    # the results must only land on the returned copy, never on the caller's object;
+    # test_adata.uns['sctoolbox'] always exists, as @log_anndata writes to the input
+    assert 'SCSA' not in test_adata.uns.get('sctoolbox', {})
     assert 'SCSA' not in test_adata.uns
     assert column not in test_adata.obs.columns
 
-    assert 'SCSA' in adata.uns
+    assert 'SCSA' in adata.uns['sctoolbox']
+    assert 'SCSA' not in adata.uns
     assert column in adata.obs.columns
 
 
@@ -100,11 +103,25 @@ def test_run_scsa_no_cwd_residue(test_adata, monkeypatch, tmp_path):
 
     monkeypatch.setattr(celltype_annotation.tempfile, "mkdtemp", recording_mkdtemp)
 
-    celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=False)
+    # inplace=True to also cover the storage location of the inplace branch without
+    # a further SCSA run; the residue assertions below are unaffected by the mode
+    celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=True)
+
+    assert list(test_adata.uns['sctoolbox']['SCSA'].keys()) == ['results', 'stderr', 'stdout', 'cmd']
+    assert 'SCSA' not in test_adata.uns
 
     assert list(tmp_path.iterdir()) == []
     assert len(created) == 1
     assert not Path(created[0]).exists()
+
+
+@pytest.mark.parametrize("key", ["invalid_key", "empty_key"])
+def test_run_scsa_missing_key(test_adata, key):
+    """Test run_scsa raises KeyError for a missing key and for missing params/groupby."""
+    test_adata.uns["empty_key"] = {}  # key exists, but holds no 'params'/'groupby'
+
+    with pytest.raises(KeyError):
+        celltype_annotation.run_scsa(test_adata, species='Mouse', key=key)
 
 
 def test_run_scsa_no_cwd_residue_on_error(test_adata, monkeypatch, tmp_path):
