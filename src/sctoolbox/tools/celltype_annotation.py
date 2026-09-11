@@ -332,7 +332,7 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
     logger.info("Checking if genes are in the database...")
 
     # Read database and find best matching gene column
-    gene_column = _match_database(marker_db, all_genes)
+    db_gene_column = _match_database(marker_db, all_genes)
 
     # ---- Setup table for SCSA input ---- #
     groups = result['names'].dtype.names
@@ -366,7 +366,7 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
                     '-m', 'txt',
                     '--db', str(marker_db),
                     '--cellcol', celltype_column,
-                    '--genecol', gene_column]
+                    '--genecol', db_gene_column]
 
         # ---- run SCSA command ---- #
         logger.info('Running SCSA...')
@@ -384,9 +384,9 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
         df = pd.read_csv(results_path, sep='\t', engine='python')
 
         # Save the celltype with the best z-score to adata.obs
-        df_max1 = df.groupby('Cluster').first()
-        df_max = df_max1.drop(columns=['Z-score'])
-        df_max = df_max.reset_index()
+        # SCSA writes each cluster block sorted by descending Z-score, so the top row is the best scoring one
+        df_max = df.groupby('Cluster', sort=False).head(1)
+        df_max = df_max.drop(columns=['Z-score'])
         df_max = df_max.rename(columns={'Cell Type': 'Cell_Type'})
         df_max = df_max.astype(str)
         dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
