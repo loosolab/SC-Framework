@@ -358,13 +358,19 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
         # ---- building the SCSA command ---- #
         results_path = Path(temp_dir) / 'scsa_results.txt'
 
-        scsa_cmd = f"{python_path} {scsa_path} -i {csv} -f {fc} -p {pvalue} -o {results_path} -m txt "
-        scsa_cmd += f"--db {marker_db} "
-        scsa_cmd += f"--cellcol {celltype_column} --genecol {gene_column}"
+        scsa_cmd = [python_path, str(scsa_path),
+                    '-i', str(csv),
+                    '-f', str(fc),
+                    '-p', str(pvalue),
+                    '-o', str(results_path),
+                    '-m', 'txt',
+                    '--db', str(marker_db),
+                    '--cellcol', celltype_column,
+                    '--genecol', gene_column]
 
         # ---- run SCSA command ---- #
         logger.info('Running SCSA...')
-        p = subprocess.run(scsa_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.run(scsa_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderr = p.stderr
         stdout = p.stdout
 
@@ -394,7 +400,7 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
         scsa_uns_dict = {"SCSA": {"results": df,
                                   "stderr": stderr.decode('utf-8'),
                                   "stdout": stdout.decode('utf-8'),
-                                  "cmd": scsa_cmd}}
+                                  "cmd": " ".join(scsa_cmd)}}
     finally:
         # Remove the temporary files and the directory itself
         utils.io.rm_tmp(temp_dir=temp_dir, all=True, rm_dir=True)
