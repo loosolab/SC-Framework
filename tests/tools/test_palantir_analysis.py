@@ -951,6 +951,93 @@ def test_detect_and_plot_terminal_states_missing_inputs_raise(
         )
 
 
+def test_analyze_top_genes_communities_ranks_markers_by_score(
+    monkeypatch, gene_trend_adata
+):
+    """Significant markers should be ranked by the magnitude of their test score."""
+    captured = {}
+
+    def fake_cluster_gene_trends(*args, **kwargs):
+        genes = args[2]
+        captured["genes"] = list(genes)
+        return pd.Series(["0" for _ in genes], index=genes, name="community")
+
+    monkeypatch.setattr(
+        pla.palantir.presults,
+        "cluster_gene_trends",
+        fake_cluster_gene_trends,
+    )
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "plot_gene_trend_clusters",
+        lambda *args, **kwargs: plt.figure(),
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    marker_table = {
+        "GroupA": pd.DataFrame(
+            {
+                "names": ["GeneA", "GeneB"],
+                "logfoldchanges": [10.0, 1.0],
+                "scores": [1.0, 5.0],
+                "pvals_adj": [0.01, 0.01],
+            }
+        )
+    }
+
+    selected_genes, _ = pla.analyze_top_genes_communities(
+        gene_trend_adata,
+        trend_branches=["BranchA"],
+        gene_source="markers",
+        marker_table=marker_table,
+        top_n=1,
+    )
+
+    assert selected_genes == ["GeneB"]
+    assert captured["genes"] == ["GeneB"]
+
+
+def test_analyze_top_genes_communities_does_not_require_logfoldchanges(
+    monkeypatch, gene_trend_adata
+):
+    """Marker selection should work without logfoldchanges when scores are present."""
+    monkeypatch.setattr(
+        pla.palantir.presults,
+        "cluster_gene_trends",
+        lambda *args, **kwargs: pd.Series(
+            ["0"] * len(args[2]),
+            index=args[2],
+            name="community",
+        ),
+    )
+    monkeypatch.setattr(
+        pla.palantir.plot,
+        "plot_gene_trend_clusters",
+        lambda *args, **kwargs: plt.figure(),
+    )
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    marker_table = {
+        "GroupA": pd.DataFrame(
+            {
+                "names": ["GeneA", "GeneB"],
+                "scores": [1.0, 5.0],
+                "pvals_adj": [0.01, 0.01],
+            }
+        )
+    }
+
+    selected_genes, _ = pla.analyze_top_genes_communities(
+        gene_trend_adata,
+        trend_branches=["BranchA"],
+        gene_source="markers",
+        marker_table=marker_table,
+        top_n=1,
+    )
+
+    assert selected_genes == ["GeneB"]
+
+
 def test_analyze_top_genes_communities_marker_selection_and_pvals_adj(
     monkeypatch, gene_trend_adata
 ):

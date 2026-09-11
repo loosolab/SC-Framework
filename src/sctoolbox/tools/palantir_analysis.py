@@ -1121,18 +1121,15 @@ def analyze_top_genes_communities(  # noqa: C901
             if "pvals_adj" in df2.columns:
                 df2 = df2[df2["pvals_adj"].notna() & (df2["pvals_adj"] <= alpha)]
 
-            missing = [col for col in ("logfoldchanges", "scores") if col not in df2.columns]
+            missing = [col for col in ("scores",) if col not in df2.columns]
             if missing:
                 raise ValueError(
                     f"Marker table '{group}' is missing required columns: {missing}. "
-                    "Expected at least: ['names' (or 'gene'), 'logfoldchanges', 'scores']."
+                    "Expected at least: ['names' (or 'gene'), 'scores']."
                 )
 
-            # Rank markers by effect size plus statistical separation.
-            df2["rank_score"] = df2["logfoldchanges"].abs() + df2["scores"].abs()
-
-            if "pvals_adj" in df2.columns:
-                df2["rank_score"] += (-np.log10(df2["pvals_adj"].clip(lower=1e-300))) * 0.1
+            # Rank significant markers by the magnitude of the marker-test score.
+            df2["rank_score"] = df2["scores"].abs()
 
             df2 = (
                 df2.sort_values("rank_score", ascending=False)
