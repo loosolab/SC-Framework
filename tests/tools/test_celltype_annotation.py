@@ -73,6 +73,19 @@ def test_run_scsa(test_adata, column):
     assert len(results) == 8604
 
 
+def test_run_scsa_not_inplace(test_adata):
+    """Test run_scsa with inplace=False leaves the input adata untouched."""
+    column = "SCSA_pred_celltype"
+    adata = celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=False, column_added=column)
+
+    # the results must only land on the returned copy, never on the caller's object
+    assert 'SCSA' not in test_adata.uns
+    assert column not in test_adata.obs.columns
+
+    assert 'SCSA' in adata.uns
+    assert column in adata.obs.columns
+
+
 def test_run_scsa_no_cwd_residue(test_adata, monkeypatch, tmp_path):
     """Test run_scsa leaves no files in the working directory."""
     monkeypatch.chdir(tmp_path)
