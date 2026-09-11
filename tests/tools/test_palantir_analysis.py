@@ -223,7 +223,8 @@ def _patch_diffusion_magic(monkeypatch, n_obs, multiscale_components):
 def _patch_gene_program_clustering(monkeypatch):
     """Patch gene-trend clustering and plotting for gene-program tests."""
 
-    def fake_cluster_gene_trends(_adata, _branch, genes, **kwargs):
+    def fake_cluster_gene_trends(*args, **kwargs):
+        genes = args[2]
         return pd.Series(
             ["0" if i % 2 == 0 else "1" for i, _ in enumerate(genes)],
             index=genes,
