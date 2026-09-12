@@ -95,7 +95,6 @@ def ensure_harmony(
     Requires:
     - batch_key in adata.obs
     - PCA basis in adata.obsm[basis]
-    - scanpy.external and harmonypy installed
 
     Returns
     -------
