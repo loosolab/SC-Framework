@@ -184,6 +184,8 @@ downstream = [
 ]
 hotspot = [
     'hotspotsc'
+    'SC-Framework[gsea]',   # gseapy for run_hotspot_module_enrichment()
+    'harmonypy<=0.0.10'
 ]
 # all is intended to install everything
 all = [
