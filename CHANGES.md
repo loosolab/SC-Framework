@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.16.0 (in progress)
+- replace the bioRxiv preprint badges with the published iScience article DOI, cite the article in the methods templates, and unify the Zenodo links on the all-versions DOI (#459)
 - connectionPlot: Fix colormap by replacing deprecated function get_cmap (#462)
 - document the development environment setup and the testing/linting dependency-groups in `development.rst`
 - document the doc-string example conventions (`.. plot::` / `.. exec_code::`) and pre-code fixtures in `development.rst`
