@@ -511,7 +511,7 @@ def ensure_umap_for_visualization(
 
 
 @beartype
-def ensure_hotspot_latent_representation(
+def ensure_hotspot_latent_representation(  # noqa: C901
     adata: AnnData,
     representation_settings: dict[str, Any],
     pca_settings: dict[str, Any],
