@@ -15,7 +15,6 @@ from pathlib import Path
 
 from beartype import beartype
 from beartype.typing import Optional, Literal, Tuple, Union, Any, Dict, List
-from numpy.typing import NDArray
 
 from sctoolbox import settings
 logger = settings.logger
@@ -248,7 +247,7 @@ def clustermap_dotplot(table: pd.DataFrame,
                        show_grid: bool = False,
                        save: Optional[str] = None,
                        report: Optional[str] = None,
-                       **kwargs: Any) -> NDArray[Axes]:
+                       **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """
     Plot a heatmap with dots (instead of squares), which can contain the dimension of "size".
 
@@ -291,7 +290,7 @@ def clustermap_dotplot(table: pd.DataFrame,
 
     Returns
     -------
-    NDArray[Axes]
+    np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of Axes objects containing the dotplot and the dendrogram(s).
 
     Examples
@@ -842,7 +841,7 @@ def pairwise_scatter(table: pd.DataFrame,  # noqa: C901
                      save: Optional[str] = None,
                      report: Optional[str] = None,
                      rasterize: bool = True,
-                     **kwargs: Any) -> NDArray[Axes]:
+                     **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """Plot a grid of scatterplot comparing column values pairwise.
 
     If thresholds are given, lines are drawn for each threshold and points outside of the thresholds are colored red.
@@ -866,7 +865,7 @@ def pairwise_scatter(table: pd.DataFrame,  # noqa: C901
 
     Returns
     -------
-    NDArray[Axes]
+    np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of Axes objects.
 
     Raises

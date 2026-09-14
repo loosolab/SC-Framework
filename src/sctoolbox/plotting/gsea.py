@@ -15,7 +15,6 @@ import warnings
 
 from beartype import beartype
 from beartype.typing import Optional, Any, Literal, Tuple
-from numpy.typing import NDArray
 
 from sctoolbox.plotting.general import clustermap_dotplot, _save_figure
 from sctoolbox.utils.bioutils import pseudobulk_table
@@ -40,7 +39,7 @@ def term_dotplot(adata: sc.AnnData,
                  hue: Literal["Mean Expression", "Zscore"] = "Zscore",  # noqa: F722
                  layer: Optional[str] = None,
                  report: Optional[str] = None,
-                 **kwargs: Any) -> NDArray[Axes]:
+                 **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """
     Plot mean expression and zscore of cluster for one GO-term.
 
@@ -72,7 +71,7 @@ def term_dotplot(adata: sc.AnnData,
 
     Returns
     -------
-    NDArray[Axes]
+    np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of Axes objects containing the dotplot and the dendrogram(s).
 
     Raises

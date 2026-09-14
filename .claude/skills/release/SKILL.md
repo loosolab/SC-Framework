@@ -114,7 +114,7 @@ After merge (~1.5 hrs for the full pipeline):
     [ ] Confirm repository updated
     [ ] Create a new GitHub release (copy description from GitLab)
 
-  Zenodo  (https://zenodo.org/records/14056105 — triggered by GitHub release)
+  Zenodo  (https://zenodo.org/records/11065517 — triggered by GitHub release)
     [ ] Confirm Zenodo release was triggered
     [ ] Adjust authors (see prior release for reference)
 

@@ -56,12 +56,18 @@ The tooling required to test and lint the project is declared as `dependency gro
   * - ``docs``
     - sphinx, sphinx-rtd-theme, sphinx-exec-code, nbsphinx, ...
     - Build this documentation locally.
+  * - ``dev``
+    - ``test`` + ``lint`` + ``spellcheck`` + ``docs``, python-gitlab[graphql]
+    - The recommended group for local development: all of the above plus the GraphQL client used by ``scripts/gitlab_query.py``.
 
 Install the groups you need into the activated ``sctoolbox`` environment:
 
 .. code-block:: bash
 
-  # everything needed to develop, test and lint
+  # recommended: everything needed to develop, test, lint and build the documentation
+  pip install -e .[all] --group dev
+
+  # or pick single groups, e.g. only what is needed to test and lint
   pip install -e .[all] --group test --group lint --group spellcheck
 
   # add the docs toolchain if you want to build the documentation

@@ -50,7 +50,10 @@ def mdata():
     adata_atac = sc.AnnData(X=np.random.rand(n_cells, 15), obs=obs_atac,
                             var=pd.DataFrame(index=[f"peak{i}" for i in range(15)]))
 
-    return mu.MuData({"RNA": adata_rna, "ATAC": adata_atac})
+    mdata_obj = mu.MuData({"RNA": adata_rna, "ATAC": adata_atac})
+    mdata_obj.pull_obs()  # propagate the modality obs columns as <mod>:<col>
+
+    return mdata_obj
 
 
 @pytest.fixture
@@ -197,6 +200,9 @@ def test_join_modalities(adata):
     assert "RNA" in mdata.mod
     assert "ATAC" in mdata.mod
     assert mdata.n_obs == adata.n_obs
+    # modality obs columns are propagated to mdata.obs as <mod>:<col>
+    assert "RNA:louvain" in mdata.obs.columns
+    assert "ATAC:louvain" in mdata.obs.columns
 
 
 def test_join_modalities_keep_outer(adata):
