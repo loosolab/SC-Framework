@@ -34,6 +34,12 @@
 - refresh the pytest filterwarnings allowlist (!541)
 - fix the always-true assertion in test_bed_is_sorted (bitwise ~ instead of not) (!541)
 - grouped_violin: implement the missing style="bar" branch (!541)
+- run_scsa: write SCSA input/results to a per-call temp directory
+- run_scsa: call SCSA via an argv list instead of a shell string
+- run_scsa: inplace=False no longer writes adata.uns["SCSA"] on the input object
+- run_scsa: select the top-scoring celltype row explicitly
+- run_scsa: move the SCSA results from adata.uns["SCSA"] to adata.uns["sctoolbox"]["SCSA"]
+- run_scsa: refresh the stale pandas downgrade note
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
