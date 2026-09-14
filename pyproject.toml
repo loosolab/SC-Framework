@@ -175,7 +175,9 @@ multiome = [
     'mofapy2'
 ]
 hotspot = [
-    'hotspotsc', 'SC-Framework[gsea]', 'harmonypy<=0.0.10'
+    'hotspotsc',
+    'SC-Framework[gsea]',
+    'harmonypy<=0.0.10'
 ]
 # core and downstream are intended to install commonly used dependencies
 # e.g. scar is deliberately skipped to to save disk space
