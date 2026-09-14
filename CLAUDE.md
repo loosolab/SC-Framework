@@ -167,12 +167,25 @@ precisely so two installations do not work from different ground.
 - **Discuss before acting.** Summarise what is known, name the intended next step,
   and get agreement — including before a long chain of read-only probing. Offer
   `/design` for anything non-trivial rather than starting in.
-- **Check the project's own helpers first.** Before hand-rolling a
-  `curl`/`bash`/`python -c`, look in `.claude/skills/` and `scripts/` for the
-  canonical helper (e.g. a GitLab issue or MR goes through
-  `scripts/gitlab_query.py search|fetch`, never a raw API call). The shipped
-  helpers are vetted, read-only and allow-listed; hand-rolled equivalents bypass
-  that and trigger prompts or fail.
+- **Check the project's own helpers first — including when diagnosing.** Before
+  hand-rolling a `curl`/`bash`/`python -c`, look in `.claude/skills/` and
+  `scripts/` for the canonical helper (e.g. a GitLab issue or MR goes through
+  `scripts/gitlab_query.py search|fetch`, never a raw API call; a permissions or
+  `settings.json` question goes through `update-config`, even when you are only
+  reading). The shipped helpers are vetted, read-only and allow-listed;
+  hand-rolled equivalents bypass that and trigger prompts or fail.
+- **Edit files with `Edit`/`Write`, never through the shell.** No `python -c`, no
+  heredoc, no `sed -i`, no `tee`, no redirection — for source, tests, `.work/`
+  artifacts, and temporary mutations in a falsifiability check alike. A shell
+  string-replace silently no-ops when the pattern misses and silently doubles when
+  it over-matches, where `Edit` errors; in a falsifiability check that inverts the
+  result you would report. It also bypasses the read-before-edit guard and hides
+  the change in the tool record as a `Bash` call.
+- **Be brief.** Lead with the result. A green gate is one line, not a table.
+  Don't restate a task back to the user, re-explain a settled decision, or
+  summarise at length what is already written to a file — link it. Save the detail
+  for decisions that need one. The same applies to sub-agent briefs: see
+  `.claude/skills/implement/SKILL.md`.
 - **This file is team documentation.** `CLAUDE.md` is checked in and doubles as
   human onboarding, so it is keep-by-default: do not propose trimming a section
   because a manifest or `ls` could reconstruct it. If a section is factually stale,

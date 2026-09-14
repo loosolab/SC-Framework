@@ -23,8 +23,22 @@ A path to a work-item directory or its `plan.md`
 modified `.work/<date>-<slug>/` and say which you picked. Runs standalone on any
 past work item, not only straight after `/implement`.
 
+**No fixed cadence** — run it after a single task, at the end of a work item, or
+both; it is the user's call, and whether an item will span an hour or several days
+is rarely knowable up front. What makes either cadence work is `retro-notes.md`
+(below), not timing.
+
 ## Process
 
+0. **Read `retro-notes.md` first** if the work item has one — it is the running
+   record of friction, pinned while it was still exact, and it is the one input
+   that does not decay. Keep one per work item at
+   `.work/<date>-<slug>/retro-notes.md`: append to it the moment something goes
+   wrong, whether the user says "pin this" or you notice it yourself
+   (a correction, a denial, a rule broken, a stage that fired late). One entry
+   each: what was observed, why it matters, the proposed fix, and any open
+   question. Nothing is deferred to recall — across a multi-day item neither party
+   will remember day one accurately.
 1. **Gather the artifact evidence.** Read the work item's `design.md`,
    `plan.md` (including which task checkboxes are ticked), `review-plan.md` and
    `review-code.md`. Note specifically: blockers a reviewer caught, deviations

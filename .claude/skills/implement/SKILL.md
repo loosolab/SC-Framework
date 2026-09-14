@@ -50,13 +50,20 @@ without a path, ask for one.
       `subagent_type: implementer`) in **single-task mode** (`sys-implement`),
       passing the `plan.md` path, the task id `T<N>`, and the commit mode. It
       returns a summary **without** ticking the checkbox.
-   2. **Confirm the gate is green**, then show the user the change
+   2. **Confirm the task's own tests pass** — the tests related to that task, not
+      the full binding gate. The binding gate and the full-suite regression run
+      once at the end (steps 3 and 7), so re-running everything after each task
+      pays for the same verification ten times over. Then show the user the change
       (`git status --short` + `git diff`) and **pause for review**. In `manual`
       mode the user commits the task; in `claude` mode it is already committed and
       the user reviews (and may amend/revert) before continuing.
    3. **On the user's go-ahead, tick `- [x] T<N>`** in `plan.md` (a local-only
       edit — never staged) and move to the next task. If the user wants changes,
       address them (re-spawning the implementer if needed) before ticking.
+      If the user flags friction at this pause — or you hit a correction, a
+      denial, or a rule broken — append it to `.work/<date>-<slug>/retro-notes.md`
+      then and there (see the `retro` skill). Offer the note, not a whole retro;
+      `/retro` reads the file later, whenever it runs.
 
    The pause happens after **every** task, in both commit modes. A retry-cap or
    blocker handoff from any single-task spawn is handled by step 2 below.
@@ -140,12 +147,45 @@ without a path, ask for one.
       note that its session-friction input (Process step 2) is weaker once this
       conversation is gone.
 
+## Writing sub-agent briefs
+
+The agent reads `plan.md` itself. A brief that re-explains the task doubles its
+cost for nothing.
+
+- **Name the task and stop.** "Execute only T6 of `<plan path>`, single-task
+  mode." Do not restate the task's content, its rationale, or its test cases.
+- **Include only what is not in the plan:** the env spec, the commit mode, the
+  binding command verbatim, corrections agreed after the plan was written, and
+  anything the *previous* task changed that this one must respect.
+- **Point, don't quote.** "Read T6 in full — it is long and every bullet is
+  load-bearing" beats reproducing the bullets.
+- **Downgrade the model for mechanical tasks.** The Agent tool takes a `model`
+  override. Docstring passes, changelog edits and other low-judgement tasks do not
+  need the same model as a risky refactor.
+- **Summarise a returned review in a few lines**, not in full: the verbatim text
+  is already written to `.work/`, so quoting it back costs twice.
+
+## Scope changes arriving mid-implementation
+
+If the user adds scope after `/plan` (a new requirement, not a correction):
+
+1. **Amend `design.md` first, then `plan.md`, in the same pass** — a new Approach
+   item, the success criteria it changes, then the task and its test cases.
+   Amending one and then the other doubles the review rounds.
+2. Insert the task in dependency order and renumber; **grep for stale
+   cross-references** afterwards (`T<n>`, "guard for T…", "re-checked in T…") —
+   they are the literal instructions executed at per-task boundaries.
+3. Re-run the `plan-reviewer` on the amendment before the new task runs.
+4. Never carry an environment claim forward without re-checking it — a recorded
+   "this failed last time" (a `PermissionError`, a missing tool) may already be
+   fixed.
+
 ## Constraints
 
 - **Reviewers are read-only and return text** — this skill writes
   `review-code.md`, not the agent.
 - **No new tasks beyond the plan.** If the plan is short a task, route back
-  to `/plan`.
+  to `/plan` — or, for scope the user adds mid-flight, follow the section above.
 - **Commit only intended files** via `sys-commit`; never blind `git add -A`,
   never a git op denied by `.claude/settings.json`.
 - **Honour the commit mode.** In `manual` mode, no step here commits or stages —
