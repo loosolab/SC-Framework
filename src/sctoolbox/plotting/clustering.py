@@ -9,7 +9,6 @@ import muon as mu
 
 from beartype import beartype
 from beartype.typing import Literal, Tuple, Optional, Any
-from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -28,7 +27,7 @@ def search_clustering_parameters(adata: sc.AnnData | mu.MuData,
                                  verbose: bool = True,
                                  save: Optional[str] = None,
                                  report: bool = False,
-                                 **kwargs: Any) -> NDArray[Axes]:
+                                 **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """
     Plot a grid of different resolution parameters for clustering.
 
@@ -55,7 +54,7 @@ def search_clustering_parameters(adata: sc.AnnData | mu.MuData,
 
     Returns
     -------
-    axarr : NDArray[Axes]
+    axarr : np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -149,7 +148,7 @@ def marker_gene_clustering(adata: sc.AnnData,
                            show_umap: bool = True,
                            save: Optional[str] = None,
                            figsize: Optional[Tuple[float | int, float | int]] = None,
-                           **kwargs: Any) -> NDArray[Axes]:
+                           **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """
     Plot an overview of marker genes and clustering.
 
@@ -172,7 +171,7 @@ def marker_gene_clustering(adata: sc.AnnData,
 
     Returns
     -------
-    axarr : NDArray[Axes]
+    axarr : np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of axes objects containing the plot(s).
 
     Examples

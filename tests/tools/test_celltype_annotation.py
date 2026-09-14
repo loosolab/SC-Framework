@@ -1,5 +1,8 @@
 """Test functions related to cell type annotation."""
 
+import subprocess
+from pathlib import Path
+
 import pytest
 from sctoolbox.tools import celltype_annotation
 from tests.conftest import _load_adata_scsa_h5ad
@@ -49,6 +52,103 @@ def test_run_scsa(test_adata, column):
     """Test run_scsa success."""
     adata = celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=False, column_added=column)
     assert column in adata.obs.columns
+
+    # derive the cluster -> celltype mapping from the returned adata; with inplace=False
+    # the input object carries neither column_added nor uns['SCSA']['results']
+    groupby = adata.uns['rank_genes_groups']['params']['groupby']
+    annotated = adata.obs[[groupby, column]].dropna().drop_duplicates()  # clusters 5 and 6 get no SCSA row
+    mapping = dict(zip(annotated[groupby].astype(str), annotated[column]))
+
+    # Golden-output pin, captured from a run on the adata_scsa fixture with the bundled
+    # cellmarker_mouse.tsv: a mismatch means the annotations changed, not that these are stale
+    assert mapping == {'1': 'Fibroblast',
+                       '2': 'Stage I neutrophil',
+                       '3': 'Hepatocellular cell',
+                       '4': 'Endothelial cell',
+                       '7': 'Epithelial cell',
+                       '8': 'Podocyte'}
+
+    results = adata.uns['sctoolbox']['SCSA']['results']
+    assert list(results.columns) == ['Cell Type', 'Z-score', 'Cluster']
+    assert len(results) == 8604
+
+
+def test_run_scsa_not_inplace(test_adata):
+    """Test run_scsa with inplace=False leaves the input adata untouched."""
+    column = "SCSA_pred_celltype"
+    adata = celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=False, column_added=column)
+
+    # the results must only land on the returned copy, never on the caller's object;
+    # test_adata.uns['sctoolbox'] always exists, as @log_anndata writes to the input
+    assert 'SCSA' not in test_adata.uns.get('sctoolbox', {})
+    assert 'SCSA' not in test_adata.uns
+    assert column not in test_adata.obs.columns
+
+    assert 'SCSA' in adata.uns['sctoolbox']
+    assert 'SCSA' not in adata.uns
+    assert column in adata.obs.columns
+
+
+def test_run_scsa_no_cwd_residue(test_adata, monkeypatch, tmp_path):
+    """Test run_scsa leaves no files in the working directory."""
+    monkeypatch.chdir(tmp_path)
+
+    # record the per-call temp directory to check it is removed again
+    created = []
+    mkdtemp = celltype_annotation.tempfile.mkdtemp
+
+    def recording_mkdtemp(*args, **kwargs):
+        created.append(mkdtemp(*args, **kwargs))
+        return created[-1]
+
+    monkeypatch.setattr(celltype_annotation.tempfile, "mkdtemp", recording_mkdtemp)
+
+    # inplace=True to also cover the storage location of the inplace branch without
+    # a further SCSA run; the residue assertions below are unaffected by the mode
+    celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=True)
+
+    assert list(test_adata.uns['sctoolbox']['SCSA'].keys()) == ['results', 'stderr', 'stdout', 'cmd']
+    assert 'SCSA' not in test_adata.uns
+
+    assert list(tmp_path.iterdir()) == []
+    assert len(created) == 1
+    assert not Path(created[0]).exists()
+
+
+@pytest.mark.parametrize("key", ["invalid_key", "empty_key"])
+def test_run_scsa_missing_key(test_adata, key):
+    """Test run_scsa raises KeyError for a missing key and for missing params/groupby."""
+    test_adata.uns["empty_key"] = {}  # key exists, but holds no 'params'/'groupby'
+
+    with pytest.raises(KeyError):
+        celltype_annotation.run_scsa(test_adata, species='Mouse', key=key)
+
+
+def test_run_scsa_no_cwd_residue_on_error(test_adata, monkeypatch, tmp_path):
+    """Test run_scsa leaves no files in the working directory if SCSA fails."""
+    monkeypatch.chdir(tmp_path)
+
+    created = []
+    mkdtemp = celltype_annotation.tempfile.mkdtemp
+
+    def recording_mkdtemp(*args, **kwargs):
+        created.append(mkdtemp(*args, **kwargs))
+        return created[-1]
+
+    monkeypatch.setattr(celltype_annotation.tempfile, "mkdtemp", recording_mkdtemp)
+
+    # a monkeypatched subprocess.run keeps this test independent of how the command is built
+    def failing_run(*args, **kwargs):
+        return subprocess.CompletedProcess(args=[], returncode=1, stdout=b'', stderr=b'boom')
+
+    monkeypatch.setattr(celltype_annotation.subprocess, "run", failing_run)
+
+    with pytest.raises(ValueError):
+        celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=False)
+
+    assert list(tmp_path.iterdir()) == []
+    assert len(created) == 1
+    assert not Path(created[0]).exists()
 
 
 def test_add_cellxgene_annotation(adata_fun_scope, tmp_path):

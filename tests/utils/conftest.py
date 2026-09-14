@@ -24,24 +24,8 @@ def named_var_adata(adata_atac):
     adata = adata_atac.copy()
     adata.var['coordinate_col'] = ('prefix-' + adata.var['chr'].astype(str)
                                    + ':' + adata.var['start'].astype(str)
-                                   + '-' + adata.var['stop'].astype(str))
+                                   + '-' + adata.var['end'].astype(str))
     adata.var.index = [str(i) for i in range(adata.n_vars)]
-    return adata
-
-
-@pytest.fixture
-def adata_atac_invalid(adata_atac):
-    """Create adata with invalid index.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with invalid index.
-    """
-    adata = adata_atac.copy()
-    adata.var.iloc[0, 1] = 500  # start
-    adata.var.iloc[0, 2] = 100  # end
-    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-stop index
     return adata
 
 

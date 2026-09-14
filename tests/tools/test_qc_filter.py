@@ -11,22 +11,9 @@ import tempfile
 import matplotlib.pyplot as plt
 import logging
 from scipy.sparse import csr_matrix
-from contextlib import contextmanager
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
-
-# ---------------------------- HELPER ------------------------------- #
-
-
-@contextmanager
-def add_logger_handler(logger, handler):
-    """Temporarily add a handler to the given logger."""
-    logger.addHandler(handler)
-    try:
-        yield
-    finally:
-        logger.removeHandler(handler)
 
 # --------------------------- FIXTURES ------------------------------ #
 
@@ -354,7 +341,7 @@ def test_get_thresholds(adata, which, groupby):
 
 
 @pytest.mark.parametrize("which", ["obs", "var"])
-def test_match_columns(adata, which, caplog):
+def test_match_columns(adata, which, caplog, add_logger_handler):
     """Test _match_columns."""
     cols = getattr(adata, which).columns
     # collect valid column names
@@ -407,7 +394,7 @@ def test_filter_object(adata, which, inplace, invert, filter_type):
         assert utils.in_uns(out, ["sctoolbox", "report", "qc", which, "filter"])
 
 
-def test_filter_object_overwrite(adata, caplog):
+def test_filter_object_overwrite(adata, caplog, add_logger_handler):
     """Test _filter_object overwrite."""
     adata_copy = adata.copy()
 
@@ -467,7 +454,7 @@ def test_filter_cells(adata, invert):
 
 
 @pytest.mark.parametrize("threshold", [0.3, 0.0])
-def test_predict_sex(caplog, adata, threshold):
+def test_predict_sex(caplog, adata, threshold, add_logger_handler):
     """Test if predict_sex warns on invalid gene and succeeds."""
     adata = adata.copy()  # copy adata to avoid inplace changes
 
