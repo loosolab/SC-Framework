@@ -174,6 +174,9 @@ multiome = [
     'muon>=0.1.7',
     'mofapy2'
 ]
+hotspot = [
+    'hotspotsc', 'SC-Framework[gsea]', 'harmonypy<=0.0.10'
+]
 # core and downstream are intended to install commonly used dependencies
 # e.g. scar is deliberately skipped to to save disk space
 core = [
@@ -181,11 +184,6 @@ core = [
 ]
 downstream = [
     'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity,palantir,pilot,multiome,hotspot]'
-]
-hotspot = [
-    'hotspotsc',
-    'SC-Framework[gsea]',   # gseapy for run_hotspot_module_enrichment()
-    'harmonypy<=0.0.10'
 ]
 # all is intended to install everything
 all = [
