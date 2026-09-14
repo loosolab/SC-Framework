@@ -56,6 +56,7 @@ def mdata():
     sc.tl.umap(adata_atac)  # sets X_umap in adata_atac.obsm
 
     mdata_obj = mu.MuData({"RNA": adata_rna, "ATAC": adata_atac})
+    mdata_obj.pull_obs()  # propagate the modality obs columns as <mod>:<col>
 
     # Set up joint neighbors for umap_parameter_sweep using RNA PCA
     mdata_obj.obsm["X_pca"] = adata_rna.obsm["X_pca"]

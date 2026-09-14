@@ -6,23 +6,10 @@ import glob
 import logging
 import random
 import re
-from contextlib import contextmanager
 
 import pysam
 import sctoolbox.tools.bam as stb
 from tests.conftest import ATAC_DATA_DIR
-
-# ---------------------------- HELPER ------------------------------- #
-
-
-@contextmanager
-def add_logger_handler(logger, handler):
-    """Temporarily add a handler to the given logger."""
-    logger.addHandler(handler)
-    try:
-        yield
-    finally:
-        logger.removeHandler(handler)
 
 # ----------------------------- FIXTURES ------------------------------- #
 
@@ -66,7 +53,7 @@ def test_bam_adata_ov(adata_atac, atac_bam_file):
     assert hitrate >= 0.10
 
 
-def test_check_barcode_tag(adata_atac, atac_bam_file, mocker, caplog):
+def test_check_barcode_tag(adata_atac, atac_bam_file, mocker, caplog, add_logger_handler):
     """Tests the barcode overlap amount between adata and bam file."""
     with caplog.at_level(logging.INFO), add_logger_handler(stb.logger, caplog.handler):
         # test overlap == 0%
@@ -90,7 +77,7 @@ def test_check_barcode_tag(adata_atac, atac_bam_file, mocker, caplog):
             stb.check_barcode_tag(adata=adata_atac, bamfile=atac_bam_file, cb_tag="CB")
 
 
-def test_subset_bam(atac_bam_file, barcodes, caplog, tmpdir):
+def test_subset_bam(atac_bam_file, barcodes, caplog, tmpdir, add_logger_handler):
     """Check the subset_bam function."""
     outfile = tmpdir / "subset.bam"
 
