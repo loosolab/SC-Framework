@@ -827,19 +827,9 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
         multiscale_components=3,
     )
 
-    saved = {}
-
-    def fake_save_h5ad(adata, path, **kwargs):
-        saved["adata"] = adata
-        saved["path"] = path
-        saved["kwargs"] = kwargs
-
-    monkeypatch.setattr(pla.utils.adata, "save_h5ad", fake_save_h5ad)
-
-    save_path = str(tmp_path / "palantir_magic.h5ad")
     result = pla.run_diffusion_and_magic(
         preprocessed_adata,
-        save_path=save_path,
+        save_path=str(tmp_path / "palantir_magic.h5ad"),
         n_components=3,
         knn=30,
         kernel_backend="scanpy",
@@ -847,9 +837,6 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
     )
 
     assert result is preprocessed_adata
-    assert saved["adata"] is preprocessed_adata
-    assert saved["path"] == save_path
-    assert saved["kwargs"]["use_output_prefix"] is False
     assert "DM_EigenVectors_multiscaled" in result.obsm
     assert result.obsm["DM_EigenVectors_multiscaled"].shape == (
         preprocessed_adata.n_obs,

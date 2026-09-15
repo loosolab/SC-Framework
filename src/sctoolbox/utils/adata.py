@@ -170,7 +170,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
 @deco.log_anndata
 @beartype
-def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, use_output_prefix: bool = True, **kwargs: Any) -> None:
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, **kwargs: Any) -> None:
     """
     Save an anndata object to an .h5ad file.
 
@@ -183,8 +183,6 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
     report : Optional[list[str]]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
         Expects a list of three names: ["overview.md", "AnnData.obs.png", "AnnData.var.png"]
-    use_output_prefix : bool, default=True
-        Whether to prepend `sctoolbox.settings.full_adata_output_prefix` to `path`.
     **kwargs : Any
         Parameters forwarded to sc.AnnData.write
     """
@@ -219,7 +217,7 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
         _rec_search(getattr(adata, attr), path=[attr], repl=("/", "|"))
 
     # Save adata
-    adata_output = settings.full_adata_output_prefix + path if use_output_prefix else path
+    adata_output = settings.full_adata_output_prefix + path
     adata.write(filename=adata_output, **kwargs)
 
     # generate report
