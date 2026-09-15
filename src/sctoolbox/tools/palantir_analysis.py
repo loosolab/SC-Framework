@@ -1937,12 +1937,18 @@ def plot_branch_gene_programs(  # noqa: C901
         if mode == "range":
             # Select genes with the largest total amplitude.
             selected_genes = (
-                dynamic_range.sort_values(ascending=False).head(n_select).index.tolist()
+                dynamic_range.sort_values(ascending=False)
+                .head(n_select)
+                .index
+                .tolist()
             )
         elif mode == "var":
             # Select genes with the largest variance across pseudotime.
             selected_genes = (
-                dynamic_var.sort_values(ascending=False).head(n_select).index.tolist()
+                dynamic_var.sort_values(ascending=False)
+                .head(n_select)
+                .index
+                .tolist()
             )
         elif mode == "union":
             # Combine both rankings so that both strong monotonic trends
@@ -1961,7 +1967,12 @@ def plot_branch_gene_programs(  # noqa: C901
                 rank_var = dynamic_var.rank(ascending=False, method="average")
                 combined = (rank_range + rank_var).sort_values()
                 missing = n_select - len(selected)
-                fill = combined.loc[~combined.index.isin(selected)].head(missing).index.tolist()
+                fill = (
+                    combined.loc[~combined.index.isin(selected)]
+                    .head(missing)
+                    .index
+                    .tolist()
+                )
                 selected.extend(fill)
 
             selected_genes = selected[:n_select]

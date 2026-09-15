@@ -170,13 +170,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
 @deco.log_anndata
 @beartype
-def save_h5ad(
-    adata: sc.AnnData,
-    path: str,
-    report: Optional[list[str]] = None,
-    use_output_prefix: bool = True,
-    **kwargs: Any,
-) -> None:
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, use_output_prefix: bool = True, **kwargs: Any) -> None:
     """
     Save an anndata object to an .h5ad file.
 
