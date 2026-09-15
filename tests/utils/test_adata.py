@@ -106,6 +106,25 @@ def test_save_and_load_h5ad(adata, raw, caplog, tmp_path, add_logger_handler):
         assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
 
 
+def test_save_h5ad_without_output_prefix(adata, monkeypatch, tmp_path):
+    """A disabled output prefix should write exactly to the given path."""
+    path = str(tmp_path / "test.h5ad")
+    written = {}
+
+    def fake_write(self, filename, **kwargs):
+        written["filename"] = filename
+
+    monkeypatch.setattr(sc.AnnData, "write", fake_write)
+
+    utils.save_h5ad(
+        adata.copy(),
+        path,
+        use_output_prefix=False,
+    )
+
+    assert written["filename"] == path
+
+
 @pytest.mark.parametrize("key,value,expected", [
     # dict of RGB tuples as stored by palantir.plot.plot_trajectories
     ("palantir_fates_colors", {"2": (0.12156862745098039, 0.4666666666666667, 0.7058823529411765),

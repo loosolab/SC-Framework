@@ -337,7 +337,7 @@ def run_diffusion_and_magic(
     # ------------------------------------------------------------------
     # (6) Save cache and return
     # ------------------------------------------------------------------
-    utils.adata.save_h5ad(adata, save_path)
+    utils.adata.save_h5ad(adata, save_path, use_output_prefix=False)
     logger.info("Processed AnnData saved to: %s", save_path)
 
     return adata
