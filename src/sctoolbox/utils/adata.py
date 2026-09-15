@@ -225,9 +225,7 @@ def save_h5ad(
         _rec_search(getattr(adata, attr), path=[attr], repl=("/", "|"))
 
     # Save adata
-    adata_output = (
-        settings.full_adata_output_prefix + path if use_output_prefix else path
-    )
+    adata_output = settings.full_adata_output_prefix + path if use_output_prefix else path
     adata.write(filename=adata_output, **kwargs)
 
     # generate report
