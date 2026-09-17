@@ -41,6 +41,45 @@ logger = settings.logger
 # -------------------------------------------------- setup functions -------------------------------------------------- #
 
 
+@beartype
+def _explode_complexes(resource: pd.DataFrame,
+                       source: str = 'ligand',
+                       target: str = 'receptor') -> pd.DataFrame:
+    """
+    Explode protein complexes into single protein interactions.
+
+    Splits the underscore separated subunits of a complex (e.g. 'ITGA4_ITGB1') into one row per subunit
+    and keeps the original complex names in the added `<source>_complex` and `<target>_complex` columns.
+    Vendored from LIANA, which no longer exposes this functionality publicly.
+    Copyright (c) the LIANA authors, BSD-3-Clause.
+
+    Parameters
+    ----------
+    resource : pd.DataFrame
+        Ligand-receptor resource.
+    source : str, default 'ligand'
+        Name of the source (typically 'ligand') column.
+    target : str, default 'receptor'
+        Name of the target (typically 'receptor') column.
+
+    Returns
+    -------
+    pd.DataFrame
+        Resource with exploded complexes.
+    """
+
+    resource['interaction'] = resource[source] + '&' + resource[target]
+    resource = (resource.set_index('interaction')
+                .apply(lambda x: x.str.split('_'))
+                .explode([target])
+                .explode(source)
+                .reset_index()
+                )
+    resource[[f'{source}_complex', f'{target}_complex']] = resource['interaction'].str.split('&', expand=True)
+
+    return resource
+
+
 @deco.log_anndata
 @beartype
 def download_db(  # noqa: C901
@@ -126,7 +165,7 @@ def download_db(  # noqa: C901
             # get LIANA db
             database = liana_res.select_resource(db_path)
             # explode protein complexes interactions into single protein interactions
-            database = liana_res.explode_complexes(database)
+            database = _explode_complexes(database)
             liana = True
         else:
             raise ValueError(f"{db_path} is neither a valid file nor on of the available LIANA resources ({liana_res.show_resources()}).")
@@ -1632,6 +1671,8 @@ def _filter_anndata(  # noqa: C901
     ValueError
         If condition lengths don't match, required columns are missing,
         or specified clusters/genes are not found.
+    KeyError
+        If condition column is not found in adata.obs
 
     Examples
     --------
@@ -1664,12 +1705,14 @@ def _filter_anndata(  # noqa: C901
         return None
 
     # Construct and apply query for cell filtering
-    # Example: If valid_pairs=[('batch', '1'), ('treatment', 'control')],
-    # This creates query: "batch == '1' & treatment == 'control'"
-    query = " & ".join([f"{col} == '{val}'" for col, val in valid_pairs])
+    # Start with a mask of all True
+    cell_mask = pd.Series(True, index=adata.obs.index)
 
-    # Boolean mask
-    cell_mask = adata.obs.eval(query)
+    for col, val in valid_pairs:
+        if col not in adata.obs.columns:
+            raise KeyError(f"Column '{col}' not found in adata.obs")
+        # Combine conditions to mask
+        cell_mask &= (adata.obs[col] == val)
 
     # Check if mask contains only False
     if cell_mask.sum() == 0:

@@ -20,6 +20,12 @@ config_path = os.path.join(DATA_DIR, "test_config.yaml")
 config_path_nokey = os.path.join(DATA_DIR, "test_config_nokey.yaml")
 
 
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    """Fixture to reset settings after each test."""
+    yield
+    settings.reset()
+
 # --------------------------- TESTS --------------------------------- #
 
 
@@ -61,7 +67,6 @@ def test_logfile_verbosity(tmp_path):
 
     sys.stdout = mystdout = StringIO()  # for capturing stdout
 
-    settings.reset()
     settings.verbosity = 1  # info
     settings.log_file = str(tmp_path / "test.log")
 
@@ -92,14 +97,12 @@ def test_settings_from_config(key, path):
     settings.settings_from_config(path, key=key)
     assert getattr(settings, "overwrite_log")
     assert getattr(settings, "log_file") == "pipeline_output/logs/01_log.txt"
-    settings.reset()
 
 
 def test_invalid_key_settings_from_config():
     """Test that appropriate Error is returned if the given key is not found in the yaml."""
     with pytest.raises(KeyError, match="Key 01 not found in config file"):
         settings.settings_from_config(config_path_nokey, key="01")
-    settings.reset()
 
 
 def test_user_logging(tmp_path):

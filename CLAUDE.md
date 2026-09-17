@@ -50,6 +50,8 @@ Tests mirror the source module structure: a test for `src/sctoolbox/<group>/<mod
 
 Run all of these **inside the project conda env** (the env name/path is per-user; see the workflow's recorded env / your local settings). The workflow's binding test command is authoritative for a given change — this is the general cheat-sheet:
 
+**How to invoke conda:** `conda run -p <prefix> <cmd>` (or `-n <name>`) for gate and workflow commands — that is the form `.claude/settings.local.json` allow-lists, so it runs without a permission prompt — and bare `conda activate <path> && <cmd>` for ad-hoc probing. Do **not** prefix with `source $(conda info --base)/etc/profile.d/conda.sh`: the Bash tool's shell is already initialized from the user's profile. `mamba activate` may not be initialized; use `conda`. Shell state does not persist between calls, so repeat the prefix in each one.
+
 ```bash
 ruff check          # lint + docstring checks (the binding test command always starts here)
 pytest              # unit tests with coverage (target > 90%)
@@ -130,6 +132,8 @@ Mark deprecated functions with the `deprecation` package, targeting removal in 2
 
 ### CHANGES.md
 
+The changelog covers **sc-framework changes only** — the package, the notebooks, and the documentation. Changes to the Claude workflow itself (`CLAUDE.md`, `.claude/**`) get **no** entry: they ship no user-visible behaviour.
+
 Every change to the package, notebooks, or documentation requires an entry in `CHANGES.md`. Package- and notebook-scope changes are enforced by CI; docs-only changes are not gated by CI, but the dev workflow still requires an entry. Docs entries go under the main section header (like package changes). Format:
 
 ```markdown
@@ -144,7 +148,48 @@ Keep each bullet a terse phrase (e.g. "enables parallel test execution"), not a 
 
 ## Agentic workflow
 
-Skills live in `.claude/skills/`. The development loop is `/design → /plan → /implement`.
+Skills live in `.claude/skills/`. The development loop is `/design → /plan → /implement → /retro`.
+
+### Working agreements
+
+These bind every Claude installation working in this repo — they are checked in
+precisely so two installations do not work from different ground.
+
+- **No agent memory for this project.** Never write to the memory store, and never
+  rely on a recalled memory as a source of truth about this repo. Everything
+  project-related — conventions, gotchas, tooling details, decisions — belongs in
+  the repository: `CLAUDE.md` for durable conventions, `.claude/skills/` and
+  `.claude/docs/` for workflow mechanics, `.work/<item>/` for a work item's audit
+  trail, `CHANGES.md` and the commit history for what shipped. If you find a stray
+  memory carrying project knowledge, fold it into the right repo file and delete
+  it (`/retro` does this sweep). **Why:** a private memory store is per-installation
+  and invisible to everyone else, so anything kept there silently diverges.
+- **Discuss before acting.** Summarise what is known, name the intended next step,
+  and get agreement — including before a long chain of read-only probing. Offer
+  `/design` for anything non-trivial rather than starting in.
+- **Check the project's own helpers first — including when diagnosing.** Before
+  hand-rolling a `curl`/`bash`/`python -c`, look in `.claude/skills/` and
+  `scripts/` for the canonical helper (e.g. a GitLab issue or MR goes through
+  `scripts/gitlab_query.py search|fetch`, never a raw API call; a permissions or
+  `settings.json` question goes through `update-config`, even when you are only
+  reading). The shipped helpers are vetted, read-only and allow-listed;
+  hand-rolled equivalents bypass that and trigger prompts or fail.
+- **Edit files with `Edit`/`Write`, never through the shell.** No `python -c`, no
+  heredoc, no `sed -i`, no `tee`, no redirection — for source, tests, `.work/`
+  artifacts, and temporary mutations in a falsifiability check alike. A shell
+  string-replace silently no-ops when the pattern misses and silently doubles when
+  it over-matches, where `Edit` errors; in a falsifiability check that inverts the
+  result you would report. It also bypasses the read-before-edit guard and hides
+  the change in the tool record as a `Bash` call.
+- **Be brief.** Lead with the result. A green gate is one line, not a table.
+  Don't restate a task back to the user, re-explain a settled decision, or
+  summarise at length what is already written to a file — link it. Save the detail
+  for decisions that need one. The same applies to sub-agent briefs: see
+  `.claude/skills/implement/SKILL.md`.
+- **This file is team documentation.** `CLAUDE.md` is checked in and doubles as
+  human onboarding, so it is keep-by-default: do not propose trimming a section
+  because a manifest or `ls` could reconstruct it. If a section is factually stale,
+  correct it in place rather than deleting it.
 
 The user need not type `/design` to start. For a **non-trivial change** — a new submodule or public function, edits spanning several files, anything that should carry tests + a `CHANGES.md` entry, or behaviour that wants the regression gate — proactively offer to begin at `/design` and proceed only if the user agrees. For **trivial work** (a one-line fix, typo or docstring tweak, single localized edit, or exploratory question) skip the workflow and handle it directly. When in doubt, name the choice and let the user decide.
 
