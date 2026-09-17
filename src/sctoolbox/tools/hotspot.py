@@ -13,39 +13,15 @@ import sctoolbox.utils.decorator as deco
 import scanpy.external as sce
 
 from anndata import AnnData
-from IPython.display import display
 from beartype import beartype
-from beartype.typing import Optional, Any, Sequence
+from beartype.typing import Optional, Any, Sequence, Literal
 from sctoolbox import settings
 from sctoolbox.plotting.general import _save_figure
 
 logger = settings.logger
 
-
-@beartype
-def was_subsetted(
-    original_adata: AnnData,
-    current_adata: AnnData,
-) -> bool:
-    """
-    Check whether current_adata contains fewer cells than original_adata.
-
-    This is useful to decide whether PCA/neighbors/UMAP should be recomputed.
-
-    Parameters
-    ----------
-    original_adata : AnnData
-        AnnData object before subsetting.
-    current_adata : AnnData
-        AnnData object after potential subsetting.
-
-    Returns
-    -------
-    bool
-        True if current_adata contains fewer cells than original_adata,
-        otherwise False.
-    """
-    return current_adata.n_obs < original_adata.n_obs
+#: Hotspot labels genes that could not be assigned to any module with this value.
+UNASSIGNED_MODULE = -1
 
 
 @beartype
@@ -227,7 +203,7 @@ def ensure_umap(
         representation under this key is reused unless force_recompute
         is True.
     force_recompute : bool, default False
-        Whether to recompute even if umap_key already exists in adata.obsm.
+        Whether to recompute even if adata.obsm["X_umap"] already exists.
 
     Returns
     -------
@@ -511,7 +487,7 @@ def ensure_umap_for_visualization(
 
 
 @beartype
-def ensure_hotspot_latent_representation(  # noqa: C901
+def ensure_hotspot_latent_representation(
     adata: AnnData,
     representation_settings: dict[str, Any],
     pca_settings: dict[str, Any],
@@ -694,122 +670,6 @@ def ensure_hotspot_latent_representation(  # noqa: C901
 
 
 @beartype
-def subset_adata(  # noqa: C901
-    adata: AnnData,
-    subset_filters: Optional[dict[str, Any]] = None,
-    copy: bool = True,
-    drop_unused_categories: bool = True,
-) -> AnnData:
-    """
-    Subset AnnData based on one or multiple columns in `adata.obs`.
-
-    Parameters
-    ----------
-    adata : AnnData
-        AnnData object to subset.
-    subset_filters : Optional[dict[str, Any]], default None
-        Dictionary mapping obs column names to one or multiple values.
-
-        Example
-        -------
-        {
-            "sample": [3, 6],
-            "subcelltype": ["Epcam+", "EPCAM-"]
-        }
-
-        Within one column, values are combined with OR.
-        Across columns, filters are combined with AND.
-
-    copy : bool, default True
-        Whether to return a copy of the subsetted AnnData.
-    drop_unused_categories : bool, default True
-        Whether to remove unused categories from categorical obs columns.
-
-    Returns
-    -------
-    AnnData
-        Subsetted AnnData object.
-
-    Raises
-    ------
-    KeyError
-        If a column specified in subset_filters is not present in
-        adata.obs.
-    TypeError
-        If subset_filters is not a dictionary.
-    ValueError
-        If requested values are missing, no values are provided, or the
-        subsetting removes all cells.
-    """
-    if subset_filters is None or len(subset_filters) == 0:
-        return adata.copy() if copy else adata
-
-    if not isinstance(subset_filters, dict):
-        raise TypeError("`subset_filters` must be a dictionary mapping obs columns to values.")
-
-    missing_columns = [col for col in subset_filters if col not in adata.obs.columns]
-    if missing_columns:
-        raise KeyError(
-            f"Columns not found in `adata.obs`: {missing_columns}. "
-            f"Available columns are: {list(adata.obs.columns)}"
-        )
-
-    mask = pd.Series(True, index=adata.obs_names)
-    applied_filters = {}
-
-    for col, values in subset_filters.items():
-        if values is None:
-            continue
-
-        if not isinstance(values, (list, tuple, set, pd.Index, np.ndarray)):
-            values = [values]
-
-        if len(values) == 0:
-            raise ValueError(f"No values were provided for subset column '{col}'.")
-
-        obs_values_str = adata.obs[col].astype(str)
-        requested_values_str = [str(v) for v in values]
-
-        available_values = sorted(obs_values_str.unique().tolist())
-        missing_values = sorted(set(requested_values_str) - set(available_values))
-
-        if missing_values:
-            preview = available_values[:20]
-            raise ValueError(
-                f"Values {missing_values} were not found in `adata.obs['{col}']`. "
-                f"Example available values: {preview}"
-            )
-
-        applied_filters[col] = requested_values_str
-
-        col_mask = obs_values_str.isin(requested_values_str)
-        mask &= col_mask
-
-    if mask.sum() == 0:
-        raise ValueError("Subsetting removed all cells. Please check `subset_filters`.")
-
-    adata_subset = qc_filter.filter_cells(
-        adata,
-        cells=adata.obs_names[mask].tolist(),
-        invert=True,
-        inplace=not copy,
-        name="hotspot_subset",
-        value={"subset_filters": applied_filters},
-        overwrite=True,
-    )
-
-    if adata_subset is None:  # inplace=True returns None
-        adata_subset = adata
-
-    if drop_unused_categories:
-        for col in adata_subset.obs.columns:
-            if pd.api.types.is_categorical_dtype(adata_subset.obs[col]):
-                adata_subset.obs[col] = adata_subset.obs[col].cat.remove_unused_categories()
-
-    return adata_subset
-
-
-@beartype
 def inspect_and_filter_genes_by_cell_detection(
     adata: AnnData,
     layer_key: Optional[str] = "raw",
@@ -835,19 +695,10 @@ def inspect_and_filter_genes_by_cell_detection(
     adata : AnnData
         Input AnnData object.
     layer_key : Optional[str], default "raw"
-        Layer to use for gene detection counts.
-        If None, adata.X is used.
+        Layer to use for gene detection counts. If None, adata.X is used;
+        note that anndata >= 0.13 stores .X in adata.layers under the None
+        key, so both spellings refer to the same matrix.
     min_cells : int, default 50
-        Minimum number of cells in which a gene must be detected.
-        Genes seen in very few cells carry little information for the
-        neighbourhood statistics and mostly add noise, so removing them can
-        sharpen the Hotspot result. As a rule of thumb, start at roughly
-        0.1-1% of the cells in the current (sub)set and check the histogram
-        and the threshold table printed by this function before deciding.
-        The default of 50 fits datasets of a few thousand to a few tens of
-        thousands of cells; for smaller subsets a lower value is usually
-        more appropriate. With filter_genes=False nothing is removed and
-        this value only affects the reported summary.
     thresholds_to_show : Sequence[int], default (10, 20, 30, 50, 100)
         Thresholds for reporting how many genes would be kept.
     filter_genes : bool, default False
@@ -902,7 +753,7 @@ def inspect_and_filter_genes_by_cell_detection(
         if layer_key not in adata.layers:
             raise KeyError(
                 f"Layer '{layer_key}' not found in adata.layers. "
-                f"Available layers: {list(adata.layers.keys())}"
+                f"Available layers: {[k for k in adata.layers if k is not None]}"
             )
         used_layer = f"adata.layers['{layer_key}']"
 
@@ -930,11 +781,13 @@ def inspect_and_filter_genes_by_cell_detection(
     )
 
     # --------------------------------------------------------
-    # Show basic statistics
+    # Log a compact summary; the full table is returned to the caller
     # --------------------------------------------------------
-    logger.info("Gene detection frequency summary:")
-    display(gene_detection.head())
-    display(gene_detection[var_column].describe())
+    stats = gene_detection[var_column].describe()
+    logger.info(
+        f"Gene detection frequency: median={stats['50%']:.0f}, "
+        f"min={stats['min']:.0f}, max={stats['max']:.0f}."
+    )
 
     # --------------------------------------------------------
     # Plot histogram
@@ -1015,18 +868,19 @@ def inspect_and_filter_genes_by_cell_detection(
     return adata_out, gene_detection, summary
 
 
+@deco.log_anndata
 @beartype
 def run_hotspot(  # noqa: C901
     adata: AnnData,
     layer_key: str = "raw",
     latent_obsm_key: Optional[str] = None,
     umi_counts_obs_key: str = "total_counts",
-    model: str = "danb",
+    model: Literal["danb", "bernoulli", "normal", "none"] = "danb",
     n_neighbors: int = 30,
     weighted_graph: bool = False,
     jobs: Optional[int] = None,
     top_n: Optional[int] = 2000,
-    gene_selection_method: str = "fdr",
+    gene_selection_method: Literal["top_n_z", "fdr"] = "fdr",
     autocorr_fdr_threshold: Optional[float] = 0.05,
     min_gene_threshold: int = 30,
     core_only: bool = True,
@@ -1034,13 +888,18 @@ def run_hotspot(  # noqa: C901
     compute_local_correlations: bool = True,
     compute_modules: bool = True,
     compute_module_scores: bool = True,
-    attach_results_to_adata: bool = False,
+    store_local_correlations: bool = False,
     module_prefix: str = "Hotspot module",
     overwrite_obs_key: bool = False,
-    overwrite_attached_results: bool = True,
 ) -> dict[str, Any]:
     """
     Run Hotspot analysis on an AnnData object.
+
+    All results that can be stored are written to adata: autocorrelation
+    statistics, module assignments and the selected gene flag to adata.var,
+    module scores to adata.obs, run metadata to adata.uns. The returned
+    dictionary additionally holds the live Hotspot object, which is only
+    needed for the local correlation heatmap, see plot_local_correlations.
 
     Parameters
     ----------
@@ -1054,10 +913,22 @@ def run_hotspot(  # noqa: C901
     umi_counts_obs_key : str, default "total_counts"
         Name of obs column containing per-cell UMI / total count values.
         If missing, it is computed from layer_key.
-    model : str, default "danb"
-        Hotspot model used for the null distribution of gene expression.
-        Supported: "danb", "bernoulli", "normal", "none". See
-        https://hotspot.readthedocs.io/ for details.
+    model : Literal["danb", "bernoulli", "normal", "none"], default "danb"
+        Null model for the per-gene expression distribution. Pick the one
+        that matches the input in layer_key:
+
+        - "danb": depth-adjusted negative binomial. For UMI counts, i.e. the
+          usual choice for scRNA-seq with layer_key="raw".
+        - "bernoulli": models detection (zero vs non-zero) only. For binary or
+          very sparse data such as scATAC peak matrices, or when counts are
+          unreliable.
+        - "normal": for continuous data that is already normalised and
+          log-transformed, or for non-count modalities.
+        - "none": no null model; values are only centered and scaled. Use when
+          the data is already variance-stabilised.
+
+        See https://hotspot.readthedocs.io/en/latest/ for the underlying
+        statistics.
     n_neighbors : int, default 30
         Number of neighbors for KNN graph construction.
     weighted_graph : bool, default False
@@ -1067,15 +938,16 @@ def run_hotspot(  # noqa: C901
     top_n : Optional[int], default 2000
         Number of top genes to use for local correlations if
         gene_selection_method="top_n_z".
-    gene_selection_method : str, default "fdr"
+    gene_selection_method : Literal["top_n_z", "fdr"], default "fdr"
         Strategy for selecting genes for local correlations.
-        Supported: "top_n_z", "fdr".
     autocorr_fdr_threshold : Optional[float], default 0.05
         FDR threshold for gene selection if gene_selection_method="fdr".
     min_gene_threshold : int, default 30
         Minimum genes per module.
     core_only : bool, default True
-        Whether to keep only core module genes.
+        Whether to keep only core module genes, i.e. the genes that cluster
+        stably with the module. Setting this to False also assigns genes at
+        the cluster border, which yields larger but less specific modules.
     module_fdr_threshold : float, default 0.05
         FDR threshold used in module creation.
     compute_local_correlations : bool, default True
@@ -1084,19 +956,20 @@ def run_hotspot(  # noqa: C901
         Whether to create modules.
     compute_module_scores : bool, default True
         Whether to calculate module scores. Requires compute_modules=True.
-    attach_results_to_adata : bool, default False
-        Whether to attach Hotspot results to adata.obs, adata.var and adata.uns.
+    store_local_correlations : bool, default False
+        Whether to store the local correlation matrix in adata.uns. The matrix
+        grows with the square of the number of selected genes and is therefore
+        skipped by default.
     module_prefix : str, default "Hotspot module"
         Prefix for module score columns added to adata.obs.
     overwrite_obs_key : bool, default False
         Whether to overwrite an existing umi_counts_obs_key in adata.obs.
-    overwrite_attached_results : bool, default True
-        Whether to overwrite already attached hotspot result columns in adata.
 
     Returns
     -------
     dict[str, Any]
-        Dictionary with Hotspot object and result tables.
+        Dictionary holding the live Hotspot object under "hotspot" and the raw
+        result tables. Downstream functions read from adata instead.
 
     Raises
     ------
@@ -1104,14 +977,21 @@ def run_hotspot(  # noqa: C901
         If the requested layer, latent representation, or a required result
         column is missing.
     ValueError
-        If the selected configuration is invalid, all genes have zero
-        variance, or the requested analysis steps are incompatible.
+        If top_n or autocorr_fdr_threshold is missing for the selected
+        gene_selection_method, if all genes have zero variance, or if
+        compute_module_scores is requested without compute_modules.
     """
     if jobs is None:
         jobs = settings.get_threads()
 
     if layer_key not in adata.layers:
-        raise KeyError(f"Layer '{layer_key}' not found in adata.layers.")
+        # anndata >= 0.13 stores .X in layers under the None key, which is not
+        # a layer name the user can pass here
+        available = [k for k in adata.layers if k is not None]
+        raise KeyError(
+            f"Layer '{layer_key}' not found in adata.layers. "
+            f"Available layers: {available}"
+        )
 
     if latent_obsm_key is None:
         for candidate in ("X_pca_harmony", "X_pca"):
@@ -1193,11 +1073,6 @@ def run_hotspot(  # noqa: C901
                 autocorrelations["FDR"] < autocorr_fdr_threshold
             ].index
 
-        else:
-            raise ValueError(
-                "Unsupported gene_selection_method. Use one of: ['top_n_z', 'fdr']."
-            )
-
         selected_genes = pd.Index(selected_genes)
         local_correlations = hs.compute_local_correlations(selected_genes, jobs=jobs)
 
@@ -1224,76 +1099,141 @@ def run_hotspot(  # noqa: C901
         "umi_counts_obs_key_used": umi_counts_obs_key,
     }
 
-    if attach_results_to_adata:
-        # add module scores to obs
-        if module_scores is not None:
-            module_scores_obs = module_scores.copy()
-            module_scores_obs.columns = [f"{module_prefix} {c}" for c in module_scores_obs.columns]
+    # --------------------------------------------------------
+    # Store results in adata so that downstream functions do
+    # not depend on the returned dictionary
+    # --------------------------------------------------------
 
-            if overwrite_attached_results:
-                adata.obs = adata.obs.drop(columns=module_scores_obs.columns, errors="ignore")
+    # autocorrelation statistics -> var
+    for col in ("C", "Z", "Pval", "FDR"):
+        if col in autocorrelations.columns:
+            adata.var[f"hotspot_{col}"] = autocorrelations[col].reindex(adata.var_names)
 
-            adata.obs = adata.obs.join(module_scores_obs)
+    # module assignments -> var
+    n_modules = None
 
-        # add autocorrelation stats to var
-        autocorr_cols = {
-            "C": "hotspot_C",
-            "Z": "hotspot_Z",
-            "Pval": "hotspot_Pval",
-            "FDR": "hotspot_FDR",
-        }
+    if modules is not None:
+        module_series = pd.Series(modules)
 
-        for src, dst in autocorr_cols.items():
-            if src in autocorrelations.columns:
-                if overwrite_attached_results or dst not in adata.var.columns:
-                    adata.var[dst] = autocorrelations[src].reindex(adata.var_names)
+        # reindex introduces NaN for genes outside the run, which count as unassigned
+        adata.var["hotspot_module"] = (
+            pd.to_numeric(module_series.reindex(adata.var_names), errors="coerce")
+            .fillna(UNASSIGNED_MODULE)
+            .astype(int)
+        )
 
-        # add module assignments to var
-        if modules is not None:
-            module_series = pd.Series(modules, name="hotspot_module")
-            if overwrite_attached_results or "hotspot_module" not in adata.var.columns:
-                adata.var["hotspot_module"] = module_series.reindex(adata.var_names)
+        n_modules = module_series[module_series != UNASSIGNED_MODULE].nunique()
 
-        # add metadata to uns['sctoolbox']['hotspot']['run']
-        utils.adata.add_uns_info(adata, key=["hotspot", "run"], value={
-            "latent_obsm_key_used": latent_obsm_key,
-            "umi_counts_obs_key_used": umi_counts_obs_key,
-            "gene_selection_method": gene_selection_method,
-            "autocorr_fdr_threshold": autocorr_fdr_threshold,
-            "top_n": top_n,
-            "n_neighbors": n_neighbors,
-            "weighted_graph": weighted_graph,
-            "model": model,
-            "min_gene_threshold": min_gene_threshold,
-            "core_only": core_only,
-            "module_fdr_threshold": module_fdr_threshold,
-            "n_selected_genes": None if selected_genes is None else len(selected_genes),
-            # module label -1 means unassigned and is excluded from the count
-            "n_modules": None if modules is None else int(pd.Series(modules).loc[pd.Series(modules) != -1].nunique()),
-            "module_prefix": module_prefix,
-            "n_genes_input": gene_var.shape[0],
-            "n_zero_variance_genes_removed": n_removed,
-            "n_genes_used": adata_hs.n_vars,
-        })
+    # genes that entered the local correlation step -> var
+    if selected_genes is not None:
+        adata.var["hotspot_selected"] = adata.var_names.isin(selected_genes)
+
+    # module scores -> obs
+    module_score_columns = None
+
+    if module_scores is not None:
+        module_scores_obs = module_scores.rename(
+            columns=lambda c: f"{module_prefix} {c}"
+        ).reindex(adata.obs_names)
+
+        module_score_columns = module_scores_obs.columns.tolist()
+
+        adata.obs = adata.obs.drop(columns=module_score_columns, errors="ignore")
+        adata.obs = adata.obs.join(module_scores_obs)
+
+    # local correlation matrix -> uns, on request only
+    if store_local_correlations and local_correlations is not None:
+        utils.adata.add_uns_info(
+            adata, key=["hotspot", "local_correlations"], value=local_correlations
+        )
+
+    # run metadata -> uns
+    utils.adata.add_uns_info(adata, key=["hotspot", "run"], value={
+        "latent_obsm_key_used": latent_obsm_key,
+        "umi_counts_obs_key_used": umi_counts_obs_key,
+        "gene_selection_method": gene_selection_method,
+        "autocorr_fdr_threshold": autocorr_fdr_threshold,
+        "top_n": top_n,
+        "n_neighbors": n_neighbors,
+        "weighted_graph": weighted_graph,
+        "model": model,
+        "min_gene_threshold": min_gene_threshold,
+        "core_only": core_only,
+        "module_fdr_threshold": module_fdr_threshold,
+        "n_selected_genes": None if selected_genes is None else len(selected_genes),
+        "n_modules": n_modules,
+        "module_prefix": module_prefix,
+        "module_score_columns": module_score_columns,
+        # stored as a scalar because h5ad has no writer for tuples
+        "n_local_correlation_genes": (
+            None if local_correlations is None else local_correlations.shape[0]
+        ),
+        "local_correlations_stored": (
+            store_local_correlations and local_correlations is not None
+        ),
+        "n_genes_input": gene_var.shape[0],
+        "n_zero_variance_genes_removed": n_removed,
+        "n_genes_used": adata_hs.n_vars,
+    })
 
     return results
 
 
 @beartype
+def plot_local_correlations(
+    hs: hotspot.Hotspot,
+    output_prefix: str = "hotspot",
+    save: bool = True,
+    report: bool = True,
+) -> None:
+    """
+    Plot the Hotspot local correlation heatmap.
+
+    Genes are ordered by the linkage Hotspot computed during module creation,
+    so that modules appear as blocks along the diagonal. This is the only
+    Hotspot plot that needs the live Hotspot object, because the linkage is
+    not stored in AnnData.
+
+    Parameters
+    ----------
+    hs : hotspot.Hotspot
+        Hotspot object as returned by run_hotspot under results["hotspot"].
+    output_prefix : str, default "hotspot"
+        Prefix for saved figure names.
+    save : bool, default True
+        Whether to save the figure.
+    report : bool, default True
+        Whether to additionally write the figure to sctoolbox.settings.report_dir.
+    """
+    try:
+        hs.plot_local_correlations()
+    except (ValueError, KeyError) as e:
+        logger.warning(f"Could not plot local correlation heatmap: {e}")
+        return
+
+    if save:
+        _save_figure(f"{output_prefix}_local_correlations_heatmap.pdf", bbox_inches="tight")
+
+    if report:
+        _save_figure(
+            f"{output_prefix}_local_correlations_heatmap.png", report=True, bbox_inches="tight"
+        )
+
+    plt.show()
+
+
+@deco.log_anndata
+@beartype
 def show_hotspot_results(  # noqa: C901
     adata: AnnData,
-    results: dict[str, Any],
     fdr_threshold: float = 0.05,
-    module_score_prefix: str = "Hotspot module",
     color_map: Optional[str] = None,
     ncols: int = 3,
-    n_selected_genes_preview: int = 20,
     hist_figsize: tuple[float, float] = (7.0, 4.0),
     hist_bins: int = 50,
     umap_key: str = "X_umap",
     output_prefix: str = "hotspot",
     plot_umap_modules: bool = True,
-    plot_local_correlation_heatmap: bool = True,
     plot_autocorrelation_distribution: bool = True,
     plot_module_sizes: bool = True,
     save: bool = True,
@@ -1302,33 +1242,29 @@ def show_hotspot_results(  # noqa: C901
     """
     Show and save the main Hotspot results.
 
+    All results are read from adata, which run_hotspot fills. The local
+    correlation heatmap is not part of this function because it needs the
+    live Hotspot object, see plot_local_correlations.
+
     This function summarizes:
     - autocorrelation results
     - number of significant / selected genes
     - autocorrelation distributions
-    - local correlation heatmap
-    - module score UMAPs
     - module size table and barplot
+    - module score UMAPs
 
     Parameters
     ----------
     adata : AnnData
-        AnnData object used for Hotspot plotting. Must contain the UMAP
-        given by umap_key if UMAP plots are requested.
-    results : dict[str, Any]
-        Dictionary returned by run_hotspot.
+        AnnData object holding the Hotspot results written by run_hotspot.
+        Must contain the UMAP given by umap_key if UMAP plots are requested.
     fdr_threshold : float, default 0.05
         FDR threshold used to count significant genes.
-    module_score_prefix : str, default "Hotspot module"
-        Prefix for module score columns added to adata.obs.
     color_map : Optional[str], default None
         Matplotlib colormap for the module score UMAPs. If None, the
         sctoolbox default is used.
     ncols : int, default 3
         Number of columns for UMAP module score plots.
-    n_selected_genes_preview : int, default 20
-        Number of selected genes shown in the preview table. The full list
-        is available in results["selected_genes"].
     hist_figsize : tuple[float, float], default (7.0, 4.0)
         Size of the autocorrelation distribution histograms in inches.
     hist_bins : int, default 50
@@ -1339,12 +1275,10 @@ def show_hotspot_results(  # noqa: C901
         Prefix for saved figure names.
     plot_umap_modules : bool, default True
         Whether to plot module scores on UMAP.
-    plot_local_correlation_heatmap : bool, default True
-        Whether to plot Hotspot local correlation heatmap.
     plot_autocorrelation_distribution : bool, default True
         Whether to plot distributions of autocorrelation results.
     plot_module_sizes : bool, default True
-        Whether to show and plot module sizes.
+        Whether to plot module sizes.
     save : bool, default True
         Whether to save figures.
     report : bool, default True
@@ -1353,46 +1287,41 @@ def show_hotspot_results(  # noqa: C901
     Returns
     -------
     dict[str, Any]
-        Summary containing information such as the number of tested genes,
-        selected genes, modules, module sizes, and module-score columns.
+        Summary holding the result tables and counts. Tables are returned
+        rather than displayed so that the caller decides what to show.
     """
     summary = {}
+
+    run_key = ["sctoolbox", "hotspot", "run"]
+    run_info = utils.adata.get_uns(adata, run_key) if utils.adata.in_uns(adata, run_key) else {}
 
     # ========================================================
     # 1. Autocorrelation results
     # ========================================================
 
-    hs_results = results.get("autocorrelations", None)
+    autocorr_cols = [c for c in ("C", "Z", "Pval", "FDR") if f"hotspot_{c}" in adata.var.columns]
 
-    if hs_results is not None:
-        logger.info("Autocorrelation results")
+    if autocorr_cols:
+        # genes outside the Hotspot run carry NaN in every column
+        hs_results = adata.var[[f"hotspot_{c}" for c in autocorr_cols]].dropna(how="all")
+        hs_results.columns = autocorr_cols
 
-        with pd.option_context("display.max.rows", 10, "display.max.columns", None):
-            display(hs_results)
-
-        n_total = hs_results.shape[0]
+        summary["autocorrelations"] = hs_results
+        summary["n_total_genes_tested"] = hs_results.shape[0]
 
         if "FDR" in hs_results.columns:
             n_sig = int((hs_results["FDR"] < fdr_threshold).sum())
-            logger.info(f"{n_sig} / {n_total} genes have FDR < {fdr_threshold}")
+            logger.info(
+                f"{n_sig} / {hs_results.shape[0]} genes have FDR < {fdr_threshold}"
+            )
         else:
             n_sig = None
-            logger.warning("Column 'FDR' not found in autocorrelation results.")
+            logger.warning("Column 'hotspot_FDR' not found in adata.var.")
 
-        summary["n_total_genes_tested"] = n_total
         summary["n_significant_genes"] = n_sig
 
-        # ----------------------------------------------------
-        # Autocorrelation distribution plots
-        # ----------------------------------------------------
-
         if plot_autocorrelation_distribution:
-            numeric_columns = [
-                col for col in ["C", "Z", "Pval", "FDR"]
-                if col in hs_results.columns
-            ]
-
-            for col in numeric_columns:
+            for col in autocorr_cols:
                 values = hs_results[col].replace([np.inf, -np.inf], np.nan).dropna()
 
                 plt.figure(figsize=hist_figsize)
@@ -1403,91 +1332,67 @@ def show_hotspot_results(  # noqa: C901
                 plt.tight_layout()
 
                 if save:
-                    _save_figure(f"{output_prefix}_autocorrelation_{col}_distribution.pdf", bbox_inches="tight")
+                    _save_figure(
+                        f"{output_prefix}_autocorrelation_{col}_distribution.pdf",
+                        bbox_inches="tight",
+                    )
 
                 if report:
-                    _save_figure(f"{output_prefix}_autocorrelation_{col}_distribution.png", report=True, bbox_inches="tight")
+                    _save_figure(
+                        f"{output_prefix}_autocorrelation_{col}_distribution.png",
+                        report=True,
+                        bbox_inches="tight",
+                    )
 
                 plt.show()
 
     else:
-        logger.warning("No autocorrelation results found in results['autocorrelations'].")
+        logger.warning("No 'hotspot_*' autocorrelation columns found in adata.var.")
 
     # ========================================================
     # 2. Selected genes
     # ========================================================
 
-    selected_genes = results.get("selected_genes", None)
+    if "hotspot_selected" in adata.var.columns:
+        selected_genes = adata.var_names[adata.var["hotspot_selected"]]
 
-    if selected_genes is not None:
         logger.info(f"Selected genes: {len(selected_genes)}")
 
-        display(pd.Series(selected_genes, name="gene").head(n_selected_genes_preview))
-
+        summary["selected_genes"] = pd.Series(selected_genes, name="gene")
         summary["n_selected_genes"] = len(selected_genes)
 
     else:
-        logger.warning("No selected genes found in results['selected_genes'].")
+        logger.warning("No selected genes found in adata.var['hotspot_selected'].")
         summary["n_selected_genes"] = None
 
     # ========================================================
-    # 3. Local correlation results and heatmap
+    # 3. Local correlations
     # ========================================================
+    # The heatmap needs the live Hotspot object, see plot_local_correlations
 
-    local_corr = results.get("local_correlations", None)
-    hs = results.get("hotspot", None)
+    n_corr_genes = run_info.get("n_local_correlation_genes")
 
-    if local_corr is not None:
-        logger.info("Local correlation matrix preview")
+    if n_corr_genes is not None:
+        logger.info(f"Local correlations computed for {n_corr_genes} genes.")
 
-        display(local_corr.iloc[:10, :10])
-
-        summary["local_correlation_shape"] = local_corr.shape
-
-        if plot_local_correlation_heatmap and hs is not None:
-            logger.info("Plotting local correlation heatmap...")
-
-            try:
-                hs.plot_local_correlations()
-            except (ValueError, KeyError) as e:
-                logger.warning(f"Could not plot local correlation heatmap: {e}")
-            else:
-                if save:
-                    _save_figure(f"{output_prefix}_local_correlations_heatmap.pdf", bbox_inches="tight")
-
-                if report:
-                    _save_figure(f"{output_prefix}_local_correlations_heatmap.png", report=True, bbox_inches="tight")
-
-                plt.show()
-
-    else:
-        logger.warning("No local correlations found in results['local_correlations'].")
+    summary["n_local_correlation_genes"] = n_corr_genes
 
     # ========================================================
     # 4. Modules and module sizes
     # ========================================================
 
-    modules = results.get("modules", None)
+    if "hotspot_module" in adata.var.columns:
+        modules = adata.var["hotspot_module"].rename("Module")
 
-    if modules is None and hs is not None and getattr(hs, "modules", None) is not None:
-        modules = hs.modules
-
-    if modules is not None:
-        modules = pd.Series(modules).copy()
-        modules.name = "Module"
-
-        logger.info("Modules preview")
-
-        with pd.option_context("display.max.rows", 10, "display.max.columns", None):
-            display(modules)
-
-        # Hotspot labels genes that could not be assigned to any module with -1
-        module_sizes = modules[modules != -1].value_counts().sort_index()
+        module_sizes = modules[modules != UNASSIGNED_MODULE].value_counts().sort_index()
         module_sizes.name = "n_genes"
 
-        logger.info("Module sizes")
-        display(module_sizes)
+        logger.info(
+            f"{module_sizes.shape[0]} modules, "
+            f"{int((modules == UNASSIGNED_MODULE).sum())} genes unassigned."
+        )
 
+        summary["modules"] = modules
         summary["n_modules"] = module_sizes.shape[0]
         summary["module_sizes"] = module_sizes
 
@@ -1503,51 +1408,35 @@ def show_hotspot_results(  # noqa: C901
                 _save_figure(f"{output_prefix}_module_sizes.pdf", bbox_inches="tight")
 
             if report:
-                _save_figure(f"{output_prefix}_module_sizes.png", report=True, bbox_inches="tight")
+                _save_figure(
+                    f"{output_prefix}_module_sizes.png", report=True, bbox_inches="tight"
+                )
 
             plt.show()
 
     else:
-        logger.warning("No modules found in results['modules'] or results['hotspot'].modules.")
-        module_sizes = None
+        logger.warning("No module assignments found in adata.var['hotspot_module'].")
         summary["n_modules"] = None
 
     # ========================================================
     # 5. Module score UMAPs
     # ========================================================
 
-    module_scores = results.get("module_scores", None)
+    # h5ad turns the stored list into an array, so normalise before testing
+    stored_columns = run_info.get("module_score_columns")
+    score_columns = [] if stored_columns is None else list(stored_columns)
 
-    if module_scores is not None:
-        logger.info("Module scores")
-
-        module_scores_plot = module_scores.copy()
-
-        module_scores_plot.columns = [
-            f"{module_score_prefix} {c}" for c in module_scores_plot.columns
-        ]
-
-        # align scores to adata cells
-        module_scores_plot = module_scores_plot.reindex(adata.obs_names)
-
-        if module_scores_plot.isna().any().any():
-            logger.warning(
-                "Some module scores are NaN after reindexing. "
-                "Please check whether module_scores.index matches adata.obs_names."
-            )
-
-        # add module scores to adata.obs
-        adata.obs[module_scores_plot.columns] = module_scores_plot
-
-        with pd.option_context("display.max.rows", 5, "display.max.columns", None):
-            display(module_scores_plot)
-
-        summary["n_module_score_columns"] = module_scores_plot.shape[1]
-        summary["module_score_columns"] = module_scores_plot.columns.tolist()
+    if score_columns:
+        summary["module_scores"] = adata.obs[score_columns]
+        summary["n_module_score_columns"] = len(score_columns)
+        summary["module_score_columns"] = list(score_columns)
 
         if plot_umap_modules:
             if umap_key not in adata.obsm:
-                logger.warning(f"No UMAP found in adata.obsm['{umap_key}']. Module UMAPs cannot be plotted.")
+                logger.warning(
+                    f"No UMAP found in adata.obsm['{umap_key}']. "
+                    "Module UMAPs cannot be plotted."
+                )
             else:
                 logger.info("Plotting module score UMAPs...")
 
@@ -1556,7 +1445,7 @@ def show_hotspot_results(  # noqa: C901
                 _ = pl.embedding.plot_embedding(
                     adata,
                     method=umap_key,
-                    color=module_scores_plot.columns.tolist(),
+                    color=score_columns,
                     ncols=ncols,
                     suptitle="",
                     save=f"{output_prefix}_module_scores_umap.pdf" if save else None,
@@ -1565,230 +1454,128 @@ def show_hotspot_results(  # noqa: C901
                 )
 
     else:
-        logger.warning("No module scores found in results['module_scores'].")
+        logger.warning("No module score columns recorded in adata.uns.")
 
     # ========================================================
     # 6. Final summary
     # ========================================================
 
-    logger.info("Hotspot result summary")
-    summary_display = {
+    scalar_summary = {
         key: value
         for key, value in summary.items()
-        if key not in ["module_sizes", "module_score_columns"]
+        if isinstance(value, (int, float, str, tuple, type(None)))
     }
-
-    display(pd.Series(summary_display, name="value"))
+    logger.info(f"Hotspot result summary: {scalar_summary}")
 
     return summary
 
 
 @beartype
-def add_hotspot_results_to_adata(  # noqa: C901
-    adata: AnnData,
-    results: dict[str, Any],
-    prefix: str = "hotspot",
-    fdr_threshold: float = 0.05,
-    store_module_scores: bool = True,
-    store_autocorrelations: bool = True,
-    store_modules: bool = True,
-    store_selected_genes: bool = True,
-    store_local_correlations: bool = False,
-    copy: bool = False,
-) -> AnnData:
+def _detect_library_case(
+    gene_sets: list[str],
+    organism: str,
+) -> Optional[str]:
     """
-    Add Hotspot results to AnnData before saving.
+    Determine the gene symbol casing used by the given Enrichr libraries.
 
-    Stores:
-    - module scores in adata.obs
-    - autocorrelation statistics in adata.var
-    - module assignments in adata.var
-    - selected gene flags in adata.var
-    - summary information in adata.uns
-
-    Does not store the Hotspot object itself.
+    Enrichr stores symbols in the casing of the respective database, e.g.
+    uppercase for human and for the modEnrichr databases such as FishEnrichr.
+    If the dataset uses a different casing, no gene matches and the enrichment
+    silently comes back empty, so the casing is taken from the library itself.
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object to add the results to.
-    results : dict[str, Any]
-        Result dictionary returned by run_hotspot.
-    prefix : str, default "hotspot"
-        Prefix for the keys added to obs, var and uns.
-    fdr_threshold : float, default 0.05
-        FDR threshold used to flag significant genes.
-    store_module_scores : bool, default True
-        Whether to store module scores in adata.obs.
-    store_autocorrelations : bool, default True
-        Whether to store autocorrelation statistics in adata.var.
-    store_modules : bool, default True
-        Whether to store module assignments in adata.var.
-    store_selected_genes : bool, default True
-        Whether to flag selected genes in adata.var.
-    store_local_correlations : bool, default False
-        Whether to store the local correlation matrix in adata.uns. This can be
-        large and is skipped by default.
-    copy : bool, default False
-        Whether to modify a copy instead of the given object.
+    gene_sets : list[str]
+        Enrichr libraries the genes will be tested against.
+    organism : str
+        Organism passed to gseapy.
 
     Returns
     -------
-    AnnData
-        AnnData object containing the selected Hotspot results.
+    Optional[str]
+        "upper", "lower", or None if the casing could not be determined or
+        the libraries disagree.
     """
+    detected = None
 
-    if copy:
-        adata = adata.copy()
+    for name in gene_sets:
+        try:
+            library = gp.get_library(name=name, organism=organism)
+        except Exception as e:
+            logger.debug(f"Could not inspect library '{name}': {e}")
+            continue
 
-    summary = {}
+        symbols = [g for terms in library.values() for g in terms]
 
-    # ========================================================
-    # 1. Autocorrelation results -> adata.var
-    # ========================================================
+        if not symbols:
+            continue
 
-    autocorr = results.get("autocorrelations", None)
+        share_upper = sum(g.isupper() for g in symbols) / len(symbols)
+        share_lower = sum(g.islower() for g in symbols) / len(symbols)
 
-    if store_autocorrelations and autocorr is not None:
-        autocorr_aligned = autocorr.reindex(adata.var_names)
+        if share_upper > 0.9:
+            case = "upper"
+        elif share_lower > 0.9:
+            case = "lower"
+        else:
+            case = None
 
-        for col in autocorr_aligned.columns:
-            adata.var[f"{prefix}_{col}"] = autocorr_aligned[col]
-
-        if "FDR" in autocorr_aligned.columns:
-            adata.var[f"{prefix}_significant"] = (
-                autocorr_aligned["FDR"] < fdr_threshold
-            ).fillna(False)
-
-            summary["n_significant_genes"] = int(
-                adata.var[f"{prefix}_significant"].sum()
+        if detected is None:
+            detected = case
+        elif detected != case:
+            logger.info(
+                "Enrichr libraries use different gene symbol casings. "
+                "Gene names are passed through unchanged."
             )
+            return None
 
-        summary["n_genes_tested"] = autocorr.shape[0]
-
-    # ========================================================
-    # 2. Selected genes -> adata.var
-    # ========================================================
-
-    selected_genes = results.get("selected_genes", None)
-
-    if store_selected_genes and selected_genes is not None:
-        selected_genes = set(selected_genes)
-
-        adata.var[f"{prefix}_selected"] = adata.var_names.isin(selected_genes)
-
-        summary["n_selected_genes"] = int(
-            adata.var[f"{prefix}_selected"].sum()
-        )
-
-    # ========================================================
-    # 3. Module assignments -> adata.var
-    # ========================================================
-
-    modules = results.get("modules", None)
-
-    if modules is None:
-        hs = results.get("hotspot", None)
-        if hs is not None and getattr(hs, "modules", None) is not None:
-            modules = hs.modules
-
-    if store_modules and modules is not None:
-        modules = pd.Series(modules).copy()
-        modules_aligned = modules.reindex(adata.var_names)
-
-        # Missing genes get -1 = unassigned
-        module_values = (
-            pd.to_numeric(modules_aligned, errors="coerce")
-            .fillna(-1)
-            .astype(int)
-        )
-
-        adata.var[f"{prefix}_module"] = module_values
-
-        module_sizes = (
-            module_values[module_values != -1]
-            .value_counts()
-            .sort_index()
-        )
-
-        module_sizes_df = module_sizes.rename("n_genes").to_frame()
-        module_sizes_df.index.name = "module"
-
-        utils.adata.add_uns_info(adata, key=[prefix, "module_sizes"], value=module_sizes_df)
-
-        summary["n_modules"] = module_sizes.shape[0]
-
-    # ========================================================
-    # 4. Module scores -> adata.obs
-    # ========================================================
-
-    module_scores = results.get("module_scores", None)
-
-    if store_module_scores and module_scores is not None:
-        module_scores = module_scores.copy()
-
-        module_scores.columns = [
-            f"{prefix}_module_score_{c}" for c in module_scores.columns
-        ]
-
-        module_scores = module_scores.reindex(adata.obs_names)
-
-        for col in module_scores.columns:
-            adata.obs[col] = module_scores[col]
-
-        summary["n_module_scores"] = module_scores.shape[1]
-
-    # ========================================================
-    # 5. Local correlations -> optional
-    # ========================================================
-
-    local_corr = results.get("local_correlations", None)
-
-    if store_local_correlations and local_corr is not None:
-        utils.adata.add_uns_info(adata, key=[prefix, "local_correlations"], value=local_corr)
-        summary["local_correlations_stored"] = True
-        summary["local_correlations_shape"] = tuple(local_corr.shape)
-    else:
-        summary["local_correlations_stored"] = False
-
-    # ========================================================
-    # 6. Store summary
-    # ========================================================
-
-    summary["fdr_threshold"] = float(fdr_threshold)
-    summary["prefix"] = prefix
-
-    utils.adata.add_uns_info(adata, key=[prefix, "summary"], value=summary)
-
-    logger.info(f"Hotspot results added to AnnData: {summary}")
-
-    return adata
+    return detected
 
 
 @beartype
+def _apply_gene_case(genes: list[str], case: Optional[str]) -> list[str]:
+    """
+    Convert gene symbols to the given casing.
+
+    Parameters
+    ----------
+    genes : list[str]
+        Gene symbols as they appear in the dataset.
+    case : Optional[str]
+        "upper", "lower", or None to leave the symbols unchanged.
+
+    Returns
+    -------
+    list[str]
+        Gene symbols in the requested casing.
+    """
+    if case == "upper":
+        return [g.upper() for g in genes]
+    if case == "lower":
+        return [g.lower() for g in genes]
+    return genes
+
+
+@deco.log_anndata
+@beartype
 def run_hotspot_module_enrichment(  # noqa: C901
     adata: AnnData,
-    results: dict[str, Any],
     organism: str,
     gene_sets: list[str] = ["GO_Biological_Process_2018"],
     min_module_size: int = 5,
     exclude_unassigned: bool = True,
-    uppercase_genes: bool = False,
     overwrite: bool = False,
-    inplace: bool = False,
     save_table: Optional[str] = "hotspot_module_enrichment.tsv",
     **kwargs: Any,
-) -> Optional[AnnData]:
+) -> None:
     """
     Run Enrichr-based gene set enrichment for Hotspot modules.
 
     Parameters
     ----------
     adata : AnnData
-        AnnData object.
-    results : dict[str, Any]
-        Result dictionary from the Hotspot workflow.
-        Expected keys include "modules".
+        AnnData object holding the module assignments written by run_hotspot
+        in adata.var["hotspot_module"]. Results are stored in adata.uns.
     organism : str
         Organism passed to gseapy.enrichr.
     gene_sets : list[str], default ["GO_Biological_Process_2018"]
@@ -1798,23 +1585,13 @@ def run_hotspot_module_enrichment(  # noqa: C901
         Minimum number of genes required to test a module.
     exclude_unassigned : bool, default True
         Whether to exclude module label -1.
-    uppercase_genes : bool, default False
-        Whether to convert module gene names to uppercase before enrichment.
-        Keep False for zebrafish symbols unless your library requires uppercase.
     overwrite : bool, default False
         If False and enrichment already exists in adata.uns, skip.
-    inplace : bool, default False
-        If True, modify adata in place. Otherwise return a modified copy.
     save_table : Optional[str], default "hotspot_module_enrichment.tsv"
         File name for saving the combined enrichment table in settings.table_dir.
         If None, no table is saved.
     **kwargs : Any
         Additional parameters forwarded to gseapy.enrichr.
-
-    Returns
-    -------
-    Optional[AnnData]
-        Modified AnnData object if inplace=False, otherwise None.
 
     Raises
     ------
@@ -1822,44 +1599,31 @@ def run_hotspot_module_enrichment(  # noqa: C901
         If the module assignments or enrichment configuration are invalid.
     """
 
-    modified_adata = adata if inplace else adata.copy()
-
     if (
-        utils.adata.in_uns(modified_adata, ["sctoolbox", "hotspot", "module_enrichment"])
+        utils.adata.in_uns(adata, ["sctoolbox", "hotspot", "module_enrichment"])
         and not overwrite
     ):
         logger.warning(
             "Hotspot module enrichment already exists. "
             "Skipping. Set overwrite=True to replace."
         )
-        if inplace:
-            return None
-        return modified_adata
+        return
 
     # --------------------------------------------------------
     # Get modules
     # --------------------------------------------------------
 
-    modules = results.get("modules", None)
-
-    if modules is None:
-        hs = results.get("hotspot", None)
-        if hs is not None and getattr(hs, "modules", None) is not None:
-            modules = hs.modules
-
-    if modules is None:
+    if "hotspot_module" not in adata.var.columns:
         raise ValueError(
-            "No module assignments found. Expected results['modules'] "
-            "or results['hotspot'].modules."
+            "No module assignments found in adata.var['hotspot_module']. "
+            "Run run_hotspot first."
         )
 
-    modules = pd.Series(modules).copy()
-    modules.name = "Module"
+    modules = adata.var["hotspot_module"].rename("Module")
 
     if exclude_unassigned:
-        # Hotspot labels unassigned genes with -1; they form no coherent
-        # gene program and are not tested for enrichment
-        modules = modules[modules != -1]
+        # unassigned genes form no coherent gene program and are not tested
+        modules = modules[modules != UNASSIGNED_MODULE]
 
     if modules.empty:
         raise ValueError("No assigned Hotspot modules found after filtering.")
@@ -1878,14 +1642,20 @@ def run_hotspot_module_enrichment(  # noqa: C901
     }
     kwargs = {**default_kwargs, **kwargs}
 
-    module_ids = sorted(modules.dropna().unique())
+    module_ids = sorted(modules.unique())
+
+    # Enrichr libraries differ in gene symbol casing, e.g. FishEnrichr stores
+    # zebrafish symbols in uppercase while datasets usually use lowercase
+    library_case = _detect_library_case(gene_sets, organism)
+
+    if library_case is not None:
+        logger.info(f"Enrichr libraries use {library_case}case gene symbols.")
 
     for i, module_id in enumerate(module_ids, start=1):
-        genes = modules[modules == module_id].index.astype(str).tolist()
-
-        if uppercase_genes:
-            genes = [g.upper() for g in genes]
-
+        genes = _apply_gene_case(
+            modules[modules == module_id].index.astype(str).tolist(),
+            library_case,
+        )
         logger.info(
             f"Running Enrichr for Hotspot module {module_id} "
             f"({i}/{len(module_ids)}), n_genes={len(genes)}."
@@ -1909,6 +1679,11 @@ def run_hotspot_module_enrichment(  # noqa: C901
             df = enr.results.copy()
 
             if df.empty:
+                logger.warning(
+                    f"Module {module_id}: Enrichr returned no terms. "
+                    "Check that organism and gene_sets match the gene symbols "
+                    "in adata.var_names."
+                )
                 continue
 
             df["module"] = int(module_id)
@@ -1930,7 +1705,11 @@ def run_hotspot_module_enrichment(  # noqa: C901
         if sort_cols:
             enrichment_table = enrichment_table.sort_values(sort_cols)
     else:
-        enrichment_table = pd.DataFrame()
+        raise ValueError(
+            "Enrichment returned no results for any module. The most common "
+            "cause is a mismatch between the gene symbols in adata.var_names "
+            f"and the libraries {gene_sets} for organism '{organism}'."
+        )
 
     # --------------------------------------------------------
     # Store in adata.uns
@@ -1939,13 +1718,12 @@ def run_hotspot_module_enrichment(  # noqa: C901
     module_sizes = modules.value_counts().sort_index()
     module_sizes.name = "n_genes"
 
-    utils.adata.add_uns_info(modified_adata, key=["hotspot", "module_enrichment"], value={
+    utils.adata.add_uns_info(adata, key=["hotspot", "module_enrichment"], value={
         "method": "enrichr",
         "organism": organism,
         "gene_sets": gene_sets,
         "min_module_size": min_module_size,
         "exclude_unassigned": exclude_unassigned,
-        "uppercase_genes": uppercase_genes,
         "module_sizes": module_sizes.to_frame(),
         "enrichment_table": enrichment_table,
     })
@@ -1963,11 +1741,6 @@ def run_hotspot_module_enrichment(  # noqa: C901
         outfile = settings.full_table_prefix + save_table
         logger.info(f"Saving Hotspot module enrichment table to {outfile}")
         enrichment_table.to_csv(outfile, sep="\t", header=True, index=False)
-
-    if inplace:
-        return None
-
-    return modified_adata
 
 
 @beartype
@@ -2105,31 +1878,10 @@ def plot_hotspot_module_enrichment(  # noqa: C901
         pvalue_column=pvalue_column,
     )
 
-    logger.info("Top enriched terms per Hotspot module")
-
-    columns_to_show = [
-        col for col in [
-            "module",
-            "Gene_set",
-            term_column,
-            pvalue_column,
-            "P-value",
-            "Overlap",
-            "Genes",
-        ]
-        if col in top_terms.columns
-    ]
-
-    with pd.option_context("display.max.rows", 100, "display.max.columns", None):
-        display(top_terms[columns_to_show])
-
-    # --------------------------------------------------------
-    # Module sizes
-    # --------------------------------------------------------
-
-    if module_sizes is not None:
-        logger.info("Hotspot module sizes")
-        display(module_sizes)
+    logger.info(
+        f"Top {top_n} enriched terms per module for "
+        f"{top_terms['module'].nunique()} modules."
+    )
 
     # --------------------------------------------------------
     # Dotplot
@@ -2208,50 +1960,3 @@ def plot_hotspot_module_enrichment(  # noqa: C901
         plt.show()
 
     return top_terms
-
-
-@beartype
-def stringify_adata_keys_for_saving(adata: AnnData) -> AnnData:
-    """
-    Convert non-string keys/columns in obs, var and uns to strings so that sctoolbox.utils.adata.save_h5ad can handle them.
-
-    Parameters
-    ----------
-    adata : AnnData
-        AnnData object whose keys should be converted to strings.
-
-    Returns
-    -------
-    AnnData
-        The modified AnnData object with string-compatible keys.
-    """
-
-    def stringify_nested_keys(obj: Any) -> Any:
-        if isinstance(obj, dict):
-            new_items = {}
-            for k, v in list(obj.items()):
-                new_k = str(k)
-                new_items[new_k] = stringify_nested_keys(v)
-
-            obj.clear()
-            obj.update(new_items)
-            return obj
-
-        elif isinstance(obj, pd.DataFrame):
-            obj.columns = obj.columns.map(str)
-            obj.index = obj.index.map(str)
-            return obj
-
-        elif isinstance(obj, pd.Series):
-            obj.index = obj.index.map(str)
-            return obj
-
-        else:
-            return obj
-
-    adata.obs.columns = adata.obs.columns.map(str)
-    adata.var.columns = adata.var.columns.map(str)
-
-    stringify_nested_keys(adata.uns)
-
-    return adata
