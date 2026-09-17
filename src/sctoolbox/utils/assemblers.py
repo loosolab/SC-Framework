@@ -705,7 +705,8 @@ def from_R(
         output: Optional[str] = None,
         report: Optional[str] = None,
         layer: Optional[Union[str, Collection[str], Mapping[str, str]]] = None,
-        r_home: Optional[str] = None) -> Optional[sc.AnnData]:
+        r_home: Optional[str] = None,
+        make_obs_unique: bool = True) -> Optional[sc.AnnData]:
     """
     Convert one or more .rds/.robj file(s) containing Seurat or SingleCellExperiment to scanpy anndata.
 
@@ -729,6 +730,8 @@ def from_R(
     r_home : Optional[str], default None
         Path to the R home directory. If None will construct path based on location of python executable.
         E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
+    make_obs_unique : bool, default True
+        If True runs `obs_names_make_unique()` after merge.
 
     Returns
     -------
@@ -737,6 +740,8 @@ def from_R(
     """
 
     adata = _read_and_merge(rds_file, convertToAdata, label, report, layer=layer, r_home=r_home)
+    if make_obs_unique:
+        adata.obs_names_make_unique()
 
     if output:
         # Saving adata.h5ad
