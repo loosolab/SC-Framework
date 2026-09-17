@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.16.0 (in progress)
+- add Palantir fate-probability projection, representative gene-trend panels, and report integration (!531)
 - improve Palantir analysis, testing, reporting, and documentation (#443)
 - replace the bioRxiv preprint badges with the published iScience article DOI, cite the article in the methods templates, and unify the Zenodo links on the all-versions DOI (#459)
 - connectionPlot: Fix colormap by replacing deprecated function get_cmap (#462)
