@@ -364,7 +364,7 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
                 f"{adata.shape[0]} observations x {adata.shape[1]} variables",
                 f"Observation information: {', '.join(adata.obs.columns)}",
                 f"Variable information: {', '.join(adata.var.columns)}",
-                f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
+                f"Additional data layers: {', '.join(real_layers)}" if real_layers else ""
             ]))
 
         # method
