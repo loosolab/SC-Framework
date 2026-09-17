@@ -699,6 +699,11 @@ def inspect_and_filter_genes_by_cell_detection(
         note that anndata >= 0.13 stores .X in adata.layers under the None
         key, so both spellings refer to the same matrix.
     min_cells : int, default 50
+        Minimum number of cells in which a gene must be detected. Genes seen
+        in very few cells carry little information for the neighbourhood
+        statistics and mostly add noise. As a rule of thumb use roughly
+        0.1-1% of the cells in the current (sub)set. With filter_genes=False
+        nothing is removed and this value only affects the reported summary.
     thresholds_to_show : Sequence[int], default (10, 20, 30, 50, 100)
         Thresholds for reporting how many genes would be kept.
     filter_genes : bool, default False
