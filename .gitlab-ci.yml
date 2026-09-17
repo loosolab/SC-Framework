@@ -658,30 +658,34 @@ cleanup-orphan-tags:
   image: alpine:latest
   before_script:
     # Install curl and jq
-    - apk add --no-cache curl jq
+    - apk add --no-cache curl jq bash
     # Install crane
     - curl -L "https://github.com/google/go-containerregistry/releases/download/v0.7.0/go-containerregistry_Linux_x86_64.tar.gz" -o /tmp/crane.tar.gz
     - tar -zxvf /tmp/crane.tar.gz -C /usr/local/bin/ crane
     - rm /tmp/crane.tar.gz
     - crane version
-    # Login to the registry
     - crane auth login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
     - |
-     # Handle broken API TOKENS
+      bash <<'EOF'
+      set -uo pipefail
+
+      API="https://gitlab.gwdg.de/api/v4"
+      HEADERS_FILE="$(mktemp)"
+
+      # Generic API call with error handling + header capture (for Link pagination)
       api() {
         url="$1"
-        # capture body + status in one go
         resp="$(curl -sS --retry 3 --retry-connrefused \
                 -H "PRIVATE-TOKEN: $API_TOKEN" \
-                -w '\n%{http_code}' "$url")" || { echo "curl failed"; return 1; }
+                -D "$HEADERS_FILE" \
+                -w '\n%{http_code}' "$url")" || { echo "curl failed for $url" >&2; return 1; }
 
         status="${resp##*$'\n'}"
         body="${resp%$'\n'$status}"
 
         if [ "$status" -ge 400 ]; then
-          # Try to extract a useful message from JSON, fall back to raw body
-          msg="$(printf '%s' "$body" | jq -r '.message? // .error? // .[]? // empty' 2>/dev/null)"
+          msg="$(printf '%s' "$body" | jq -r '.message? // .error? // empty' 2>/dev/null)"
           echo "GitLab API error $status for $url: ${msg:-$body}" >&2
           return 1
         fi
@@ -689,35 +693,60 @@ cleanup-orphan-tags:
         printf '%s' "$body"
       }
 
-      # Fetch all branch names
-      branches_json="$(api "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/repository/branches?per_page=100")"
-      BRANCHES="$(printf '%s' "$branches_json" | jq -er 'if type=="array" then .[].name else empty end')"
+      # Extract 'next' link from the Link header of the last api() call
+      next_link() {
+        grep -o '<[^>]*>; rel="next"' "$HEADERS_FILE" 2>/dev/null | sed -E 's/<(.*)>.*/\1/'
+      }
+
+      # ---- Fetch ALL branches ----
+      BRANCHES=()
+      page=1
+      while :; do
+        chunk="$(api "$API/projects/$CI_PROJECT_ID/repository/branches?per_page=100&page=$page")" || exit 1
+        mapfile -t names < <(printf '%s' "$chunk" | jq -er 'if type=="array" then .[].name else empty end' 2>/dev/null || true)
+        [ "${#names[@]}" -eq 0 ] && break
+        BRANCHES+=("${names[@]}")
+        page=$((page + 1))
+      done
 
       echo "Branches:"
-      echo "$BRANCHES"
-      
-      # Fetch repository ID for Docker Registry
-      repo_id=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/registry/repositories" | jq -r ".[0].id")
-      
-      # Fetch all image tags
-      TAGS=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/registry/repositories/${repo_id}/tags" | jq -r '.[].name')
-      echo "Tags:"
-      echo "$TAGS"
-      
-      # Regular expression for semantic versioning
-      SEMVER_REGEX="^([0-9]+)\.([0-9]+)\.([0-9]+)$"
+      printf '%s\n' "${BRANCHES[@]}"
 
-      # Compare tags against branches and skip semantic versioning tags
-      for tag in $TAGS; do
+      SEMVER_REGEX="^([0-9]+)\.([0-9]+)\.([0-9]+)$"
+      FAILED=0
+      # HARDCODED REPO ID - ID is of sc_framework container repo
+      repo_id="2721"
+
+      echo "== Cleaning repository ID $repo_id =="
+
+      # ---- Fetch ALL tags via Link-header pagination ----
+      TAGS=()
+      url="$API/projects/$CI_PROJECT_ID/registry/repositories/${repo_id}/tags?per_page=100"
+      while [ -n "$url" ]; do
+        chunk="$(api "$url")" || { FAILED=1; break; }
+        mapfile -t names < <(printf '%s' "$chunk" | jq -r '.[].name')
+        TAGS+=("${names[@]}")
+        url="$(next_link)"
+      done
+
+      echo "Tags:"
+      printf '%s\n' "${TAGS[@]}"
+
+      for tag in "${TAGS[@]}"; do
         if [[ $tag =~ $SEMVER_REGEX ]] || [[ $tag == "latest" ]] || [[ $tag == "dev" ]]; then
-          echo "Tag '$tag' follows semantic versioning or is 'latest' and will be kept."
-        elif ! echo "$BRANCHES" | grep -qx "$tag"; then
-          echo "Tag '$tag' does not match any branch and does not follow semantic versioning, will be deleted."
-          # Use crane to delete the tag
-          crane delete "$CI_REGISTRY_IMAGE:$tag"
-        else
+          echo "Tag '$tag' follows semantic versioning or is 'latest'/'dev' and will be kept."
+        elif printf '%s\n' "${BRANCHES[@]}" | grep -qx "$tag"; then
           echo "Tag '$tag' matches a branch and will not be deleted."
+        else
+          echo "Tag '$tag' does not match any branch and does not follow semantic versioning, will be deleted."
+          if ! crane delete "$CI_REGISTRY_IMAGE:$tag"; then
+            echo "WARNING: failed to delete tag '$tag' in repo $REPO_NAME" >&2
+            FAILED=1
+          fi
         fi
       done
+
+      rm -f "$HEADERS_FILE"
+      exit $FAILED
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"  # only for commits to main
+    - if: $CI_COMMIT_BRANCH == "main"

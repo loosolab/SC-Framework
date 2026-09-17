@@ -13,6 +13,13 @@
 - reduce test runtime hotspots, right-size fixture scopes, dedup fixtures/orphan data, and fix warnings (#445)
 - pin the conda environment to Python >=3.9,<3.13 (#460)
 - fix SCSA for Python >= 3.13
+- fix gsea_dot top pathway selection (#457)
+- prepare_for_cellxgene: added na check (#458)
+- fix _filter_anndata: replacing eval to allow mathematical symbols in column names (#452)
+- fix cut off slider number (#439)
+- add obs_names_make_unique option to `sctoolbox.utils.assemblers.from_R` (#438)
+- add `utils.adata.remove_group` function
+- add additional parameters to `group_expression_boxplot()` (#456)
 - add compatibility with pandas 3 and anndata 0.13 (!533)
 - make pygenometracks an optional 'genometracks' extra to resolve the matplotlib conflict in .[all] (!533)
 - drop the typing_extensions pin and exclude anndata 0.13.0 (!533)
@@ -40,6 +47,9 @@
 - run_scsa: select the top-scoring celltype row explicitly
 - run_scsa: move the SCSA results from adata.uns["SCSA"] to adata.uns["sctoolbox"]["SCSA"]
 - run_scsa: refresh the stale pandas downgrade note
+
+### Changes to notebooks
+- General/GSEA: Additional parameters for gsea_dot
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
