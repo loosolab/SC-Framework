@@ -581,13 +581,16 @@ def gsea_dot(adata: sc.AnnData,
     # Filter enrichment table
     logger.info("Filtering enrichment table...")
     term_table = term_table[term_table[sig_col] <= cutoff]
+
     if score_sign is True:
         # Get only upregulated pathways
         term_table = term_table[term_table[score_col] > 0]
     elif score_sign is False:
         # Get only downregulated pathways
         term_table = term_table[term_table[score_col] < 0]
+
     term_table["score_abs"] = term_table[score_col].abs()
+
     if top_term:
         term_table = (
             term_table.sort_values(by=[cluster_col, "score_abs"], ascending=[True, False])
@@ -608,6 +611,7 @@ def gsea_dot(adata: sc.AnnData,
     logger.info("Generating dotplot...")
     norm = plt.Normalize(term_table[hue].min(), term_table[hue].max())
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+
     # Create figure
     fig, ax = plt.subplots(1, figsize=figsize)
     plot = sns.scatterplot(data=term_table,
@@ -619,6 +623,7 @@ def gsea_dot(adata: sc.AnnData,
                            palette=cmap,
                            ax=ax
                            )
+
     # Move legend to right side
     sns.move_legend(plot, loc='upper left', bbox_to_anchor=(1, 1, 0, 0))
 
@@ -630,6 +635,7 @@ def gsea_dot(adata: sc.AnnData,
     ax.legend(handles[i:], labels[i:], bbox_to_anchor=(1.05, 1),
               loc=2, borderaxespad=0., fontsize=13,
               frameon=False, alignment="left")
+
     # set colorbar
     cbar = ax.figure.colorbar(sm, ax=ax, shrink=0.4, anchor=(0.1, 0.1), label=hue, aspect=10)
     cbar.set_label(hue, rotation=0, ha="left", fontsize=13)
@@ -639,6 +645,7 @@ def gsea_dot(adata: sc.AnnData,
     ax.set_title(title, **{"fontsize": title_size})
     ax.tick_params(axis='x', labelrotation=x_label_rotation)
     ax.grid(True, axis="y")
+
     # save plot
     fig.tight_layout()
     _save_figure(save)
