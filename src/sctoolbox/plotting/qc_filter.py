@@ -26,7 +26,6 @@ import sctoolbox.utils.decorator as deco
 # type hint imports
 from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Any, Iterator  # , Union, List
 from beartype import beartype
-from numpy.typing import NDArray
 
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -79,7 +78,7 @@ def plot_starsolo_quality(folder: str,
                           ncol: int = 3,
                           order: Optional[list[str]] = None,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> NDArray[Axes]:
+                          **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """Plot quality measures from starsolo as barplots per condition.
 
     Parameters
@@ -99,7 +98,7 @@ def plot_starsolo_quality(folder: str,
 
     Returns
     -------
-    axes : NDArray[Axes]
+    axes : np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -176,7 +175,7 @@ def plot_starsolo_quality(folder: str,
 @beartype
 def plot_starsolo_UMI(folder: str,
                       ncol: int = 3,
-                      save: Optional[str] = None) -> NDArray[Axes]:
+                      save: Optional[str] = None) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """Plot UMI distribution for each condition in a folder.
 
     Parameters
@@ -190,7 +189,7 @@ def plot_starsolo_UMI(folder: str,
 
     Returns
     -------
-    axes : NDArray[Axes]
+    axes : np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -284,7 +283,7 @@ def n_cells_barplot(adata: sc.AnnData,  # noqa: C901
                     add_labels: bool = False,
                     title: Optional[str] = None,
                     report: Optional[str] = None,
-                    **kwargs: Any) -> NDArray[Axes]:
+                    **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -313,7 +312,7 @@ def n_cells_barplot(adata: sc.AnnData,  # noqa: C901
 
     Returns
     -------
-    axarr : NDArray[Axes]
+    axarr : np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of axes objects containing the plot(s).
 
     Examples

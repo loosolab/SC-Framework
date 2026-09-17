@@ -6,6 +6,7 @@ import numpy as np
 import os
 import tempfile
 import filelock
+from contextlib import contextmanager
 from typing import Callable
 
 # ---------------------------- Script variables --------------------------- #
@@ -18,6 +19,29 @@ ATAC_DATA_DIR = os.path.join(DATA_DIR, 'atac')
 
 
 # ------------------------------ FIXTURES --------------------------------- #
+
+
+@pytest.fixture
+def add_logger_handler():
+    """Temporarily attach a handler to a logger, e.g. to capture sctoolbox log output.
+
+    The sctoolbox logger does not propagate to the root logger, so `caplog` only
+    sees its records while its handler is attached.
+
+    Returns
+    -------
+    Callable
+        Context manager taking a logger and the handler to attach.
+    """
+    @contextmanager
+    def _add_logger_handler(logger, handler):
+        logger.addHandler(handler)
+        try:
+            yield
+        finally:
+            logger.removeHandler(handler)
+
+    return _add_logger_handler
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -282,6 +306,38 @@ def adata_atac_emptyvar(adata_atac):
     """
     adata = adata_atac.copy()
     adata.var = adata.var.drop(columns=adata.var.columns)
+    return adata
+
+
+@pytest.fixture
+def adata_atac_invalid(adata_atac):
+    """Create adata with invalid index.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with invalid index.
+    """
+    adata = adata_atac.copy()
+    adata.var.iloc[0, 1] = 500  # start
+    adata.var.iloc[0, 2] = 100  # end
+    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-end index
+    return adata
+
+
+# TODO(0.18.0): remove together with the 'stop' acceptance in
+# sctoolbox.utils.checker.validate_regions, along with every test using this fixture
+@pytest.fixture
+def adata_atac_stop(adata_atac):
+    """Create an ATAC adata using the deprecated 'stop' coordinate column name.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object whose var columns are ['chr', 'start', 'stop'].
+    """
+    adata = adata_atac.copy()
+    adata.var.rename(columns={"end": "stop"}, inplace=True)
     return adata
 
 

@@ -16,7 +16,6 @@ from matplotlib.patches import Patch
 
 from beartype.typing import Optional, Tuple, Literal, Any
 from beartype import beartype
-from numpy.typing import NDArray
 
 # sctoolbox functions
 import sctoolbox.utils as utils
@@ -244,7 +243,7 @@ def grouped_violin(adata: sc.AnnData,  # noqa: C901
     save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
     **kwargs : Any
-        Additional arguments passed to seaborn.violinplot or seaborn.boxplot.
+        Additional arguments passed to seaborn.violinplot or seaborn.boxplot or seaborn.barplot.
 
     Returns
     -------
@@ -339,11 +338,9 @@ def grouped_violin(adata: sc.AnnData,  # noqa: C901
     elif style == "boxplot":
         sns.boxplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     elif style == "bar":
-
-        pass
-
+        sns.barplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     else:
-        raise ValueError(f"Style '{style}' is not valid for this function. Style must be one of 'violin' or 'boxplot'")
+        raise ValueError(f"Style '{style}' is not valid for this function. Style must be one of 'violin' or 'boxplot' or 'bar'")
 
     if groupby is not None:
         ax.legend(title=groupby, loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)  # Set location of legend
@@ -735,7 +732,7 @@ def plot_gene_correlation(adata: sc.AnnData,
                           ncols: int = 3,
                           figsize: Optional[Tuple[int | float, int | float]] = None,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> NDArray[Axes]:
+                          **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """
     Plot the gene expression of one reference gene against the expression of a set of genes.
 
@@ -758,7 +755,7 @@ def plot_gene_correlation(adata: sc.AnnData,
 
     Returns
     -------
-    NDArray[Axes]
+    np.ndarray[tuple[int, ...], np.dtype[Axes]]
         List containing all axis objects.
 
     Examples

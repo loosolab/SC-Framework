@@ -88,7 +88,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
     # Establish columns for coordinates
     if coordinate_cols is None:
-        coordinate_cols = ['chr', 'start', 'stop']
+        coordinate_cols = ['chr', 'start', 'end']
 
     # Format coordinate columns
     utils.checker.var_index_to_column(adata, coordinate_cols)

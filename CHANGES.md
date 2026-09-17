@@ -28,6 +28,25 @@
 - fix get_variable_features subsampling for pandas 3 (Series positional access via .iloc) and expose subsample_target (!533)
 - fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
 - bump palantir floor to >=1.4.5 for pandas 3 / anndata 0.13 compatibility (!533)
+- save_h5ad: normalise uns '*_colors' to hex so Palantir results are writable (#470)
+- replace `numpy.typing.NDArray` type hints with the expanded `np.ndarray[shape, dtype]` generic to fix beartype PEP 484 errors under numpy 2.5 (#469)
+- document the `dev` dependency group in `development.rst`
+- migrate to muon 0.1.9's explicit pull_obs for modality obs propagation and raise the muon floor
+- vendor liana's explode_complexes, which is private as of liana 1.10.0
+- add error and verbose parameters to validate_regions, which now owns the coordinate column normalization
+- narrow validate_regions' coordinate_columns from Iterable[str] to np.ndarray | Sequence[str] | pd.Index | None
+- annotate_adata: validate the coordinate columns instead of repairing adata.var
+- rename the adata.var coordinate column stop to end (deprecated, removed in 0.18.0); a pre-rename object gains end alongside its retained stop
+- annotate_adata: raise an explicit error when adata.var has fewer than three columns to infer coordinates from
+- refresh the pytest filterwarnings allowlist (!541)
+- fix the always-true assertion in test_bed_is_sorted (bitwise ~ instead of not) (!541)
+- grouped_violin: implement the missing style="bar" branch (!541)
+- run_scsa: write SCSA input/results to a per-call temp directory
+- run_scsa: call SCSA via an argv list instead of a shell string
+- run_scsa: inplace=False no longer writes adata.uns["SCSA"] on the input object
+- run_scsa: select the top-scoring celltype row explicitly
+- run_scsa: move the SCSA results from adata.uns["SCSA"] to adata.uns["sctoolbox"]["SCSA"]
+- run_scsa: refresh the stale pandas downgrade note
 
 ### Changes to notebooks
 - General/GSEA: Additional parameters for gsea_dot

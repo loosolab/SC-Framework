@@ -13,7 +13,7 @@ import pandas as pd
 
 from beartype.typing import Optional, Tuple, Any, Iterable, Union, Literal, Sequence
 from beartype import beartype
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import ArrayLike
 
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
@@ -166,7 +166,7 @@ def var_column_to_index(adata: sc.AnnData,  # noqa: C901
     r"""
     Format adata.var index from a specified column or multiple coordinate columns.
 
-    This formats the index of adata.var according to the pattern ["chr", "start", "stop"].
+    This formats the index of adata.var according to the pattern ["chr", "start", "end"].
     The adata is changed inplace.
 
     Parameters
@@ -351,8 +351,42 @@ def _get_index_type(entry: str, regex: str) -> Optional[str]:
 
 
 @beartype
+def _normalize_coordinate_columns(coordinate_columns: np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None) -> list[str]:
+    """
+    Convert a coordinate column specification into a list of three column names.
+
+    Parameters
+    ----------
+    coordinate_columns : np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None
+        Sequence of length 3 specifying column names for chromosome, start and end coordinates.
+        None or a single string falls back to the default names ['chr', 'start', 'end'].
+
+    Returns
+    -------
+    list[str]
+        List of length 3 containing the column names for chr, start, end.
+
+    Raises
+    ------
+    ValueError
+        If the given coordinate columns are not of length 3.
+    """
+
+    if coordinate_columns is None or isinstance(coordinate_columns, str):
+        return ['chr', 'start', 'end']
+
+    coordinate_columns = list(coordinate_columns)
+    if len(coordinate_columns) != 3:
+        raise ValueError("The coordinate_columns must be a list of length 3 containing the column names for chr, start, end.")
+
+    return coordinate_columns
+
+
+@beartype
 def validate_regions(adata: sc.AnnData,
-                     coordinate_columns: Iterable[str]) -> bool:
+                     coordinate_columns: np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None = ["chr", "start", "end"],
+                     error: bool = False,
+                     verbose: bool = True) -> bool:
     """
     Check if the regions in adata.var are valid.
 
@@ -362,40 +396,72 @@ def validate_regions(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object containing the regions to be checked.
-    coordinate_columns : Iterable[str]
-        List of length 3 for column names in adata.var containing chr, start, end coordinates (in this order).
+    coordinate_columns : np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None, default ['chr', 'start', 'end']
+        Sequence of length 3 for column names in adata.var containing chr, start, end coordinates (in this order).
+        None or a single string falls back to the default names ['chr', 'start', 'end'].
+    error : bool, default False
+        If True, raise instead of returning False. A KeyError (from `check_columns`) is raised if the columns
+        are absent from adata.var, a ValueError if they are present but do not hold valid regions.
+    verbose : bool, default True
+        If True, emit log output. Set to False when re-checking already reported regions.
 
     Returns
     -------
     bool
         True if all regions are valid.
+
+    Raises
+    ------
+    ValueError
+        If the coordinate columns do not contain valid genome regions and error is set to True.
     """
+
+    coordinate_columns = _normalize_coordinate_columns(coordinate_columns)
+
+    # TODO(0.18.0): remove the 'stop' acceptance. To delete at 0.18.0: this warning and
+    # its `if`; the `verbose=False` on the post-insert re-validation in
+    # `var_index_to_column` (checker.py:540) if nothing else needs it; the
+    # `adata_atac_stop` fixture in tests/conftest.py; and the tests built on it (the
+    # grace-path cases in tests/utils/test_checker.py and
+    # tests/tools/test_peak_annotation.py).
+    # 'stop' is deprecated in favour of the canonical 'end' (GFF/BED)
+    if verbose and ('stop' in coordinate_columns or 'stop' in adata.var.columns):
+        logger.warning("The adata.var coordinate column name 'stop' is deprecated and will be "
+                       "removed in 0.18.0. Please use 'end' instead.")
 
     # Test whether the three columns are in the right format
     chr, start, end = coordinate_columns
 
     valid = False
-    # Test if coordinate columns are in adata.var
-    if utils.checker.check_columns(adata.var, coordinate_columns, name="adata.var", error=False):
+    # Test if coordinate columns are in adata.var - raises KeyError when error=True
+    if utils.checker.check_columns(adata.var, coordinate_columns, name="adata.var", error=error) is False:
+        return False
 
-        # Test whether the three columns are in the right format
-        for _, line in adata.var.to_dict(orient="index").items():
-            valid = False
+    # Test whether the three columns are in the right format
+    for _, line in adata.var.to_dict(orient="index").items():
+        valid = False
 
-            if isinstance(line[chr], str) and isinstance(line[start], int) and isinstance(line[end], int):
-                if line[start] <= line[end]:  # start must be smaller than end
-                    valid = True  # if all tests passed, the line is valid
+        if isinstance(line[chr], str) and isinstance(line[start], int) and isinstance(line[end], int):
+            if line[start] <= line[end]:  # start must be smaller than end
+                valid = True  # if all tests passed, the line is valid
 
-            if valid is False:
+        if valid is False:
+            if verbose:
                 logger.info("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
-                return valid
+            break
+
+    if not valid and error:
+        raise ValueError(f"The coordinate columns {coordinate_columns} in adata.var do not contain valid genome "
+                         "regions. Expected chromosome (str), start (int) and end (int) with start <= end. "
+                         "Fix the columns, or rebuild them from adata.var.index with "
+                         "sctoolbox.utils.checker.var_index_to_column(adata).")
 
     return valid
 
 
 @beartype
 def var_index_to_column(adata: sc.AnnData,
-                        coordinate_columns: NDArray[str] | Sequence[str] | pd.core.indexes.base.Index = ["chr", "start", "end"]) -> None:
+                        coordinate_columns: np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None = ["chr", "start", "end"]) -> None:
     """
     Format ``adata.var`` index and add peak location columns (chr, start, end) if needed.
 
@@ -414,9 +480,10 @@ def var_index_to_column(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object containing features to annotate.
-    coordinate_columns : NDArray[str] | Sequence[str] | pd.core.indexes.base.Index, default ['chr', 'start', 'end']
+    coordinate_columns : np.ndarray | Sequence[str] | pd.core.indexes.base.Index | None, default ['chr', 'start', 'end']
         Sequence of length 3 specifying column names in ``adata.var`` for
-        chromosome, start, and end coordinates.
+        chromosome, start, and end coordinates. None or a single string falls
+        back to the default names ['chr', 'start', 'end'].
 
     Raises
     ------
@@ -430,11 +497,10 @@ def var_index_to_column(adata: sc.AnnData,
 
     # Test whether the three columns are in the right format
     format_index = True
-    if not isinstance(coordinate_columns, list):
-        coordinate_columns = ['chr', 'start', 'end']
+    fallback = coordinate_columns is None or isinstance(coordinate_columns, str)  # mirrors _normalize_coordinate_columns
+    coordinate_columns = _normalize_coordinate_columns(coordinate_columns)
+    if fallback:
         logger.info("No column names supplied falling back to default names ['chr', 'start', 'end']")
-    elif isinstance(coordinate_columns, list) and len(coordinate_columns) != 3:
-        raise ValueError("The coordinate_columns must be a list of length 3 containing the column names for chr, start, end.")
     else:
         logger.info(f"The coordinate columns are: {coordinate_columns}")
 
@@ -471,7 +537,7 @@ def var_index_to_column(adata: sc.AnnData,
         adata.var.insert(0, coordinate_columns[0], peak_chr_list)
 
         # Check whether the newly added columns are in the right format
-        if validate_regions(adata, coordinate_columns):
+        if validate_regions(adata, coordinate_columns, verbose=False):
             logger.info('The newly added coordinate columns are in the correct format.')
 
 
