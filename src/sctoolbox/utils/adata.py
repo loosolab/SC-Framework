@@ -6,7 +6,6 @@ from collections.abc import Sequence  # check if object is iterable
 from collections import OrderedDict
 import scipy
 import matplotlib.pyplot as plt
-from matplotlib.colors import is_color_like, to_hex
 from scipy.sparse import issparse
 import pandas as pd
 from pathlib import Path
@@ -15,6 +14,7 @@ import yaml
 from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tuple, List, Literal
 from beartype import beartype
 
+import sctoolbox.tools.qc_filter as qc_filter
 import sctoolbox.utils.decorator as deco
 from sctoolbox.plotting.general import plot_table
 from sctoolbox._settings import settings
@@ -53,6 +53,139 @@ def get_adata_subsets(adata: sc.AnnData, groupby: str) -> dict[str, sc.AnnData]:
     logger.debug("Split adata into {} subsets based on column '{}'".format(len(adata_subsets), groupby))
 
     return adata_subsets
+
+
+@deco.log_anndata
+@beartype
+def obs_subset(  # noqa: C901
+    adata: sc.AnnData,
+    subset_filters: Optional[dict[str, Any]] = None,
+    copy: bool = True,
+    drop_unused_categories: bool = True,
+    name: str = "obs_subset",
+) -> sc.AnnData:
+    """
+    Subset an anndata object based on one or multiple columns in adata.obs.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Anndata object to subset.
+    subset_filters : Optional[dict[str, Any]], default None
+        Dictionary mapping obs column names to one or multiple values.
+        Within one column values are combined with OR, across columns with AND.
+        If None or empty no filtering is applied.
+
+        Example: {"sample": [3, 6], "celltype": ["Epcam+", "Epcam-"]}
+
+    copy : bool, default True
+        Whether to return a copy of the subsetted anndata object.
+    drop_unused_categories : bool, default True
+        Whether to remove unused categories from categorical obs columns.
+    name : str, default "obs_subset"
+        Name the applied filters are logged under in adata.uns. Use a
+        descriptive value when several subsets are applied in one workflow,
+        e.g. "hotspot_subset".
+
+    Returns
+    -------
+    sc.AnnData
+        Subsetted anndata object.
+
+    Raises
+    ------
+    KeyError
+        If a column given in subset_filters is not found in adata.obs.
+    ValueError
+        If requested values are missing, no values are given for a column, or
+        the subsetting removes all cells.
+    """
+    if not subset_filters:
+        return adata.copy() if copy else adata
+
+    missing_columns = [col for col in subset_filters if col not in adata.obs.columns]
+    if missing_columns:
+        raise KeyError(
+            f"Columns not found in adata.obs: {missing_columns}. "
+            f"Available columns are: {list(adata.obs.columns)}"
+        )
+
+    mask = pd.Series(True, index=adata.obs_names)
+    applied_filters = {}
+
+    for col, values in subset_filters.items():
+        if values is None:
+            continue
+
+        if not isinstance(values, (list, tuple, set, pd.Index, np.ndarray)):
+            values = [values]
+
+        if len(values) == 0:
+            raise ValueError(f"No values were provided for subset column '{col}'.")
+
+        # compare as strings so that e.g. 3 and "3" both match
+        obs_values_str = adata.obs[col].astype(str)
+        requested_values_str = [str(v) for v in values]
+
+        available_values = sorted(obs_values_str.unique().tolist())
+        missing_values = sorted(set(requested_values_str) - set(available_values))
+
+        if missing_values:
+            raise ValueError(
+                f"Values {missing_values} were not found in adata.obs['{col}']. "
+                f"Example available values: {available_values[:20]}"
+            )
+
+        applied_filters[col] = requested_values_str
+        mask &= obs_values_str.isin(requested_values_str)
+
+    if mask.sum() == 0:
+        raise ValueError("Subsetting removed all cells. Please check `filters`.")
+
+    adata_subset = qc_filter.filter_cells(
+        adata,
+        cells=adata.obs_names[mask].tolist(),
+        invert=True,
+        inplace=not copy,
+        name=name,
+        value={"subset_filters": applied_filters},
+        overwrite=True,
+    )
+
+    if adata_subset is None:  # inplace=True returns None
+        adata_subset = adata
+
+    if drop_unused_categories:
+        for col in adata_subset.obs.columns:
+            if isinstance(adata_subset.obs[col].dtype, pd.CategoricalDtype):
+                adata_subset.obs[col] = adata_subset.obs[col].cat.remove_unused_categories()
+
+    logger.info(f"Subsetted adata: {adata_subset.n_obs} of {adata.n_obs} cells kept.")
+
+    return adata_subset
+
+
+@beartype
+def was_subsetted(original: sc.AnnData, current: sc.AnnData) -> bool:
+    """
+    Check whether an anndata object lost cells compared to an earlier state.
+
+    Useful to decide whether representations such as PCA, neighbors or UMAP
+    should be recomputed, since those describe the cells they were computed on.
+
+    Parameters
+    ----------
+    original : sc.AnnData
+        Anndata object before the potential subsetting.
+    current : sc.AnnData
+        Anndata object after the potential subsetting.
+
+    Returns
+    -------
+    bool
+        True if current holds fewer cells than original, otherwise False.
+    """
+    return current.n_obs < original.n_obs
 
 
 @deco.log_anndata
@@ -199,17 +332,15 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
             tmp.dtype.names = dnames  # set old names back in place
             adata.uns[unk]["names"] = tmp
 
-    # fixes anndata not being able to write RGB(A) tuples in adata.uns[<key>_colors]
-    # matplotlib>=3.11 defines the default prop cycle as cycler(color='tab10'), which resolves to RGB float
-    # tuples that palantir.plot.plot_trajectories stores verbatim in adata.uns['palantir_fates_colors']
-    for key in list(adata.uns):  # avoid RuntimeError by forcing a copy of dict keys.
-        if key.endswith("_colors"):
-            adata.uns[key] = _hex_uns_colors(adata.uns[key], key)
-
     # add file compression if not already present
     # this was default prior to version 0.6.16
     if "compression" not in kwargs:
         kwargs["compression"] = "gzip"
+
+    # AnnData can only write string keys, so convert non-string keys first;
+    # this also lets the "/" replacement below work on integer keys
+    for attr in ["obs", "var", "uns"]:
+        _rec_stringify(getattr(adata, attr), path=[attr])
 
     # check var/obs/uns and replace any "/" with "|" as anndata does not allow "/" in any keys
     # as of anndata>=0.12
@@ -222,15 +353,13 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
 
     # generate report
     if settings.report_dir and report:
-        # filter out a None key: anndata>=0.13 exposes .X as a spurious None-keyed layer (absent on anndata 0.12)
-        real_layers = [key for key in adata.layers.keys() if key is not None]
         with open(Path(settings.report_dir) / report[0], "w") as f:
             f.write("\n".join([
                 "## Dataset",
                 f"{adata.shape[0]} observations x {adata.shape[1]} variables",
                 f"Observation information: {', '.join(adata.obs.columns)}",
                 f"Variable information: {', '.join(adata.var.columns)}",
-                f"Additional data layers: {', '.join(real_layers)}" if real_layers else ""
+                f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
             ]))
 
         # method
@@ -249,44 +378,6 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
         plot_table(adata.var, report=report[2], crop=4)
 
     logger.info(f"The adata object was saved to: {adata_output}")
-
-
-@beartype
-def _hex_uns_colors(colors: Any, key: str) -> Any:
-    """
-    Help to convert the matplotlib colors of an adata.uns['<column>_colors'] entry to 6-digit hex strings.
-
-    Note: Alpha values are dropped. Values that are not color like are left unchanged and reported in a single warning.
-
-    Parameters
-    ----------
-    colors : Any
-        Value of an adata.uns['<column>_colors'] entry. Either a single color, a dict of colors or a list/tuple/np.ndarray of colors.
-        Any other type is returned as is.
-    key : str
-        Name of the adata.uns key holding the colors. Only used for logging.
-
-    Returns
-    -------
-    Any
-        The colors converted to hex strings, keeping the container type. Dicts are rebuilt as dicts, any other collection as a list.
-    """
-    if is_color_like(colors):  # checked first as a single RGB(A) color is a sequence as well
-        return to_hex(colors)
-
-    if isinstance(colors, Mapping):
-        converted = {name: to_hex(c) if is_color_like(c) else c for name, c in colors.items()}
-        skipped = [c for c in colors.values() if not is_color_like(c)]
-    elif isinstance(colors, (list, tuple, np.ndarray)):
-        converted = [to_hex(c) if is_color_like(c) else c for c in colors]
-        skipped = [c for c in colors if not is_color_like(c)]
-    else:
-        return colors
-
-    if skipped:
-        logger.warning(f"Could not convert {len(skipped)} value(s) of adata.uns['{key}'] to hex: {skipped}. These values were left unchanged.")
-
-    return converted
 
 
 @beartype
@@ -341,6 +432,54 @@ def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str
             # open a nested dict
             if isinstance(v, dict) or isinstance(v, pd.DataFrame):
                 _rec_search(v, repl=repl, path=path + [k])
+
+
+@beartype
+def _rec_stringify(var: Union[Dict, pd.DataFrame], path: List[str]) -> None:
+    """
+    Convert non-string keys in nested dicts and pandas objects to strings.
+
+    AnnData can only write string keys, so integer or tuple keys, as produced
+    for example by pandas groupby operations, make the write fail.
+
+    Note: This is intended to be used on AnnData attributes such as .obs, .var, .uns.
+    Note: The function operates inplace.
+
+    Parameters
+    ----------
+    var : Union[Dict, pd.DataFrame]
+        The variable to convert. Either a dict, whose keys are converted
+        recursively, or a pandas object, whose column names and index are
+        converted.
+    path : List[str]
+        The nesting path as a list. First element should be the name of an
+        AnnData attribute e.g. 'uns'.
+    """
+    if isinstance(var, (pd.DataFrame, pd.Series)):
+        if isinstance(var, pd.DataFrame) and not all(isinstance(c, str) for c in var.columns):
+            var.columns = var.columns.map(str)
+        if not all(isinstance(i, str) for i in var.index):
+            var.index = var.index.map(str)
+        return
+
+    if not isinstance(var, dict):
+        return
+
+    non_string = [k for k in var if not isinstance(k, str)]
+
+    if non_string:
+        tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
+        path_str = f".{path[0]}{tmp_path}"
+
+        logger.warning(f"Found non-string key(s) in {path_str} ({non_string}), which AnnData cannot write. Converting to string.")
+
+        for k in non_string:
+            var[str(k)] = var.pop(k)
+
+    # recurse into nested dicts and pandas objects
+    for k, v in list(var.items()):
+        if isinstance(v, (dict, pd.DataFrame, pd.Series)):
+            _rec_stringify(v, path=path + [k])
 
 
 @beartype
@@ -601,10 +740,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
         If ``layer`` is set but no layer with that name exists.
     """
     if layer and layer not in adata.layers:
-        # filter out a None key: anndata>=0.13 exposes .X as a spurious None-keyed layer
-        # (absent on anndata 0.12); listing only real (str) layer names keeps the message correct
-        available = ','.join(key for key in adata.layers.keys() if key is not None)
-        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {available}.")
+        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
 
     def clean_section(obj: sc.AnnData, axis: str = "obs", keep: Optional[list[str]] = None, delete: Optional[list[str]] = None, rename: Optional[dict[str, str]] = None) -> None:  # noqa: C901
         """
@@ -849,13 +985,12 @@ def tidy_layers(  # noqa: C901
         if replace_X in adata.layers:
             adata.X = adata.layers[replace_X].copy()
         else:
-            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({[key for key in adata.layers.keys() if key is not None]}).")
+            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({list(adata.layers.keys())}).")
 
     # ----- keep ----- #
     if keep != "all":
         for layer in list(adata.layers.keys()):
-            # skip a None key: anndata>=0.13 exposes .X as a None-keyed layer; deleting it would drop .X
-            if layer is not None and layer not in keep:
+            if layer not in keep:
                 del adata.layers[layer]
 
     if not inplace:
