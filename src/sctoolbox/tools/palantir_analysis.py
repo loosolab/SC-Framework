@@ -1,6 +1,7 @@
 """Helper functions for Palantir."""
 
 import os
+import textwrap
 from pathlib import Path
 
 import numpy as np
@@ -9,6 +10,7 @@ from scipy.sparse import issparse, spmatrix
 
 # Visualization
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import plotly.express as px
 import seaborn as sns
@@ -2722,3 +2724,461 @@ def plot_branch_early_late_genes(  # noqa: C901
         }
 
     return results
+
+
+@deco.log_anndata
+@beartype
+def plot_fate_probability_projection(  # noqa: C901
+    adata: AnnData,
+    fate_prob_key: str = "palantir_fate_probabilities",
+    color_by: str | None = None,
+    fate_order: Optional[Iterable[str]] = None,
+    point_size: float = 8.0,
+    alpha: float = 0.45,
+    figsize: tuple[float, float] | None = None,
+    label_wrap: int | None = 28,
+    legend_height: float | None = None,
+    legend_marker_scale: float = 2.5,
+    title: str = "Palantir fate probability projection",
+    show_equal_probability: bool = True,
+    save: str | None = None,
+    report_save: str | None = None,
+    show: bool = True,
+) -> tuple[Figure, Axes]:
+    """Plot Palantir fate probabilities as a joint two-dimensional projection.
+
+    Terminal states are placed at fixed endpoints and each cell is positioned
+    at the probability-weighted average of these endpoints.
+
+    For two terminal states, the projection preserves the full probability
+    vector on a line. For three terminal states, the triangular projection
+    represents the complete two-dimensional probability simplex. For more than
+    three terminal states, the regular polygon is a lossy two-dimensional
+    projection.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object containing Palantir fate probabilities.
+    fate_prob_key : str, default="palantir_fate_probabilities"
+        Key in ``adata.obsm`` containing cell-by-terminal-state fate probabilities.
+    color_by : str | None, default=None
+        Column in ``adata.obs`` used to color cells.
+    fate_order : Optional[Iterable[str]], default=None
+        Optional order of terminal states around the projection. If None, the
+        column order in the fate-probability table is retained.
+    point_size : float, default=8.0
+        Size of individual cell points.
+    alpha : float, default=0.45
+        Transparency of individual cell points.
+    figsize : tuple[float, float] | None, default=None
+        Figure size. If None, a suitable size is chosen automatically.
+    label_wrap : int | None, default=28
+        Maximum width used to wrap fate and categorical legend labels. Set to
+        None to disable wrapping.
+    legend_height : float | None, default=None
+        Height reserved for a categorical legend below the projection. If None,
+        the required height is estimated automatically.
+    legend_marker_scale : float, default=2.5
+        Scale factor applied to categorical legend markers.
+    title : str, default="Palantir fate probability projection"
+        Figure title.
+    show_equal_probability : bool, default=True
+        Whether to mark the equal-probability reference position.
+    save : str | None, default=None
+        Filename used to save the figure to the regular figure directory.
+    report_save : str | None, default=None
+        Relative path used to save the figure to the report directory.
+    show : bool, default=True
+        Whether to display the figure.
+
+    Returns
+    -------
+    tuple[Figure, Axes]
+        Matplotlib figure and projection axes.
+
+    Raises
+    ------
+    ValueError
+        If required inputs or plotting parameters are invalid.
+    """
+    if fate_prob_key not in adata.obsm:
+        raise ValueError(f"Fate probabilities '{fate_prob_key}' not found in adata.obsm.")
+    if color_by is not None and color_by not in adata.obs.columns:
+        raise ValueError(f"Column '{color_by}' not found in adata.obs.")
+    if point_size <= 0:
+        raise ValueError("point_size must be > 0.")
+    if not 0 <= alpha <= 1:
+        raise ValueError("alpha must satisfy 0 <= alpha <= 1.")
+    if label_wrap is not None and label_wrap < 1:
+        raise ValueError("label_wrap must be >= 1 or None.")
+    if legend_height is not None and legend_height < 0:
+        raise ValueError("legend_height must be >= 0 or None.")
+    if legend_marker_scale <= 0:
+        raise ValueError("legend_marker_scale must be > 0.")
+
+    fate_probabilities = adata.obsm[fate_prob_key]
+
+    if isinstance(fate_probabilities, pd.DataFrame):
+        prob_df = fate_probabilities.copy()
+        common_cells = adata.obs_names.intersection(prob_df.index)
+
+        if len(common_cells) == 0:
+            raise ValueError(f"No cells in adata.obs_names overlap with '{fate_prob_key}'.")
+
+        if len(common_cells) < adata.n_obs:
+            logger.warning(
+                "Fate probabilities contain %d/%d AnnData cells. Only overlapping cells will be plotted.",
+                len(common_cells),
+                adata.n_obs,
+            )
+
+        prob_df = prob_df.loc[common_cells]
+
+    else:
+        probability_array = np.asarray(fate_probabilities)
+
+        if probability_array.ndim != 2:
+            raise ValueError(
+                f"adata.obsm['{fate_prob_key}'] must be a two-dimensional cell-by-fate matrix."
+            )
+        if probability_array.shape[0] != adata.n_obs:
+            raise ValueError(
+                f"adata.obsm['{fate_prob_key}'] contains {probability_array.shape[0]} rows "
+                f"but adata has {adata.n_obs} cells."
+            )
+
+        logger.warning(
+            "Fate probabilities in adata.obsm['%s'] have no column labels. "
+            "Using generic terminal-state names.",
+            fate_prob_key,
+        )
+
+        prob_df = pd.DataFrame(
+            probability_array,
+            index=adata.obs_names,
+            columns=[f"terminal_state_{i}" for i in range(1, probability_array.shape[1] + 1)],
+        )
+
+    prob_df.columns = [str(column) for column in prob_df.columns]
+
+    if prob_df.columns.duplicated().any():
+        duplicates = prob_df.columns[prob_df.columns.duplicated()].tolist()
+        raise ValueError(f"Duplicate terminal-state labels in '{fate_prob_key}': {duplicates}")
+
+    n_fates = prob_df.shape[1]
+    if n_fates == 0:
+        raise ValueError(f"adata.obsm['{fate_prob_key}'] contains no terminal states.")
+
+    if fate_order is not None:
+        requested_order = [str(fate) for fate in fate_order]
+
+        if len(requested_order) != len(set(requested_order)):
+            raise ValueError("fate_order contains duplicate terminal-state labels.")
+        if len(requested_order) != n_fates or set(requested_order) != set(prob_df.columns):
+            raise ValueError(
+                "fate_order must contain every terminal-state label exactly once. "
+                f"Available states: {list(prob_df.columns)}"
+            )
+
+        prob_df = prob_df.loc[:, requested_order]
+
+    fate_names = list(prob_df.columns)
+    prob_df = prob_df.apply(pd.to_numeric, errors="coerce")
+    probability_values = prob_df.to_numpy(dtype=float)
+
+    finite_rows = np.isfinite(probability_values).all(axis=1)
+    if not finite_rows.all():
+        logger.warning(
+            "Dropping %d cells with non-finite fate probabilities.",
+            int((~finite_rows).sum()),
+        )
+        prob_df = prob_df.loc[finite_rows]
+        probability_values = probability_values[finite_rows]
+
+    if probability_values.shape[0] == 0:
+        raise ValueError("No valid cells remain after filtering fate probabilities.")
+
+    tolerance = 1e-8
+    if np.any(probability_values < -tolerance) or np.any(probability_values > 1 + tolerance):
+        raise ValueError("Fate probabilities must lie between 0 and 1.")
+
+    probability_values = np.clip(probability_values, 0, 1)
+    row_sums = probability_values.sum(axis=1)
+    positive_rows = row_sums > 0
+
+    if not positive_rows.all():
+        logger.warning(
+            "Dropping %d cells whose fate probabilities sum to zero.",
+            int((~positive_rows).sum()),
+        )
+        prob_df = prob_df.loc[positive_rows]
+        probability_values = probability_values[positive_rows]
+        row_sums = row_sums[positive_rows]
+
+    if probability_values.shape[0] == 0:
+        raise ValueError("No valid cells remain after removing zero-sum probability rows.")
+
+    if not np.allclose(row_sums, 1, atol=1e-6):
+        logger.warning(
+            "Some fate-probability rows do not sum to 1. "
+            "Rows will be normalized before projection."
+        )
+
+    probability_values /= row_sums[:, None]
+
+    if n_fates == 1:
+        vertices = np.array([[0.0, 0.0]])
+        logger.warning(
+            "Only one terminal state is available. All cells have the same projection position."
+        )
+    elif n_fates == 2:
+        vertices = np.array([[-1.0, 0.0], [1.0, 0.0]])
+    else:
+        angles = np.pi / 2 - 2 * np.pi * np.arange(n_fates) / n_fates
+        vertices = np.column_stack((np.cos(angles), np.sin(angles)))
+
+        if n_fates > 3:
+            logger.warning(
+                "Plotting %d terminal states as a 2D circular projection. "
+                "For more than three terminal states this representation is lossy.",
+                n_fates,
+            )
+
+    projected_coordinates = probability_values @ vertices
+    plot_df = pd.DataFrame(
+        projected_coordinates,
+        columns=["projection_x", "projection_y"],
+        index=prob_df.index,
+    )
+
+    color_values = None
+    categorical_color = False
+    hue_order = None
+    legend_columns = 0
+
+    if color_by is not None:
+        color_values = adata.obs.loc[plot_df.index, color_by]
+        categorical_color = not pd.api.types.is_numeric_dtype(color_values)
+
+        if categorical_color:
+            hue_order = (
+                color_values.astype("string")
+                .fillna("NA")
+                .astype(str)
+                .drop_duplicates()
+                .tolist()
+            )
+
+            n_categories = len(hue_order)
+
+            if n_categories <= 6:
+                legend_columns = 1
+            elif n_categories <= 10:
+                legend_columns = 2
+            elif n_categories <= 15:
+                legend_columns = 3
+            elif n_categories <= 24:
+                legend_columns = 4
+            else:
+                legend_columns = 5
+
+            max_label_length = max((len(label) for label in hue_order), default=0)
+            wrapped_length = (
+                min(max_label_length, label_wrap)
+                if label_wrap is not None
+                else max_label_length
+            )
+            wrapped_lines = max(
+                1,
+                int(np.ceil(max_label_length / max(wrapped_length, 1))),
+            )
+            legend_rows = int(np.ceil(n_categories / legend_columns))
+
+            if legend_height is None:
+                legend_height = max(0.6, 0.20 * legend_rows * wrapped_lines)
+
+    if figsize is None:
+        figsize = (9.0, 7.0 + legend_height) if categorical_color else (7.0, 7.0)
+
+    if categorical_color:
+        effective_legend_height = max(float(legend_height), 0.05)
+        fig = plt.figure(figsize=figsize)
+
+        grid = fig.add_gridspec(
+            2,
+            1,
+            height_ratios=(
+                max(1.0, figsize[1] - effective_legend_height),
+                effective_legend_height,
+            ),
+            hspace=0.0,
+        )
+
+        ax = fig.add_subplot(grid[0, 0])
+        legend_ax = fig.add_subplot(grid[1, 0])
+        legend_ax.axis("off")
+    else:
+        fig, ax = plt.subplots(figsize=figsize)
+
+    if color_by is None:
+        ax.scatter(
+            plot_df["projection_x"],
+            plot_df["projection_y"],
+            s=point_size,
+            alpha=alpha,
+            linewidths=0,
+            rasterized=True,
+            zorder=2,
+        )
+
+    elif pd.api.types.is_numeric_dtype(color_values):
+        numeric_colors = pd.to_numeric(color_values, errors="coerce").to_numpy(dtype=float)
+
+        scatter = ax.scatter(
+            plot_df["projection_x"],
+            plot_df["projection_y"],
+            c=numeric_colors,
+            s=point_size,
+            alpha=alpha,
+            linewidths=0,
+            rasterized=True,
+            zorder=2,
+        )
+
+        colorbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+        colorbar.set_label(color_by)
+
+    else:
+        plot_df[color_by] = color_values.astype("string").fillna("NA").astype(str)
+
+        sns.scatterplot(
+            data=plot_df,
+            x="projection_x",
+            y="projection_y",
+            hue=color_by,
+            hue_order=hue_order,
+            s=point_size,
+            alpha=alpha,
+            linewidth=0,
+            rasterized=True,
+            ax=ax,
+            zorder=2,
+        )
+
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend_.remove()
+
+        legend_labels = [
+            textwrap.fill(label, width=label_wrap) if label_wrap is not None else label
+            for label in labels
+        ]
+        legend_title = (
+            textwrap.fill(color_by, width=label_wrap)
+            if label_wrap is not None
+            else color_by
+        )
+
+        legend_ax.legend(
+            handles,
+            legend_labels,
+            title=legend_title,
+            loc="center",
+            frameon=False,
+            ncol=legend_columns,
+            markerscale=legend_marker_scale,
+        )
+
+    if n_fates == 2:
+        ax.plot(vertices[:, 0], vertices[:, 1], linewidth=1.5, color="0.55", zorder=1)
+    elif n_fates >= 3:
+        closed_vertices = np.vstack([vertices, vertices[0]])
+        ax.plot(
+            closed_vertices[:, 0],
+            closed_vertices[:, 1],
+            linewidth=1.5,
+            color="0.55",
+            zorder=1,
+        )
+
+    ax.scatter(
+        vertices[:, 0],
+        vertices[:, 1],
+        s=100,
+        facecolors="white",
+        edgecolors="black",
+        linewidths=1.2,
+        zorder=4,
+    )
+
+    for fate_name, (x_coord, y_coord) in zip(fate_names, vertices):
+        if n_fates == 1:
+            text_x, text_y = 0.0, 0.15
+        else:
+            text_x, text_y = 1.2 * x_coord, 1.2 * y_coord
+
+        fate_label = (
+            textwrap.fill(fate_name, width=label_wrap)
+            if label_wrap is not None
+            else fate_name
+        )
+
+        ha = "left" if text_x > 0.15 else "right" if text_x < -0.15 else "center"
+        va = "bottom" if text_y > 0.15 else "top" if text_y < -0.15 else "center"
+
+        ax.text(
+            text_x,
+            text_y,
+            fate_label,
+            ha=ha,
+            va=va,
+            fontsize=10,
+            fontweight="bold",
+        )
+
+    if show_equal_probability and n_fates >= 2:
+        equal_position = np.full(n_fates, 1 / n_fates) @ vertices
+
+        ax.scatter(
+            equal_position[0],
+            equal_position[1],
+            s=35,
+            facecolors="white",
+            edgecolors="black",
+            linewidths=1.0,
+            zorder=5,
+        )
+
+        reference_label = (
+            "equal fate probability"
+            if n_fates <= 3
+            else "equal-probability reference"
+        )
+
+        ax.annotate(
+            reference_label,
+            xy=equal_position,
+            xytext=(0, -14),
+            textcoords="offset points",
+            ha="center",
+            va="top",
+            fontsize=8,
+        )
+
+    ax.set_title(title, fontsize=14)
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlim(-1.35, 1.35)
+    ax.set_ylim(-1.30, 1.35)
+    ax.axis("off")
+    fig.tight_layout()
+
+    plt.figure(fig.number)
+
+    if save is not None:
+        _save_figure(path=save, bbox_inches="tight")
+    if report_save is not None:
+        _save_figure(path=report_save, report=True, bbox_inches="tight")
+    if show:
+        plt.show()
+
+    return fig, ax
