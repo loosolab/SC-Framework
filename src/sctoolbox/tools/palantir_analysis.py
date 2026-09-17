@@ -3182,3 +3182,404 @@ def plot_fate_probability_projection(  # noqa: C901
         plt.show()
 
     return fig, ax
+
+
+@deco.log_anndata
+@beartype
+def plot_branch_gene_trend_panels(  # noqa: C901
+    adata: AnnData,
+    computed: dict[str, dict[str, Any]] | None = None,
+    branches: str | Iterable[str] | None = None,
+    genes: str | Iterable[str] | None = None,
+    genes_per_cluster: int = 1,
+    color: str | None = None,
+    position_layer: str | None = None,
+    masks_key: str | None = "branch_masks",
+    gene_trend_key: str = "gene_trends",
+    pseudotime_key: str = "palantir_pseudotime",
+    ncols: int = 3,
+    point_size: float = 8.0,
+    alpha: float = 0.35,
+    figsize: tuple[float, float] = (4.5, 3.5),
+    trend_linewidth: float = 2.0,
+    save: str | None = None,
+    report_save: str | None = None,
+    plot_format: str = "png",
+    show: bool = True,
+) -> dict[str, dict[str, Any]]:
+    """Plot branch-specific Palantir gene trends together with individual cells.
+
+    Genes can be supplied manually or selected automatically from representative
+    trend-cluster genes returned by :func:`plot_branch_gene_programs`. A single
+    selected gene uses Palantir's native ``plot_trend`` representation, while
+    multiple genes are combined into a shared panel figure.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData containing Palantir results and expression data.
+    computed : dict[str, dict[str, Any]] | None, default=None
+        Results returned by :func:`plot_branch_gene_programs`. Required for
+        automatic branch or gene selection.
+    branches : str | Iterable[str] | None, default=None
+        Branches to plot. If None, all branches in ``computed`` are used.
+    genes : str | Iterable[str] | None, default=None
+        Genes to plot. If None, representative genes are selected automatically.
+    genes_per_cluster : int, default=1
+        Number of representative genes selected per trend cluster.
+    color : str | None, default=None
+        ``adata.obs`` column or gene used to color individual cells.
+    position_layer : str | None, default=None
+        Expression layer used for individual cell positions.
+    masks_key : str | None, default="branch_masks"
+        Key in ``adata.obsm`` containing branch masks.
+    gene_trend_key : str, default="gene_trends"
+        Base key for branch-specific Palantir gene trends.
+    pseudotime_key : str, default="palantir_pseudotime"
+        Column in ``adata.obs`` containing Palantir pseudotime.
+    ncols : int, default=3
+        Maximum number of subplot columns.
+    point_size : float, default=8.0
+        Size of individual cell points.
+    alpha : float, default=0.35
+        Transparency of individual cell points.
+    figsize : tuple[float, float], default=(4.5, 3.5)
+        Width and height of one multi-gene panel.
+    trend_linewidth : float, default=2.0
+        Width of the Palantir trend line in multi-gene panels.
+    save : str | None, default=None
+        Filename prefix for saving figures.
+    report_save : str | None, default=None
+        Filename prefix for saving figures to the report directory.
+    plot_format : str, default="png"
+        File format used for saved figures.
+    show : bool, default=True
+        Whether to display generated figures.
+
+    Returns
+    -------
+    dict[str, dict[str, Any]]
+        Mapping from branch name to generated figure, axes, genes, and selection mode.
+
+    Raises
+    ------
+    ValueError
+        If required data or plotting parameters are invalid.
+    """
+    if genes_per_cluster < 1:
+        raise ValueError("genes_per_cluster must be >= 1.")
+    if ncols < 1:
+        raise ValueError("ncols must be >= 1.")
+    if point_size <= 0:
+        raise ValueError("point_size must be > 0.")
+    if not 0 <= alpha <= 1:
+        raise ValueError("alpha must satisfy 0 <= alpha <= 1.")
+    if trend_linewidth <= 0:
+        raise ValueError("trend_linewidth must be > 0.")
+
+    plot_format = str(plot_format).lstrip(".")
+    if not plot_format:
+        raise ValueError("plot_format must not be empty.")
+    if position_layer is not None and position_layer not in adata.layers:
+        raise ValueError(f"Layer '{position_layer}' not found in adata.layers.")
+    if masks_key is not None and masks_key not in adata.obsm:
+        raise ValueError(f"Branch masks '{masks_key}' not found in adata.obsm.")
+    if masks_key is not None and pseudotime_key not in adata.obs:
+        raise ValueError(f"Pseudotime '{pseudotime_key}' not found in adata.obs.")
+    if color is not None and color not in adata.obs.columns and color not in adata.var_names:
+        raise ValueError(f"Color '{color}' not found in adata.obs or adata.var_names.")
+
+    if branches is None:
+        if not computed:
+            raise ValueError("branches=None requires results from plot_branch_gene_programs.")
+        branch_list = list(computed)
+    elif isinstance(branches, str):
+        branch_list = [branches]
+    else:
+        branch_list = list(branches)
+
+    if not branch_list:
+        raise ValueError("No branches were provided for plotting.")
+
+    manual_genes = genes is not None
+    if isinstance(genes, str):
+        requested_genes = [genes]
+    elif genes is not None:
+        requested_genes = list(genes)
+    else:
+        requested_genes = []
+
+    requested_genes = list(dict.fromkeys(str(gene) for gene in requested_genes))
+
+    def _save_branch_figure(
+        fig: Figure,
+        prefix: str | None,
+        branch_name: str,
+        report: bool,
+    ) -> None:
+        if prefix is None:
+            return
+
+        safe_branch = "".join(
+            character if character.isalnum() or character in "-_." else "_"
+            for character in branch_name
+        )
+        path = f"{prefix}_branch-{safe_branch}.{plot_format}"
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        plt.figure(fig.number)
+        _save_figure(path=path, report=report, bbox_inches="tight")
+
+    results: dict[str, dict[str, Any]] = {}
+
+    for branch in branch_list:
+        trend_key = f"{gene_trend_key}_{branch}"
+        trends = adata.varm.get(trend_key)
+
+        if not isinstance(trends, pd.DataFrame):
+            raise ValueError(
+                f"Branch trends '{trend_key}' not found as a DataFrame in adata.varm."
+            )
+
+        if manual_genes:
+            branch_genes = requested_genes.copy()
+            selection_mode = "manual"
+        else:
+            if computed is None or branch not in computed:
+                raise ValueError(
+                    f"Automatic gene selection for branch '{branch}' requires "
+                    "plot_branch_gene_programs results."
+                )
+
+            representatives = computed[branch].get("cluster_representatives")
+            if not isinstance(representatives, dict) or not representatives:
+                raise ValueError(
+                    f"No representative genes available for branch '{branch}'. "
+                    "Provide genes manually or run plot_branch_gene_programs with "
+                    "plot_representative_genes=True."
+                )
+
+            centroid_z = computed[branch].get("centroid_z")
+            cluster_order = (
+                centroid_z.index.astype(str).tolist()
+                if isinstance(centroid_z, pd.DataFrame)
+                else [str(cluster) for cluster in representatives]
+            )
+
+            branch_genes = []
+            for cluster in cluster_order:
+                cluster_genes = representatives.get(str(cluster), [])
+                branch_genes.extend(str(gene) for gene in cluster_genes[:genes_per_cluster])
+
+            branch_genes = list(dict.fromkeys(branch_genes))
+            selection_mode = "automatic"
+
+        available_genes = set(map(str, trends.index))
+        missing_genes = [gene for gene in branch_genes if gene not in available_genes]
+
+        if missing_genes:
+            logger.warning(
+                "Branch '%s': skipping genes without stored trends: %s",
+                branch,
+                missing_genes,
+            )
+
+        branch_genes = [gene for gene in branch_genes if gene in available_genes]
+        if not branch_genes:
+            logger.warning("Branch '%s': no genes available for plotting.", branch)
+            continue
+
+        if len(branch_genes) == 1:
+            gene = branch_genes[0]
+
+            palantir.plot.plot_trend(
+                adata,
+                branch,
+                gene,
+                color=color,
+                masks_key=masks_key,
+                gene_trend_key=gene_trend_key,
+                pseudo_time_key=pseudotime_key,
+                position_layer=position_layer,
+                s=point_size,
+                alpha=alpha,
+            )
+
+            fig = plt.gcf()
+            axes = np.array(fig.axes, dtype=object)
+
+            _save_branch_figure(fig, save, branch, report=False)
+            _save_branch_figure(fig, report_save, branch, report=True)
+
+            if show:
+                plt.show()
+
+            results[branch] = {
+                "figure": fig,
+                "axes": axes,
+                "genes": branch_genes,
+                "gene_selection": selection_mode,
+            }
+            continue
+
+        ncols_eff = min(ncols, len(branch_genes))
+        nrows_eff = int(np.ceil(len(branch_genes) / ncols_eff))
+        has_categorical_legend = (
+            color is not None
+            and color in adata.obs.columns
+            and (
+                not pd.api.types.is_numeric_dtype(adata.obs[color])
+                or pd.api.types.is_bool_dtype(adata.obs[color])
+            )
+        )
+        has_numeric_color = color is not None and not has_categorical_legend
+
+        legend_height = 1.4 if has_categorical_legend else 0.0
+        figure_height = figsize[1] * nrows_eff + legend_height
+        fig = plt.figure(figsize=(figsize[0] * ncols_eff, figure_height))
+
+        if has_categorical_legend:
+            grid = fig.add_gridspec(
+                nrows_eff + 1,
+                ncols_eff,
+                height_ratios=[1.0] * nrows_eff + [legend_height / figsize[1]],
+                hspace=0.25,
+                wspace=0.30,
+            )
+            axes = np.array(
+                [
+                    fig.add_subplot(grid[row, col])
+                    for row in range(nrows_eff)
+                    for col in range(ncols_eff)
+                ],
+                dtype=object,
+            )
+            legend_ax = fig.add_subplot(grid[-1, :])
+            legend_ax.axis("off")
+        else:
+            grid = fig.add_gridspec(
+                nrows_eff,
+                ncols_eff,
+                hspace=0.25,
+                wspace=0.30,
+            )
+            axes = np.array(
+                [
+                    fig.add_subplot(grid[row, col])
+                    for row in range(nrows_eff)
+                    for col in range(ncols_eff)
+                ],
+                dtype=object,
+            )
+            legend_ax = None
+
+        legend_handles = None
+        legend_labels = None
+        numeric_mappable = None
+
+        for i, gene in enumerate(branch_genes):
+            ax = axes[i]
+            axes_before = set(fig.axes)
+
+            palantir.plot.plot_trend(
+                adata,
+                branch,
+                gene,
+                color=color,
+                masks_key=masks_key,
+                gene_trend_key=gene_trend_key,
+                ax=ax,
+                pseudo_time_key=pseudotime_key,
+                position_layer=position_layer,
+                color_bar_bounds=None,
+                s=point_size,
+                alpha=alpha,
+            )
+
+            if ax.lines:
+                ax.lines[0].set_linewidth(trend_linewidth)
+
+            row = i // ncols_eff
+            col = i % ncols_eff
+            last_row = (len(branch_genes) - 1) // ncols_eff
+
+            ax.set_title(gene, fontsize=11)
+            ax.set_xlabel("Pseudotime" if row == last_row else "", labelpad=2)
+            ax.set_ylabel("Palantir trend" if col == 0 else "")
+            ax.grid(alpha=0.2)
+
+            new_axes = [axis for axis in fig.axes if axis not in axes_before]
+            if new_axes:
+                cell_ax = new_axes[0]
+                cell_ax.set_title("")
+                cell_ax.set_ylabel("Expression" if col == ncols_eff - 1 else "")
+
+                if has_numeric_color and numeric_mappable is None and cell_ax.collections:
+                    numeric_mappable = cell_ax.collections[0]
+
+                legend = cell_ax.get_legend()
+                if legend is not None:
+                    if legend_handles is None:
+                        legend_handles, legend_labels = cell_ax.get_legend_handles_labels()
+                    legend.remove()
+
+        for i in range(len(branch_genes), len(axes)):
+            axes[i].axis("off")
+
+        if nrows_eff == 1:
+            layout_top = 0.85
+        elif nrows_eff == 2:
+            layout_top = 0.90
+        else:
+            layout_top = 0.96
+
+        fig.suptitle(f"Branch '{branch}' — Palantir gene trends", fontsize=14, y=0.99)
+
+        if legend_ax is not None and legend_handles and legend_labels:
+            n_categories = len(legend_labels)
+
+            if n_categories <= 6:
+                legend_columns = n_categories
+            elif n_categories <= 12:
+                legend_columns = 4
+            else:
+                legend_columns = 5
+
+            legend_ax.legend(
+                legend_handles,
+                legend_labels,
+                title=color,
+                loc="center",
+                bbox_to_anchor=(0.5, 0.40),
+                frameon=False,
+                ncol=legend_columns,
+                markerscale=2.5,
+            )
+
+        fig.tight_layout(rect=(0, 0, 1, layout_top))
+        fig.subplots_adjust(top=layout_top)
+
+        if has_numeric_color and numeric_mappable is not None:
+            colorbar = fig.colorbar(
+                numeric_mappable,
+                ax=list(axes[: len(branch_genes)]),
+                fraction=0.025,
+                pad=0.03,
+                shrink=0.75,
+                aspect=30,
+            )
+            colorbar.set_label(color)
+
+        _save_branch_figure(fig, save, branch, report=False)
+        _save_branch_figure(fig, report_save, branch, report=True)
+
+        if show:
+            plt.show()
+
+        results[branch] = {
+            "figure": fig,
+            "axes": axes[: len(branch_genes)],
+            "genes": branch_genes,
+            "gene_selection": selection_mode,
+        }
+
+    return results
