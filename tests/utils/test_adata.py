@@ -470,10 +470,9 @@ def test_tidy_layer_keep_and_X(adata, keep_X, replace_X, keep):
     (True, type(None)),
     (False, sc.AnnData),
 ])
-def test_remove_group(table, col_name, value, inplace, expected_return_type, adata):
+def test_remove_group(table, col_name, value, inplace, expected_return_type, adata_fun_scope):
     """Test removal of None/single/multiple/all groups from obs/var with inplace=True/False."""
-    # Isolate test from fixture mutations
-    adata = adata.copy()
+    adata = adata_fun_scope
 
     # Setup var column if testing var table
     if table == "var":
