@@ -354,6 +354,10 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
 
     # generate report
     if settings.report_dir and report:
+
+        # filter out a None key: anndata>=0.13 exposes .X as a spurious None-keyed layer (absent on anndata 0.12)
+        real_layers = [key for key in adata.layers.keys() if key is not None]
+
         with open(Path(settings.report_dir) / report[0], "w") as f:
             f.write("\n".join([
                 "## Dataset",
