@@ -142,7 +142,7 @@ def obs_subset(  # noqa: C901
         mask &= obs_values_str.isin(requested_values_str)
 
     if mask.sum() == 0:
-        raise ValueError("Subsetting removed all cells. Please check `filters`.")
+        raise ValueError("Subsetting removed all cells. Please check `subset_filters`.")
 
     adata_subset = qc_filter.filter_cells(
         adata,
@@ -305,7 +305,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
 @deco.log_anndata
 @beartype
-def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, **kwargs: Any) -> None:
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, **kwargs: Any) -> None:  # noqa: C901
     """
     Save an anndata object to an .h5ad file.
 
@@ -795,7 +795,6 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
         # (absent on anndata 0.12); listing only real (str) layer names keeps the message correct
         available = ','.join(key for key in adata.layers.keys() if key is not None)
         raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {available}.")
-
 
     def clean_section(obj: sc.AnnData, axis: str = "obs", keep: Optional[list[str]] = None, delete: Optional[list[str]] = None, rename: Optional[dict[str, str]] = None) -> None:  # noqa: C901
         """
