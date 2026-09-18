@@ -6,6 +6,7 @@ from collections.abc import Sequence  # check if object is iterable
 from collections import OrderedDict
 import scipy
 import matplotlib.pyplot as plt
+from matplotlib.colors import is_color_like, to_hex
 from scipy.sparse import issparse
 import pandas as pd
 from pathlib import Path
@@ -333,6 +334,13 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
             tmp.dtype.names = dnames  # set old names back in place
             adata.uns[unk]["names"] = tmp
 
+    # fixes anndata not being able to write RGB(A) tuples in adata.uns[<key>_colors]
+    # matplotlib>=3.11 defines the default prop cycle as cycler(color='tab10'), which resolves to RGB float
+    # tuples that palantir.plot.plot_trajectories stores verbatim in adata.uns['palantir_fates_colors']
+    for key in list(adata.uns):  # avoid RuntimeError by forcing a copy of dict keys.
+        if key.endswith("_colors"):
+            adata.uns[key] = _hex_uns_colors(adata.uns[key], key)
+
     # add file compression if not already present
     # this was default prior to version 0.6.16
     if "compression" not in kwargs:
@@ -383,6 +391,44 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
         plot_table(adata.var, report=report[2], crop=4)
 
     logger.info(f"The adata object was saved to: {adata_output}")
+
+
+@beartype
+def _hex_uns_colors(colors: Any, key: str) -> Any:
+    """
+    Help to convert the matplotlib colors of an adata.uns['<column>_colors'] entry to 6-digit hex strings.
+
+    Note: Alpha values are dropped. Values that are not color like are left unchanged and reported in a single warning.
+
+    Parameters
+    ----------
+    colors : Any
+        Value of an adata.uns['<column>_colors'] entry. Either a single color, a dict of colors or a list/tuple/np.ndarray of colors.
+        Any other type is returned as is.
+    key : str
+        Name of the adata.uns key holding the colors. Only used for logging.
+
+    Returns
+    -------
+    Any
+        The colors converted to hex strings, keeping the container type. Dicts are rebuilt as dicts, any other collection as a list.
+    """
+    if is_color_like(colors):  # checked first as a single RGB(A) color is a sequence as well
+        return to_hex(colors)
+
+    if isinstance(colors, Mapping):
+        converted = {name: to_hex(c) if is_color_like(c) else c for name, c in colors.items()}
+        skipped = [c for c in colors.values() if not is_color_like(c)]
+    elif isinstance(colors, (list, tuple, np.ndarray)):
+        converted = [to_hex(c) if is_color_like(c) else c for c in colors]
+        skipped = [c for c in colors if not is_color_like(c)]
+    else:
+        return colors
+
+    if skipped:
+        logger.warning(f"Could not convert {len(skipped)} value(s) of adata.uns['{key}'] to hex: {skipped}. These values were left unchanged.")
+
+    return converted
 
 
 @beartype
@@ -745,7 +791,11 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
         If ``layer`` is set but no layer with that name exists.
     """
     if layer and layer not in adata.layers:
-        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
+        # filter out a None key: anndata>=0.13 exposes .X as a spurious None-keyed layer
+        # (absent on anndata 0.12); listing only real (str) layer names keeps the message correct
+        available = ','.join(key for key in adata.layers.keys() if key is not None)
+        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {available}.")
+
 
     def clean_section(obj: sc.AnnData, axis: str = "obs", keep: Optional[list[str]] = None, delete: Optional[list[str]] = None, rename: Optional[dict[str, str]] = None) -> None:  # noqa: C901
         """
@@ -991,12 +1041,13 @@ def tidy_layers(  # noqa: C901
         if replace_X in adata.layers:
             adata.X = adata.layers[replace_X].copy()
         else:
-            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({list(adata.layers.keys())}).")
+            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({[key for key in adata.layers.keys() if key is not None]}).")
 
     # ----- keep ----- #
     if keep != "all":
         for layer in list(adata.layers.keys()):
-            if layer not in keep:
+            # skip a None key: anndata>=0.13 exposes .X as a None-keyed layer; deleting it would drop .X
+            if layer is not None and layer not in keep:
                 del adata.layers[layer]
 
     if not inplace:
