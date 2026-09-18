@@ -1512,15 +1512,18 @@ def _detect_library_case(
 
         symbols = [g for terms in library.values() for g in terms]
 
-        if not symbols:
+        # count letters rather than whole symbols: names like "C1orf159" are
+        # neither isupper() nor islower() and would otherwise be miscounted
+        letters = [c for g in symbols for c in g if c.isalpha()]
+
+        if not letters:
             continue
 
-        share_upper = sum(g.isupper() for g in symbols) / len(symbols)
-        share_lower = sum(g.islower() for g in symbols) / len(symbols)
+        share_upper = sum(c.isupper() for c in letters) / len(letters)
 
         if share_upper > 0.9:
             case = "upper"
-        elif share_lower > 0.9:
+        elif share_upper < 0.1:
             case = "lower"
         else:
             case = None
