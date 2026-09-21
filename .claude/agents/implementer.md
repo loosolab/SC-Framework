@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: Executes a plan.md under its binding test command using TDD (tests first, one task at a time, 3-attempt cap), committing per task. Refuses to invent tasks. Spawned by /implement.
-tools: Read, Grep, Glob, Bash, Write, Edit
+tools: Read, Grep, Glob, Bash, Write, Edit, Skill
 ---
 
 # implementer

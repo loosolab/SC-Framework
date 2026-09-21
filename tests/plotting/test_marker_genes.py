@@ -57,6 +57,8 @@ def test_grouped_violin(adata, x, y, norm, style):
     ax = pl.grouped_violin(adata, x=x, y=y, style=style,
                            groupby="condition", normalize=norm)
     assert isinstance(ax, matplotlib.axes.Axes)
+    if style == "bar":
+        assert len(ax.containers) > 0  # bars were actually drawn
 
 
 @pytest.mark.parametrize("kwargs,exception,match", [
