@@ -606,6 +606,50 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                                 planet_columns = selected_genes,
                                 color_schema = color_schema)
 
+    Expression scaling:
+    The expression_scaling parameter enables flexible scaling of gene expression values to improve visual interpretation.
+
+    .. note::
+        Scaling choice directly impacts visualization and biological interpretation.
+        Log transforms preserve multiplicative relationships and reduce skewness, while
+        min-max scaling emphasizes relative expression patterns within each row/column/gene.
+        Ensure the scaling aligns with your analytical goal.
+
+    .. plot::
+        :context: close-figs
+
+        # Using "log" scaling for gene expression
+        pl.planet_plot.planet_plot_render(
+            plot_vars,
+            x_col,
+            y_col,
+            mode = "planet",
+            size_value = "count",
+            color_value = "value",
+            use_log_scale = False,
+            expression_scaling = "log",
+            planet_columns = selected_genes,
+            color_schema = color_schema
+        )
+
+
+    .. plot::
+        :context: close-figs
+
+        # Using "gene" scaling
+        pl.planet_plot.planet_plot_render(
+            plot_vars,
+            x_col,
+            y_col,
+            mode = "planet",
+            size_value = "count",
+            color_value = "value",
+            use_log_scale = False,
+            expression_scaling = "gene",
+            planet_columns = selected_genes,
+            color_schema = color_schema
+        )
+
     Plotting obs_columns:
     We have many scoring metrics stored in the obs column.
     You can pass the obs columns and get the aggregate values to plot them as planets.
