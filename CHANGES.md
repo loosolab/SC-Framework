@@ -47,6 +47,7 @@
 - run_scsa: select the top-scoring celltype row explicitly
 - run_scsa: move the SCSA results from adata.uns["SCSA"] to adata.uns["sctoolbox"]["SCSA"]
 - run_scsa: refresh the stale pandas downgrade note
+- unpin docutils (#421)
 
 ### Changes to notebooks
 - General/GSEA: Additional parameters for gsea_dot
