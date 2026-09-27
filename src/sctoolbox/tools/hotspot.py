@@ -69,7 +69,9 @@ def ensure_pca(
     if pca_key in adata.obsm and not force_recompute:
         existing_dims = adata.obsm[pca_key].shape[1]
         logger.info(
-            f"Existing PCA found: adata.obsm['{pca_key}'] with {existing_dims} dimensions."
+            f"Existing PCA found: adata.obsm['{pca_key}'] with {existing_dims} "
+            f"dimensions. n_comps={n_comps} is not applied to an existing "
+            "representation; set force_recompute_pca=True to recompute it."
         )
         return pca_key
 
@@ -187,7 +189,9 @@ def ensure_umap(
     n_neighbors : int, default 30
         Number of neighbors for the graph.
     n_pcs : int, default 30
-        Number of components used when use_rep is the PCA key.
+        Number of components used when use_rep is the PCA key. Capped at the
+        number of dimensions the representation actually has, since earlier
+        notebooks may have dropped principal components.
     metric : str, default "euclidean"
         Distance metric for the neighbor graph.
     min_dist : float, default 0.5
@@ -226,12 +230,26 @@ def ensure_umap(
             "Cannot compute UMAP."
         )
 
+    # PCs may have been dropped in an earlier notebook, so the representation
+    # can hold fewer dimensions than n_pcs asks for
+    n_pcs_used = None
+
+    if use_rep == pca_key:
+        available_dims = adata.obsm[use_rep].shape[1]
+        n_pcs_used = min(n_pcs, available_dims)
+
+        if n_pcs_used < n_pcs:
+            logger.info(
+                f"adata.obsm['{use_rep}'] holds {available_dims} dimensions, "
+                f"using n_pcs={n_pcs_used} instead of {n_pcs}."
+            )
+
     logger.info(f"Computing neighbors using representation: '{use_rep}'.")
 
     sc.pp.neighbors(
         adata,
         n_neighbors=n_neighbors,
-        n_pcs=n_pcs if use_rep == pca_key else None,
+        n_pcs=n_pcs_used,
         use_rep=use_rep,
         metric=metric,
         key_added=neighbors_key,
@@ -562,6 +580,8 @@ def ensure_hotspot_latent_representation(  # noqa: C901
 
     external_reps = {"X_scVI", "X_scanorama"}
 
+    # a subset invalidates the existing representations, since they describe
+    # the cells and genes they were computed on
     force_pca_effective = force_recompute_pca or (is_subset and recompute_if_subset)
     force_harmony_effective = force_recompute_harmony or (is_subset and recompute_if_subset)
 
@@ -669,79 +689,59 @@ def ensure_hotspot_latent_representation(  # noqa: C901
     )
 
 
+@deco.log_anndata
 @beartype
-def inspect_and_filter_genes_by_cell_detection(
+def inspect_gene_detection(
     adata: AnnData,
     layer_key: Optional[str] = "raw",
-    min_cells: int = 50,
-    thresholds_to_show: Sequence[int] = (10, 20, 30, 50, 100),
-    filter_genes: bool = False,
+    thresholds_to_show: Optional[Sequence[int]] = None,
+    var_column: str = "hotspot_n_cells_detected",
     plot: bool = True,
     bins: int = 50,
-    save: bool = True,
-    report: bool = True,
-    output_prefix: str = "hotspot",
-    var_column: str = "n_cells_by_counts",
-    recompute: bool = False,
-    copy: bool = True,
-) -> tuple[AnnData, pd.DataFrame, dict[str, Any]]:
+    save: Optional[str] = None,
+    report: Optional[str] = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Inspect and optionally filter genes based on the number of cells in which each gene is detected.
+    Show in how many cells each gene is detected.
 
-    A gene is considered detected in a cell if its expression/count value is > 0.
+    A gene counts as detected in a cell if its value in the selected layer is
+    greater than zero. Nothing is removed here; the result is the basis for
+    choosing min_cells in filter_genes_by_cell_detection.
 
     Parameters
     ----------
     adata : AnnData
         Input AnnData object.
     layer_key : Optional[str], default "raw"
-        Layer to use for gene detection counts. If None, adata.X is used;
-        note that anndata >= 0.13 stores .X in adata.layers under the None
-        key, so both spellings refer to the same matrix.
-    min_cells : int, default 50
-        Minimum number of cells in which a gene must be detected. Genes seen
-        in very few cells carry little information for the neighbourhood
-        statistics and mostly add noise. As a rule of thumb use roughly
-        0.1-1% of the cells in the current (sub)set. With filter_genes=False
-        nothing is removed and this value only affects the reported summary.
-    thresholds_to_show : Sequence[int], default (10, 20, 30, 50, 100)
-        Thresholds for reporting how many genes would be kept.
-    filter_genes : bool, default False
-        If False, only statistics and plots are shown.
-        If True, genes detected in fewer than min_cells cells are removed.
+        Layer used for the detection counts. If None, adata.X is used; note
+        that anndata >= 0.13 stores .X in adata.layers under the None key, so
+        both spellings refer to the same matrix.
+    thresholds_to_show : Optional[Sequence[int]], default None
+        Thresholds reported in the overview table. If None, they are derived
+        from the current cell number as 0.1%, 0.25%, 0.5%, 1% and 2% of
+        adata.n_obs, so that the candidates fit the size of the current
+        (sub)set instead of a fixed dataset size.
+    var_column : str, default "hotspot_n_cells_detected"
+        Column in adata.var the detection counts are written to. The counts
+        are always computed from the current object rather than reused from
+        adata.var["n_cells_by_counts"], which describes the state of the data
+        in notebook 2 and is too high after subsetting.
     plot : bool, default True
-        Whether to plot a histogram of gene detection frequencies.
+        Whether to plot a histogram of the gene detection frequencies.
     bins : int, default 50
         Number of histogram bins.
-    save : bool, default True
-        Whether to save the histogram.
-    report : bool, default True
-        Whether to additionally write the histogram to sctoolbox.settings.report_dir.
-    output_prefix : str, default "hotspot"
-        Prefix for saved figure names.
-    var_column : str, default "n_cells_by_counts"
-        Column in adata.var holding the number of cells each gene is detected in.
-        Reused if present. If missing, it is computed with
-        sc.pp.calculate_qc_metrics, which also (re)writes the other QC columns in
-        adata.var, e.g. "total_counts", "mean_counts" and "pct_dropout_by_counts".
-        With a standard workflow the column comes from notebook 2 and nothing is
-        recomputed.
-    recompute : bool, default False
-        Whether to recompute the detection counts even if var_column exists.
-        Set this to True after subsetting: counts carried over from an earlier
-        notebook refer to the full object and are systematically too high.
-    copy : bool, default True
-        If True, return a copied filtered AnnData object.
-        If False and filter_genes=True, return a view.
+    save : Optional[str], default None
+        File name for the saved figure. If None, the figure is not saved.
+    report : Optional[str], default None
+        Name of the output file used for report creation. Will be silently
+        skipped if sctoolbox.settings.report_dir is None.
 
     Returns
     -------
-    adata_out : AnnData
-        Original or filtered AnnData object, depending on filter_genes.
     gene_detection : pandas.DataFrame
-        DataFrame with gene names and number of cells detected.
-    summary : dict
-        Summary information about filtering.
+        Per gene: the number of cells it is detected in.
+    threshold_table : pandas.DataFrame
+        Per candidate threshold: how many genes would be kept.
 
     Raises
     ------
@@ -756,9 +756,10 @@ def inspect_and_filter_genes_by_cell_detection(
         used_layer = "adata.X"
     else:
         if layer_key not in adata.layers:
+            available = [k for k in adata.layers if k is not None]
             raise KeyError(
                 f"Layer '{layer_key}' not found in adata.layers. "
-                f"Available layers: {[k for k in adata.layers if k is not None]}"
+                f"Available layers: {available}"
             )
         used_layer = f"adata.layers['{layer_key}']"
 
@@ -767,21 +768,20 @@ def inspect_and_filter_genes_by_cell_detection(
     # --------------------------------------------------------
     # Count number of cells where each gene is detected
     # --------------------------------------------------------
-    if var_column in adata.var.columns and not recompute:
-        logger.info(f"Using existing adata.var['{var_column}'] for gene detection.")
-    else:
-        logger.info(f"Computing gene detection counts from {used_layer}.")
-        sc.pp.calculate_qc_metrics(
-            adata, layer=layer_key, percent_top=None, log1p=False, inplace=True
-        )
+    # counted here rather than reused from the QC columns of notebook 2:
+    # those describe the full object and are too high after subsetting
+    logger.info(f"Counting gene detection from {used_layer}.")
 
-    n_cells_per_gene = adata.var[var_column].to_numpy()
+    X = adata.X if layer_key is None else adata.layers[layer_key]
+
+    # (X > 0) works for sparse and dense alike; asarray/ravel flattens the
+    # np.matrix that sparse .sum() returns
+    n_cells_per_gene = np.asarray((X > 0).sum(axis=0)).ravel()
+
+    adata.var[var_column] = n_cells_per_gene
 
     gene_detection = pd.DataFrame(
-        {
-            "gene": adata.var_names,
-            var_column: n_cells_per_gene,
-        },
+        {"gene": adata.var_names, var_column: n_cells_per_gene},
         index=adata.var_names,
     )
 
@@ -790,8 +790,8 @@ def inspect_and_filter_genes_by_cell_detection(
     # --------------------------------------------------------
     stats = gene_detection[var_column].describe()
     logger.info(
-        f"Gene detection frequency: median={stats['50%']:.0f}, "
-        f"min={stats['min']:.0f}, max={stats['max']:.0f}."
+        f"Gene detection frequency across {adata.n_obs} cells: "
+        f"median={stats['50%']:.0f}, min={stats['min']:.0f}, max={stats['max']:.0f}."
     )
 
     # --------------------------------------------------------
@@ -805,72 +805,172 @@ def inspect_and_filter_genes_by_cell_detection(
         plt.title("Gene detection frequency")
         plt.tight_layout()
 
-        if save:
-            _save_figure(f"{output_prefix}_gene_detection_frequency.pdf", bbox_inches="tight")
+        _save_figure(save, bbox_inches="tight")
 
-        if report:
-            _save_figure(f"{output_prefix}_gene_detection_frequency.png", report=True, bbox_inches="tight")
+        if settings.report_dir and report:
+            _save_figure(report, report=True, bbox_inches="tight")
 
         plt.show()
 
     # --------------------------------------------------------
-    # Show threshold comparison
+    # Threshold overview
     # --------------------------------------------------------
-    logger.info("Genes kept at different min_cells thresholds:")
+    if thresholds_to_show is None:
+        # scale the candidates with the current (sub)set instead of using
+        # fixed numbers that only fit medium-sized datasets
+        thresholds_to_show = sorted(
+            {max(1, int(round(adata.n_obs * f))) for f in (0.001, 0.0025, 0.005, 0.01, 0.02)}
+        )
 
-    threshold_summary = {}
+    rows = []
 
     for threshold in thresholds_to_show:
         n_keep = int((gene_detection[var_column] >= threshold).sum())
-        threshold_summary[threshold] = n_keep
-        logger.info(f"min_cells={threshold}: keep {n_keep} / {adata.n_vars} genes")
+        rows.append({
+            "min_cells": int(threshold),
+            "pct_of_cells": round(100 * threshold / adata.n_obs, 3),
+            "n_genes_kept": n_keep,
+            "pct_genes_kept": round(100 * n_keep / adata.n_vars, 1),
+        })
 
-    # --------------------------------------------------------
-    # Apply filtering only if requested
-    # --------------------------------------------------------
-    keep_genes = n_cells_per_gene >= min_cells
+    threshold_table = pd.DataFrame(rows).set_index("min_cells")
+
+    logger.info("Genes kept at different min_cells thresholds:")
+
+    for threshold, row in threshold_table.iterrows():
+        logger.info(
+            f"min_cells={threshold} ({row['pct_of_cells']}% of cells): "
+            f"keep {int(row['n_genes_kept'])} / {adata.n_vars} genes"
+        )
+
+    # rule of thumb expressed in the numbers of this dataset rather than in
+    # the abstract, so that the user can act on it directly
+    lo = max(1, int(adata.n_obs * 0.001))
+    hi = max(1, int(adata.n_obs * 0.01))
+
+    logger.info(
+        f"Rule of thumb: min_cells between {lo} and {hi} (0.1-1% of the "
+        f"{adata.n_obs} cells in this set). Pick a value where the histogram "
+        "flattens out and most genes are still kept."
+    )
+
+    utils.adata.add_uns_info(adata, key=["hotspot", "gene_detection"], value={
+        "used_layer": used_layer,
+        "var_column": var_column,
+        "n_cells": int(adata.n_obs),
+        "n_genes": int(adata.n_vars),
+        # stored as two scalars because h5ad has no writer for tuples
+        "suggested_min_cells_low": lo,
+        "suggested_min_cells_high": hi,
+    })
+
+    return gene_detection, threshold_table
+
+
+@deco.log_anndata
+@beartype
+def filter_genes_by_cell_detection(
+    adata: AnnData,
+    min_cells: Optional[int],
+    copy: bool = True,
+) -> tuple[AnnData, dict[str, Any]]:
+    """
+    Remove genes detected in fewer than min_cells cells.
+
+    Requires inspect_gene_detection to have been run on the same object, so
+    that the decision is made after seeing the distribution.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object inspected with inspect_gene_detection.
+    min_cells : Optional[int]
+        Minimum number of cells in which a gene must be detected. None keeps
+        all genes, which is the state the notebook ships in. There is no
+        numeric default on purpose: choose the value from the histogram and
+        the threshold table of inspect_gene_detection. As a starting point,
+        0.1-1% of the cells in the current (sub)set.
+    copy : bool, default True
+        Whether to return a copy instead of filtering in place.
+
+    Returns
+    -------
+    adata_out : AnnData
+        Filtered AnnData object.
+    summary : dict
+        Gene numbers before and after filtering.
+
+    Raises
+    ------
+    ValueError
+        If inspect_gene_detection was not run, if the counts refer to a
+        different cell number, or if the threshold removes all genes.
+    """
+    if min_cells is None:
+        logger.info("min_cells is None, no genes were removed.")
+        summary = {
+            "min_cells": None,
+            "n_genes_before": adata.n_vars,
+            "n_genes_after": adata.n_vars,
+            "n_genes_removed": 0,
+        }
+        return (adata.copy() if copy else adata), summary
+
+    key = ["sctoolbox", "hotspot", "gene_detection"]
+
+    if not utils.adata.in_uns(adata, key):
+        raise ValueError(
+            "No gene detection statistics found. Run inspect_gene_detection "
+            "first and choose min_cells based on its output."
+        )
+
+    info = utils.adata.get_uns(adata, key)
+    var_column = info["var_column"]
+
+    if info["n_cells"] != adata.n_obs:
+        raise ValueError(
+            f"Gene detection counts were computed on {info['n_cells']} cells, "
+            f"but the object now has {adata.n_obs}. Rerun inspect_gene_detection."
+        )
+
+    keep_genes = adata.var[var_column].to_numpy() >= min_cells
+
+    if keep_genes.sum() == 0:
+        raise ValueError(
+            f"min_cells={min_cells} removes all {adata.n_vars} genes. "
+            "Choose a lower threshold."
+        )
 
     summary = {
-        "used_layer": used_layer,
+        "used_layer": info["used_layer"],
         "min_cells": min_cells,
+        "pct_of_cells": round(100 * min_cells / adata.n_obs, 3),
         "n_genes_before": adata.n_vars,
         "n_genes_after": int(keep_genes.sum()),
         "n_genes_removed": int(adata.n_vars - keep_genes.sum()),
-        "filter_genes": filter_genes,
-        "threshold_summary": threshold_summary,
     }
 
     logger.info(
-        f"Selected filtering threshold min_cells={min_cells}: "
-        f"keep {summary['n_genes_after']} / {summary['n_genes_before']} genes, "
-        f"remove {summary['n_genes_removed']} genes."
+        f"min_cells={min_cells}: keep {summary['n_genes_after']} / "
+        f"{summary['n_genes_before']} genes, remove {summary['n_genes_removed']}."
     )
 
-    if filter_genes:
-        logger.info("Filtering genes.")
+    adata_out = qc_filter.filter_genes(
+        adata,
+        genes=adata.var_names[keep_genes].tolist(),
+        invert=True,
+        inplace=not copy,
+        name="hotspot_gene_detection",
+        value={"min_cells": min_cells, "used_layer": info["used_layer"]},
+        overwrite=True,
+    )
 
-        adata_out = qc_filter.filter_genes(
-            adata,
-            genes=adata.var_names[keep_genes].tolist(),
-            invert=True,
-            inplace=not copy,
-            name="hotspot_gene_detection",
-            value={"min_cells": min_cells, "used_layer": used_layer},
-            overwrite=True,
-        )
-
-        if adata_out is None:  # inplace=True returns None
-            adata_out = adata
-
-        logger.info(
-            f"Filtered AnnData: {adata_out.n_obs} cells x {adata_out.n_vars} genes."
-        )
-
-    else:
-        logger.info("filter_genes=False, no genes were removed.")
+    if adata_out is None:  # inplace=True returns None
         adata_out = adata
 
-    return adata_out, gene_detection, summary
+    logger.info(f"Filtered AnnData: {adata_out.n_obs} cells x {adata_out.n_vars} genes.")
+
+    return adata_out, summary
 
 
 @deco.log_anndata
@@ -902,9 +1002,12 @@ def run_hotspot(  # noqa: C901
 
     All results that can be stored are written to adata: autocorrelation
     statistics, module assignments and the selected gene flag to adata.var,
-    module scores to adata.obs, run metadata to adata.uns. The returned
-    dictionary additionally holds the live Hotspot object, which is only
-    needed for the local correlation heatmap, see plot_local_correlations.
+    module scores to adata.obs, run metadata to adata.uns. Genes that Hotspot
+    could not assign to any module, including genes that were not part of the
+    run, carry the label -1 (UNASSIGNED_MODULE) in
+    adata.var["hotspot_module"]. The returned dictionary additionally holds
+    the live Hotspot object, which is only needed for the local correlation
+    heatmap, see plot_local_correlations.
 
     Parameters
     ----------
@@ -951,8 +1054,10 @@ def run_hotspot(  # noqa: C901
         Minimum genes per module.
     core_only : bool, default True
         Whether to keep only core module genes, i.e. the genes that cluster
-        stably with the module. Setting this to False also assigns genes at
-        the cluster border, which yields larger but less specific modules.
+        stably with the module as a whole rather than with a few of its
+        members. Genes that are not assigned carry the label -1
+        (UNASSIGNED_MODULE). Setting this to False also assigns genes at the
+        cluster border, which yields larger but less specific modules.
     module_fdr_threshold : float, default 0.05
         FDR threshold used in module creation.
     compute_local_correlations : bool, default True
@@ -1016,6 +1121,7 @@ def run_hotspot(  # noqa: C901
     # Remove genes with zero variance in the selected layer
     X = adata.layers[layer_key]
 
+    # scipy sparse has no .var(), so Var(X) = E[X²] - E[X]² is computed by hand
     if sp.issparse(X):
         mean = np.asarray(X.mean(axis=0)).ravel()
         mean_sq = np.asarray(X.multiply(X).mean(axis=0)).ravel()
@@ -1023,6 +1129,8 @@ def run_hotspot(  # noqa: C901
     else:
         gene_var = np.asarray(X.var(axis=0)).ravel()
 
+    # Hotspot's null models divide by the gene variance, so constant genes
+    # have to go before the object is handed over
     keep_genes = gene_var > 0
 
     if keep_genes.sum() == 0:
@@ -1035,6 +1143,8 @@ def run_hotspot(  # noqa: C901
 
     if n_removed > 0:
         logger.info(f"Removing {n_removed} genes with zero variance in '{layer_key}'.")
+        # Hotspot gets a reduced copy; results are written back to the full
+        # adata further down, where the dropped genes end up as NaN / -1
         adata_hs = adata[:, keep_genes].copy()
     else:
         adata_hs = adata
@@ -1143,6 +1253,8 @@ def run_hotspot(  # noqa: C901
 
         module_score_columns = module_scores_obs.columns.tolist()
 
+        # drop first so that a rerun with fewer modules leaves no stale
+        # columns from the previous run behind
         adata.obs = adata.obs.drop(columns=module_score_columns, errors="ignore")
         adata.obs = adata.obs.join(module_scores_obs)
 
@@ -1187,9 +1299,8 @@ def run_hotspot(  # noqa: C901
 @beartype
 def plot_local_correlations(
     hs: hotspot.Hotspot,
-    output_prefix: str = "hotspot",
-    save: bool = True,
-    report: bool = True,
+    save: Optional[str] = None,
+    report: Optional[str] = None,
 ) -> None:
     """
     Plot the Hotspot local correlation heatmap.
@@ -1203,12 +1314,11 @@ def plot_local_correlations(
     ----------
     hs : hotspot.Hotspot
         Hotspot object as returned by run_hotspot under results["hotspot"].
-    output_prefix : str, default "hotspot"
-        Prefix for saved figure names.
-    save : bool, default True
-        Whether to save the figure.
-    report : bool, default True
-        Whether to additionally write the figure to sctoolbox.settings.report_dir.
+    save : Optional[str], default None
+        File name for the saved figure. If None, the figure is not saved.
+    report : Optional[str], default None
+        Name of the output file used for report creation. Will be silently
+        skipped if sctoolbox.settings.report_dir is None.
     """
     try:
         hs.plot_local_correlations()
@@ -1216,13 +1326,10 @@ def plot_local_correlations(
         logger.warning(f"Could not plot local correlation heatmap: {e}")
         return
 
-    if save:
-        _save_figure(f"{output_prefix}_local_correlations_heatmap.pdf", bbox_inches="tight")
+    _save_figure(save, bbox_inches="tight")
 
-    if report:
-        _save_figure(
-            f"{output_prefix}_local_correlations_heatmap.png", report=True, bbox_inches="tight"
-        )
+    if settings.report_dir and report:
+        _save_figure(report, report=True, bbox_inches="tight")
 
     plt.show()
 
@@ -1237,12 +1344,15 @@ def show_hotspot_results(  # noqa: C901
     hist_figsize: tuple[float, float] = (7.0, 4.0),
     hist_bins: int = 50,
     umap_key: str = "X_umap",
-    output_prefix: str = "hotspot",
     plot_umap_modules: bool = True,
     plot_autocorrelation_distribution: bool = True,
     plot_module_sizes: bool = True,
-    save: bool = True,
-    report: bool = True,
+    save_autocorrelation: Optional[str] = None,
+    report_autocorrelation: Optional[str] = None,
+    save_module_sizes: Optional[str] = None,
+    report_module_sizes: Optional[str] = None,
+    save_module_scores: Optional[str] = None,
+    report_module_scores: Optional[str] = None,
 ) -> dict[str, Any]:
     """
     Show and save the main Hotspot results.
@@ -1276,24 +1386,38 @@ def show_hotspot_results(  # noqa: C901
         Number of bins in the autocorrelation distribution histograms.
     umap_key : str, default "X_umap"
         Key in adata.obsm holding the UMAP used for the module score plots.
-    output_prefix : str, default "hotspot"
-        Prefix for saved figure names.
     plot_umap_modules : bool, default True
         Whether to plot module scores on UMAP.
     plot_autocorrelation_distribution : bool, default True
         Whether to plot distributions of autocorrelation results.
     plot_module_sizes : bool, default True
         Whether to plot module sizes.
-    save : bool, default True
-        Whether to save figures.
-    report : bool, default True
-        Whether to additionally write the figures to sctoolbox.settings.report_dir.
+    save_autocorrelation : Optional[str], default None
+        File name for the autocorrelation distributions. One file per
+        statistic is written, with the statistic appended to the given name,
+        e.g. "..._C.pdf". If None, the figures are not saved.
+    report_autocorrelation : Optional[str], default None
+        Name of the output file used for report creation, handled like
+        save_autocorrelation. Will be silently skipped if
+        sctoolbox.settings.report_dir is None.
+    save_module_sizes : Optional[str], default None
+        File name for the module size barplot. If None, it is not saved.
+    report_module_sizes : Optional[str], default None
+        Name of the output file used for report creation. Will be silently
+        skipped if sctoolbox.settings.report_dir is None.
+    save_module_scores : Optional[str], default None
+        File name for the module score UMAPs. If None, they are not saved.
+    report_module_scores : Optional[str], default None
+        Name of the output file used for report creation. Will be silently
+        skipped if sctoolbox.settings.report_dir is None.
 
     Returns
     -------
     dict[str, Any]
         Summary holding the result tables and counts. Tables are returned
-        rather than displayed so that the caller decides what to show.
+        rather than displayed so that the caller decides what to show. The
+        "modules" entry is the raw column from adata.var, in which unassigned
+        genes carry the label -1 (UNASSIGNED_MODULE).
     """
     summary = {}
 
@@ -1336,15 +1460,16 @@ def show_hotspot_results(  # noqa: C901
                 plt.title(f"Distribution of Hotspot {col}")
                 plt.tight_layout()
 
-                if save:
-                    _save_figure(
-                        f"{output_prefix}_autocorrelation_{col}_distribution.pdf",
-                        bbox_inches="tight",
-                    )
+                # one figure per statistic, so the column is appended to the name
+                _save_figure(
+                    None if save_autocorrelation is None
+                    else save_autocorrelation.replace(".pdf", f"_{col}.pdf"),
+                    bbox_inches="tight",
+                )
 
-                if report:
+                if settings.report_dir and report_autocorrelation:
                     _save_figure(
-                        f"{output_prefix}_autocorrelation_{col}_distribution.png",
+                        report_autocorrelation.replace(".png", f"_{col}.png"),
                         report=True,
                         bbox_inches="tight",
                     )
@@ -1409,13 +1534,10 @@ def show_hotspot_results(  # noqa: C901
             plt.title("Hotspot module sizes")
             plt.tight_layout()
 
-            if save:
-                _save_figure(f"{output_prefix}_module_sizes.pdf", bbox_inches="tight")
+            _save_figure(save_module_sizes, bbox_inches="tight")
 
-            if report:
-                _save_figure(
-                    f"{output_prefix}_module_sizes.png", report=True, bbox_inches="tight"
-                )
+            if settings.report_dir and report_module_sizes:
+                _save_figure(report_module_sizes, report=True, bbox_inches="tight")
 
             plt.show()
 
@@ -1453,8 +1575,8 @@ def show_hotspot_results(  # noqa: C901
                     color=score_columns,
                     ncols=ncols,
                     suptitle="",
-                    save=f"{output_prefix}_module_scores_umap.pdf" if save else None,
-                    report=f"{output_prefix}_module_scores_umap.png" if report else None,
+                    save=save_module_scores,
+                    report=report_module_scores if settings.report_dir else None,
                     **extra,
                 )
 
@@ -1465,6 +1587,7 @@ def show_hotspot_results(  # noqa: C901
     # 6. Final summary
     # ========================================================
 
+    # only scalars go into the log; the tables are returned to the caller
     scalar_summary = {
         key: value
         for key, value in summary.items()
@@ -1573,7 +1696,7 @@ def run_hotspot_module_enrichment(  # noqa: C901
     min_module_size: int = 5,
     exclude_unassigned: bool = True,
     overwrite: bool = False,
-    save_table: Optional[str] = "hotspot_module_enrichment.tsv",
+    save_table: Optional[str] = None,
     **kwargs: Any,
 ) -> None:
     """
@@ -1592,12 +1715,14 @@ def run_hotspot_module_enrichment(  # noqa: C901
     min_module_size : int, default 5
         Minimum number of genes required to test a module.
     exclude_unassigned : bool, default True
-        Whether to exclude module label -1.
+        Whether to exclude genes that Hotspot could not assign to any module.
+        Those genes carry the label -1 (UNASSIGNED_MODULE) in
+        adata.var["hotspot_module"].
     overwrite : bool, default False
         If False and enrichment already exists in adata.uns, skip.
-    save_table : Optional[str], default "hotspot_module_enrichment.tsv"
-        File name for saving the combined enrichment table in settings.table_dir.
-        If None, no table is saved.
+    save_table : Optional[str], default None
+        File name for the combined enrichment table, saved to
+        sctoolbox.settings.table_dir. If None, no table is saved.
     **kwargs : Any
         Additional parameters forwarded to gseapy.enrichr.
 
@@ -1812,25 +1937,22 @@ def summarize_hotspot_module_enrichment(
 
 @deco.log_anndata
 @beartype
-def plot_hotspot_module_enrichment(  # noqa: C901
+def plot_hotspot_module_enrichment(
     adata: AnnData,
     top_n: int = 5,
     pvalue_column: str = "Adjusted P-value",
     term_column: str = "Term",
     pseudocount: float = 1e-300,
     dot_size_factor: float = 25.0,
-    save: Optional[str] = "hotspot_module_enrichment.pdf",
-    report: Optional[str] = "hotspot_module_enrichment.png",
+    save: Optional[str] = None,
+    report: Optional[str] = None,
     figsize: tuple[float, float] = (10, 8),
 ) -> pd.DataFrame:
     """
     Plot Hotspot module enrichment results.
 
-    Creates:
-    - top enriched terms table
-    - module size table
-    - dotplot of top enriched terms per module
-    - module size barplot
+    Creates a dotplot of the top enriched terms per module and returns the
+    underlying table. Module sizes are shown in show_hotspot_results.
 
     Parameters
     ----------
@@ -1846,10 +1968,11 @@ def plot_hotspot_module_enrichment(  # noqa: C901
         Added to all p-values before the log transform to avoid -log10(0).
     dot_size_factor : float, default 25.0
         Scales the dot area in the dotplot relative to -log10(p-value).
-    save : Optional[str], default "hotspot_module_enrichment.pdf"
-        File name for the saved figure. If None, the figure is not saved.
-    report : Optional[str], default "hotspot_module_enrichment.png"
-        File name for the report figure. If None, no report figure is written.
+    save : Optional[str], default None
+        File name for the saved dotplot.
+    report : Optional[str], default None
+        Name of the output file used for report creation, handled like save.
+        Will be silently skipped if sctoolbox.settings.report_dir is None.
     figsize : tuple[float, float], default (10, 8)
         Size of the dotplot in inches.
 
@@ -1868,7 +1991,6 @@ def plot_hotspot_module_enrichment(  # noqa: C901
     enrichment_info = utils.adata.get_uns(adata, key) if utils.adata.in_uns(adata, key) else {}
 
     enrichment_table = enrichment_info.get("enrichment_table", None)
-    module_sizes = enrichment_info.get("module_sizes", None)
 
     if enrichment_table is None or enrichment_table.empty:
         raise ValueError(
@@ -1933,38 +2055,11 @@ def plot_hotspot_module_enrichment(  # noqa: C901
     plt.colorbar(scatter, label="-log10 adjusted p-value")
     plt.tight_layout()
 
-    if save:
-        _save_figure(save, bbox_inches="tight")
+    _save_figure(save, bbox_inches="tight")
 
-    if report:
+    if settings.report_dir and report:
         _save_figure(report, report=True, bbox_inches="tight")
 
     plt.show()
-
-    # --------------------------------------------------------
-    # Module size barplot
-    # --------------------------------------------------------
-
-    if module_sizes is not None:
-        plt.figure(figsize=(10, 4))
-
-        if isinstance(module_sizes, pd.DataFrame):
-            size_series = module_sizes.iloc[:, 0]
-        else:
-            size_series = pd.Series(module_sizes)
-
-        size_series.plot(kind="bar")
-        plt.xlabel("Hotspot module")
-        plt.ylabel("Number of genes")
-        plt.title("Hotspot module sizes")
-        plt.tight_layout()
-
-        if save:
-            _save_figure(save.replace(".pdf", "_module_sizes.pdf"), bbox_inches="tight")
-
-        if report:
-            _save_figure(report.replace(".png", "_module_sizes.png"), report=True, bbox_inches="tight")
-
-        plt.show()
 
     return top_terms

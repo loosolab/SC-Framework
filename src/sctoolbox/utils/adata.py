@@ -170,10 +170,11 @@ def obs_subset(  # noqa: C901
 @beartype
 def was_subsetted(original: sc.AnnData, current: sc.AnnData) -> bool:
     """
-    Check whether an anndata object lost cells compared to an earlier state.
+    Check whether an anndata object lost cells or genes compared to an earlier state.
 
     Useful to decide whether representations such as PCA, neighbors or UMAP
-    should be recomputed, since those describe the cells they were computed on.
+    should be recomputed. Those describe the cells they were computed on, and
+    a PCA is a linear combination over genes, so removing either changes them.
 
     Parameters
     ----------
@@ -185,9 +186,10 @@ def was_subsetted(original: sc.AnnData, current: sc.AnnData) -> bool:
     Returns
     -------
     bool
-        True if current holds fewer cells than original, otherwise False.
+        True if current holds fewer cells or fewer genes than original,
+        otherwise False.
     """
-    return current.n_obs < original.n_obs
+    return current.n_obs < original.n_obs or current.n_vars < original.n_vars
 
 
 @deco.log_anndata
