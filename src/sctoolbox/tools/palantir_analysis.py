@@ -2748,7 +2748,8 @@ def plot_fate_probability_projection(  # noqa: C901
     """Plot Palantir fate probabilities as a joint two-dimensional projection.
 
     Terminal states are placed at fixed endpoints and each cell is positioned
-    at the probability-weighted average of these endpoints.
+    at the probability-weighted average of these endpoints. Fate-probability
+    rows are normalized to sum to one before projection.
 
     For two terminal states, the projection preserves the full probability
     vector on a line. For three terminal states, the triangular projection
@@ -2762,11 +2763,15 @@ def plot_fate_probability_projection(  # noqa: C901
         AnnData object containing Palantir fate probabilities.
     fate_prob_key : str, default="palantir_fate_probabilities"
         Key in ``adata.obsm`` containing cell-by-terminal-state fate probabilities.
+        If stored as a NumPy array, terminal-state labels are read from
+        ``adata.uns[f"{fate_prob_key}_columns"]`` when available.
     color_by : str | None, default=None
         Column in ``adata.obs`` used to color cells.
     fate_order : Optional[Iterable[str]], default=None
-        Optional order of terminal states around the projection. If None, the
-        column order in the fate-probability table is retained.
+        Optional order of terminal states in the projection. If None, the
+        column order in the fate-probability table is retained. For more than
+        three terminal states, this order also determines which states are
+        adjacent in the polygon.
     point_size : float, default=8.0
         Size of individual cell points.
     alpha : float, default=0.45
@@ -2777,8 +2782,8 @@ def plot_fate_probability_projection(  # noqa: C901
         Maximum width used to wrap fate and categorical legend labels. Set to
         None to disable wrapping.
     legend_height : float | None, default=None
-        Height reserved for a categorical legend below the projection. If None,
-        the required height is estimated automatically.
+        Positive height reserved for a categorical legend below the projection.
+        If None, the required height is estimated automatically.
     legend_marker_scale : float, default=2.5
         Scale factor applied to categorical legend markers.
     title : str, default="Palantir fate probability projection"
@@ -2800,7 +2805,10 @@ def plot_fate_probability_projection(  # noqa: C901
     Raises
     ------
     ValueError
-        If required inputs or plotting parameters are invalid.
+        If required inputs or plotting parameters are invalid, including when
+        fewer than two terminal states are provided, probabilities are
+        non-numeric, non-finite, outside the valid range, or contain a zero-sum
+        row, or when ndarray terminal-state labels have an inconsistent count.
     """
     if fate_prob_key not in adata.obsm:
         raise ValueError(f"Fate probabilities '{fate_prob_key}' not found in adata.obsm.")
@@ -2812,15 +2820,23 @@ def plot_fate_probability_projection(  # noqa: C901
         raise ValueError("alpha must satisfy 0 <= alpha <= 1.")
     if label_wrap is not None and label_wrap < 1:
         raise ValueError("label_wrap must be >= 1 or None.")
-    if legend_height is not None and legend_height < 0:
-        raise ValueError("legend_height must be >= 0 or None.")
+    if legend_height is not None and legend_height <= 0:
+        raise ValueError("legend_height must be > 0 or None.")
     if legend_marker_scale <= 0:
         raise ValueError("legend_marker_scale must be > 0.")
+
+    # Label-based alignment (.loc / intersection) is ambiguous with duplicated cell IDs.
+    if not adata.obs_names.is_unique and (
+        color_by is not None or isinstance(adata.obsm[fate_prob_key], pd.DataFrame)
+    ):
+        raise ValueError("adata.obs_names must be unique to align fate probabilities with adata.obs.")
 
     fate_probabilities = adata.obsm[fate_prob_key]
 
     if isinstance(fate_probabilities, pd.DataFrame):
         prob_df = fate_probabilities.copy()
+        if not prob_df.index.is_unique:
+            raise ValueError(f"Cell IDs in adata.obsm['{fate_prob_key}'] must be unique.")
         common_cells = adata.obs_names.intersection(prob_df.index)
 
         if len(common_cells) == 0:
@@ -2848,16 +2864,32 @@ def plot_fate_probability_projection(  # noqa: C901
                 f"but adata has {adata.n_obs} cells."
             )
 
-        logger.warning(
-            "Fate probabilities in adata.obsm['%s'] have no column labels. "
-            "Using generic terminal-state names.",
-            fate_prob_key,
-        )
+        columns_key = f"{fate_prob_key}_columns"
+
+        if columns_key in adata.uns:
+            fate_names = list(adata.uns[columns_key])
+
+            if len(fate_names) != probability_array.shape[1]:
+                raise ValueError(
+                    f"adata.uns['{columns_key}'] contains {len(fate_names)} terminal-state labels "
+                    f"but adata.obsm['{fate_prob_key}'] contains {probability_array.shape[1]} columns."
+                )
+        else:
+            logger.warning(
+                "Fate probabilities in adata.obsm['%s'] have no column labels and "
+                "adata.uns['%s'] is missing. Using generic terminal-state names.",
+                fate_prob_key,
+                columns_key,
+            )
+            fate_names = [
+                f"terminal_state_{i}"
+                for i in range(1, probability_array.shape[1] + 1)
+            ]
 
         prob_df = pd.DataFrame(
             probability_array,
             index=adata.obs_names,
-            columns=[f"terminal_state_{i}" for i in range(1, probability_array.shape[1] + 1)],
+            columns=fate_names,
         )
 
     prob_df.columns = [str(column) for column in prob_df.columns]
@@ -2869,6 +2901,11 @@ def plot_fate_probability_projection(  # noqa: C901
     n_fates = prob_df.shape[1]
     if n_fates == 0:
         raise ValueError(f"adata.obsm['{fate_prob_key}'] contains no terminal states.")
+    if n_fates == 1:
+        raise ValueError(
+            "The fate-probability projection is not informative with only one terminal state; "
+            "at least two are required."
+        )
 
     if fate_order is not None:
         requested_order = [str(fate) for fate in fate_order]
@@ -2884,57 +2921,47 @@ def plot_fate_probability_projection(  # noqa: C901
         prob_df = prob_df.loc[:, requested_order]
 
     fate_names = list(prob_df.columns)
-    prob_df = prob_df.apply(pd.to_numeric, errors="coerce")
-    probability_values = prob_df.to_numpy(dtype=float)
 
-    finite_rows = np.isfinite(probability_values).all(axis=1)
-    if not finite_rows.all():
-        logger.warning(
-            "Dropping %d cells with non-finite fate probabilities.",
-            int((~finite_rows).sum()),
-        )
-        prob_df = prob_df.loc[finite_rows]
-        probability_values = probability_values[finite_rows]
+    try:
+        probability_values = prob_df.to_numpy(dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Fate probabilities must contain numeric values only.") from exc
 
-    if probability_values.shape[0] == 0:
-        raise ValueError("No valid cells remain after filtering fate probabilities.")
+    if not np.isfinite(probability_values).all():
+        raise ValueError("Fate probabilities must contain only finite values.")
 
+    # Allow only tiny floating-point excursions around the valid [0, 1] range.
     tolerance = 1e-8
-    if np.any(probability_values < -tolerance) or np.any(probability_values > 1 + tolerance):
+    if np.any(probability_values < -tolerance) or np.any(
+        probability_values > 1 + tolerance
+    ):
         raise ValueError("Fate probabilities must lie between 0 and 1.")
 
     probability_values = np.clip(probability_values, 0, 1)
+
     row_sums = probability_values.sum(axis=1)
-    positive_rows = row_sums > 0
 
-    if not positive_rows.all():
+    if np.any(row_sums <= 0):
+        raise ValueError("Fate-probability rows must have a positive sum.")
+
+    non_unit_rows = ~np.isclose(row_sums, 1.0, atol=1e-6, rtol=0)
+
+    if non_unit_rows.any():
         logger.warning(
-            "Dropping %d cells whose fate probabilities sum to zero.",
-            int((~positive_rows).sum()),
-        )
-        prob_df = prob_df.loc[positive_rows]
-        probability_values = probability_values[positive_rows]
-        row_sums = row_sums[positive_rows]
-
-    if probability_values.shape[0] == 0:
-        raise ValueError("No valid cells remain after removing zero-sum probability rows.")
-
-    if not np.allclose(row_sums, 1, atol=1e-6):
-        logger.warning(
-            "Some fate-probability rows do not sum to 1. "
-            "Rows will be normalized before projection."
+            "%d fate-probability rows do not sum to 1 and will be normalized "
+            "before projection (maximum deviation: %.4g).",
+            int(non_unit_rows.sum()),
+            float(np.max(np.abs(row_sums[non_unit_rows] - 1.0))),
         )
 
+    # The projection uses convex weights, therefore normalize each row.
     probability_values /= row_sums[:, None]
 
-    if n_fates == 1:
-        vertices = np.array([[0.0, 0.0]])
-        logger.warning(
-            "Only one terminal state is available. All cells have the same projection position."
-        )
-    elif n_fates == 2:
+    if n_fates == 2:
         vertices = np.array([[-1.0, 0.0], [1.0, 0.0]])
     else:
+        # Regular polygon: first vertex at the top, then clockwise in fate order, so
+        # neighbouring states in fate_order are adjacent on the polygon.
         angles = np.pi / 2 - 2 * np.pi * np.arange(n_fates) / n_fates
         vertices = np.column_stack((np.cos(angles), np.sin(angles)))
 
@@ -2945,6 +2972,8 @@ def plot_fate_probability_projection(  # noqa: C901
                 n_fates,
             )
 
+    # Probability-weighted vertex average: p=1 puts a cell on its vertex, an even mix at
+    # the centroid.
     projected_coordinates = probability_values @ vertices
     plot_df = pd.DataFrame(
         projected_coordinates,
@@ -2959,31 +2988,47 @@ def plot_fate_probability_projection(  # noqa: C901
 
     if color_by is not None:
         color_values = adata.obs.loc[plot_df.index, color_by]
-        categorical_color = not pd.api.types.is_numeric_dtype(color_values)
+        # pandas counts bool as numeric; treat it as categorical (True/False).
+        categorical_color = (
+            not pd.api.types.is_numeric_dtype(color_values)
+            or pd.api.types.is_bool_dtype(color_values)
+        )
 
         if categorical_color:
-            hue_order = (
-                color_values.astype("string")
-                .fillna("NA")
-                .astype(str)
-                .drop_duplicates()
-                .tolist()
-            )
+            observed = color_values.astype("string")
+            existing = set(observed.dropna())
+            is_categorical = isinstance(color_values.dtype, pd.CategoricalDtype)
+            if is_categorical:
+                existing |= {str(c) for c in color_values.cat.categories}
+
+            # Missing values get their own label; never merge them with a genuine value.
+            # Deterministic fallbacks: "NA", "NA (missing)", "NA (missing 2)", ...
+            missing_label = "NA"
+            suffix = 0
+            while missing_label in existing:
+                suffix += 1
+                missing_label = "NA (missing)" if suffix == 1 else f"NA (missing {suffix})"
+
+            color_labels = observed.fillna(missing_label).astype(str)
+
+            if is_categorical:
+                # Respect the declared category order, restricted to categories present.
+                present = set(color_labels)
+                hue_order = [
+                    str(category)
+                    for category in color_values.cat.categories
+                    if str(category) in present
+                ]
+                if observed.isna().any():
+                    hue_order.append(missing_label)
+            else:
+                hue_order = color_labels.drop_duplicates().tolist()
 
             n_categories = len(hue_order)
 
-            if n_categories <= 6:
-                legend_columns = 1
-            elif n_categories <= 10:
-                legend_columns = 2
-            elif n_categories <= 15:
-                legend_columns = 3
-            elif n_categories <= 24:
-                legend_columns = 4
-            else:
-                legend_columns = 5
+            legend_columns = min(5, max(1, n_categories // 5))
 
-            max_label_length = max((len(label) for label in hue_order), default=0)
+            max_label_length = max(len(label) for label in hue_order)
             wrapped_length = (
                 min(max_label_length, label_wrap)
                 if label_wrap is not None
@@ -3002,15 +3047,14 @@ def plot_fate_probability_projection(  # noqa: C901
         figsize = (9.0, 7.0 + legend_height) if categorical_color else (7.0, 7.0)
 
     if categorical_color:
-        effective_legend_height = max(float(legend_height), 0.05)
         fig = plt.figure(figsize=figsize)
 
         grid = fig.add_gridspec(
             2,
             1,
             height_ratios=(
-                max(1.0, figsize[1] - effective_legend_height),
-                effective_legend_height,
+                max(1.0, figsize[1] - legend_height),
+                legend_height,
             ),
             hspace=0.0,
         )
@@ -3032,31 +3076,62 @@ def plot_fate_probability_projection(  # noqa: C901
             zorder=2,
         )
 
-    elif pd.api.types.is_numeric_dtype(color_values):
-        numeric_colors = pd.to_numeric(color_values, errors="coerce").to_numpy(dtype=float)
-
-        scatter = ax.scatter(
-            plot_df["projection_x"],
-            plot_df["projection_y"],
-            c=numeric_colors,
-            s=point_size,
-            alpha=alpha,
-            linewidths=0,
-            rasterized=True,
-            zorder=2,
+    elif not categorical_color:
+        numeric_colors = pd.to_numeric(color_values, errors="coerce").to_numpy(
+            dtype=float, na_value=np.nan
         )
 
-        colorbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
-        colorbar.set_label(color_by)
+        # Only finite values define the color scale; NaN/inf cells are drawn in light gray
+        # so they stay visible without corrupting the norm.
+        finite_colors = np.isfinite(numeric_colors)
+        x_coords = plot_df["projection_x"].to_numpy()
+        y_coords = plot_df["projection_y"].to_numpy()
+
+        if not finite_colors.all():
+            if finite_colors.any():
+                logger.warning(
+                    "%d cells have non-finite '%s' values; they are drawn in light gray.",
+                    int((~finite_colors).sum()),
+                    color_by,
+                )
+
+            ax.scatter(
+                x_coords[~finite_colors],
+                y_coords[~finite_colors],
+                color="lightgray",
+                s=point_size,
+                alpha=alpha,
+                linewidths=0,
+                rasterized=True,
+                zorder=2,
+            )
+
+        if finite_colors.any():
+            scatter = ax.scatter(
+                x_coords[finite_colors],
+                y_coords[finite_colors],
+                c=numeric_colors[finite_colors],
+                s=point_size,
+                alpha=alpha,
+                linewidths=0,
+                rasterized=True,
+                zorder=2,
+            )
+            colorbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+            colorbar.set_label(color_by)
+        else:
+            logger.warning("'%s' has no finite values; all cells are drawn in gray.", color_by)
 
     else:
-        plot_df[color_by] = color_values.astype("string").fillna("NA").astype(str)
+        # Private column name: color_by may equal "projection_x"/"projection_y" and would
+        # otherwise overwrite the coordinates.
+        plot_df["_sctoolbox_color"] = color_labels
 
         sns.scatterplot(
             data=plot_df,
             x="projection_x",
             y="projection_y",
-            hue=color_by,
+            hue="_sctoolbox_color",
             hue_order=hue_order,
             s=point_size,
             alpha=alpha,
@@ -3079,6 +3154,8 @@ def plot_fate_probability_projection(  # noqa: C901
             else color_by
         )
 
+        # Separate axis for the legend: keeps a wide, multi-column legend below the
+        # projection from shrinking or distorting the (equal-aspect) projection axes.
         legend_ax.legend(
             handles,
             legend_labels,
@@ -3091,7 +3168,7 @@ def plot_fate_probability_projection(  # noqa: C901
 
     if n_fates == 2:
         ax.plot(vertices[:, 0], vertices[:, 1], linewidth=1.5, color="0.55", zorder=1)
-    elif n_fates >= 3:
+    else:
         closed_vertices = np.vstack([vertices, vertices[0]])
         ax.plot(
             closed_vertices[:, 0],
@@ -3112,10 +3189,7 @@ def plot_fate_probability_projection(  # noqa: C901
     )
 
     for fate_name, (x_coord, y_coord) in zip(fate_names, vertices):
-        if n_fates == 1:
-            text_x, text_y = 0.0, 0.15
-        else:
-            text_x, text_y = 1.2 * x_coord, 1.2 * y_coord
+        text_x, text_y = 1.2 * x_coord, 1.2 * y_coord
 
         fate_label = (
             textwrap.fill(fate_name, width=label_wrap)
@@ -3136,7 +3210,7 @@ def plot_fate_probability_projection(  # noqa: C901
             fontweight="bold",
         )
 
-    if show_equal_probability and n_fates >= 2:
+    if show_equal_probability:
         equal_position = np.full(n_fates, 1 / n_fates) @ vertices
 
         ax.scatter(
@@ -3219,10 +3293,11 @@ def plot_branch_gene_trend_panels(  # noqa: C901
     adata : AnnData
         AnnData containing Palantir results and expression data.
     computed : dict[str, dict[str, Any]] | None, default=None
-        Results returned by :func:`plot_branch_gene_programs`. Required for
-        automatic branch or gene selection.
+        Results returned by :func:`plot_branch_gene_programs`. Required when
+        ``genes=None`` for automatic representative-gene selection.
     branches : str | Iterable[str] | None, default=None
-        Branches to plot. If None, all branches in ``computed`` are used.
+        Branches to plot. If None, all branches with stored gene trends in
+        ``adata.varm`` are used.
     genes : str | Iterable[str] | None, default=None
         Genes to plot. If None, representative genes are selected automatically.
     genes_per_cluster : int, default=1
@@ -3277,29 +3352,37 @@ def plot_branch_gene_trend_panels(  # noqa: C901
     if trend_linewidth <= 0:
         raise ValueError("trend_linewidth must be > 0.")
 
-    plot_format = str(plot_format).lstrip(".")
+    plot_format = plot_format.lstrip(".")
     if not plot_format:
         raise ValueError("plot_format must not be empty.")
     if position_layer is not None and position_layer not in adata.layers:
         raise ValueError(f"Layer '{position_layer}' not found in adata.layers.")
     if masks_key is not None and masks_key not in adata.obsm:
         raise ValueError(f"Branch masks '{masks_key}' not found in adata.obsm.")
-    if masks_key is not None and pseudotime_key not in adata.obs:
+    if pseudotime_key not in adata.obs:
         raise ValueError(f"Pseudotime '{pseudotime_key}' not found in adata.obs.")
     if color is not None and color not in adata.obs.columns and color not in adata.var_names:
         raise ValueError(f"Color '{color}' not found in adata.obs or adata.var_names.")
 
+    trend_prefix = f"{gene_trend_key}_"
+
+    # Stored branch-specific trend tables define which branches can be plotted;
+    # `computed` is only needed later for automatic representative-gene selection.
     if branches is None:
-        if not computed:
-            raise ValueError("branches=None requires results from plot_branch_gene_programs.")
-        branch_list = list(computed)
+        branch_list = [
+            key[len(trend_prefix):]
+            for key in adata.varm
+            if key.startswith(trend_prefix)
+        ]
     elif isinstance(branches, str):
         branch_list = [branches]
     else:
         branch_list = list(branches)
 
     if not branch_list:
-        raise ValueError("No branches were provided for plotting.")
+        raise ValueError(
+            f"No branch-specific gene trends with prefix '{trend_prefix}' found for plotting."
+        )
 
     manual_genes = genes is not None
     if isinstance(genes, str):
@@ -3310,6 +3393,24 @@ def plot_branch_gene_trend_panels(  # noqa: C901
         requested_genes = []
 
     requested_genes = list(dict.fromkeys(str(gene) for gene in requested_genes))
+
+    # Validate automatic-gene inputs before plotting so a missing branch cannot
+    # fail midway after earlier branch figures have already been created or saved.
+    if genes is None:
+        if computed is None:
+            raise ValueError(
+                "Automatic gene selection (genes=None) requires computed results "
+                "from plot_branch_gene_programs."
+            )
+
+        missing_computed_branches = [
+            branch for branch in branch_list if branch not in computed
+        ]
+        if missing_computed_branches:
+            raise ValueError(
+                "Automatic gene selection is missing computed results for "
+                f"branches: {missing_computed_branches}."
+            )
 
     def _save_branch_figure(
         fig: Figure,
@@ -3325,7 +3426,6 @@ def plot_branch_gene_trend_panels(  # noqa: C901
             for character in branch_name
         )
         path = f"{prefix}_branch-{safe_branch}.{plot_format}"
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
         plt.figure(fig.number)
         _save_figure(path=path, report=report, bbox_inches="tight")
 
@@ -3333,23 +3433,20 @@ def plot_branch_gene_trend_panels(  # noqa: C901
 
     for branch in branch_list:
         trend_key = f"{gene_trend_key}_{branch}"
-        trends = adata.varm.get(trend_key)
+        if trend_key not in adata.varm:
+            raise ValueError(f"Branch trends '{trend_key}' not found in adata.varm.")
+
+        trends = adata.varm[trend_key]
 
         if not isinstance(trends, pd.DataFrame):
             raise ValueError(
-                f"Branch trends '{trend_key}' not found as a DataFrame in adata.varm."
+                f"Branch trends '{trend_key}' must be a DataFrame in adata.varm."
             )
 
         if manual_genes:
             branch_genes = requested_genes.copy()
             selection_mode = "manual"
         else:
-            if computed is None or branch not in computed:
-                raise ValueError(
-                    f"Automatic gene selection for branch '{branch}' requires "
-                    "plot_branch_gene_programs results."
-                )
-
             representatives = computed[branch].get("cluster_representatives")
             if not isinstance(representatives, dict) or not representatives:
                 raise ValueError(
@@ -3358,6 +3455,7 @@ def plot_branch_gene_trend_panels(  # noqa: C901
                     "plot_representative_genes=True."
                 )
 
+            # Preserve the trend-cluster order from plot_branch_gene_programs().
             centroid_z = computed[branch].get("centroid_z")
             cluster_order = (
                 centroid_z.index.astype(str).tolist()
@@ -3370,6 +3468,7 @@ def plot_branch_gene_trend_panels(  # noqa: C901
                 cluster_genes = representatives.get(str(cluster), [])
                 branch_genes.extend(str(gene) for gene in cluster_genes[:genes_per_cluster])
 
+            # A gene may represent multiple clusters; deduplicate while keeping its first occurrence.
             branch_genes = list(dict.fromkeys(branch_genes))
             selection_mode = "automatic"
 
@@ -3453,6 +3552,7 @@ def plot_branch_gene_trend_panels(  # noqa: C901
                 ],
                 dtype=object,
             )
+            # Use one categorical legend instead of repeating it in every gene panel.
             legend_ax = fig.add_subplot(grid[-1, :])
             legend_ax.axis("off")
         else:
@@ -3478,6 +3578,9 @@ def plot_branch_gene_trend_panels(  # noqa: C901
 
         for i, gene in enumerate(branch_genes):
             ax = axes[i]
+            # `plot_trend()` creates a secondary expression axis for the cell values.
+            # Track newly created axes so per-panel legends can be removed and the scatter
+            # mappable can be reused for the shared legend or numeric colorbar.
             axes_before = set(fig.axes)
 
             palantir.plot.plot_trend(
@@ -3555,7 +3658,6 @@ def plot_branch_gene_trend_panels(  # noqa: C901
                 markerscale=2.5,
             )
 
-        fig.tight_layout(rect=(0, 0, 1, layout_top))
         fig.subplots_adjust(top=layout_top)
 
         if has_numeric_color and numeric_mappable is not None:

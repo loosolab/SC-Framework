@@ -172,9 +172,17 @@ def gene_trend_adata(preprocessed_adata):
 
 
 def _patch_diffusion_magic(monkeypatch, n_obs, multiscale_components):
-    """Patch Palantir diffusion and MAGIC calls with deterministic test doubles."""
+    """Patch Palantir diffusion and MAGIC calls.
+
+    Returns
+    -------
+    dict
+        Captured keyword arguments from the patched calls.
+    """
+    captured = {}
 
     def fake_run_diffusion_maps(adata, **kwargs):
+        captured["run_diffusion_maps_kwargs"] = kwargs
         adata.obsp["DM_Similarity"] = sp.csr_matrix(np.eye(adata.n_obs))
         return {
             "EigenVectors": pd.DataFrame(
@@ -195,6 +203,8 @@ def _patch_diffusion_magic(monkeypatch, n_obs, multiscale_components):
         imputation_key="MAGIC_imputed_data",
         **kwargs,
     ):
+        captured["run_magic_imputation_kwargs"] = kwargs
+        captured["imputation_key"] = imputation_key
         data.layers[imputation_key] = data.X.copy()
         return data.layers[imputation_key]
 
@@ -218,6 +228,7 @@ def _patch_diffusion_magic(monkeypatch, n_obs, multiscale_components):
         "save_h5ad",
         lambda *args, **kwargs: None,
     )
+    return captured
 
 
 def _patch_gene_program_clustering(monkeypatch):
@@ -821,7 +832,7 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
     tmp_path,
 ):
     """Diffusion and MAGIC results should be stored in the AnnData object."""
-    _patch_diffusion_magic(
+    captured = _patch_diffusion_magic(
         monkeypatch,
         n_obs=preprocessed_adata.n_obs,
         multiscale_components=3,
@@ -843,6 +854,10 @@ def test_run_diffusion_and_magic_stores_expected_outputs(
         3,
     )
     assert "MAGIC_imputed_data" in result.layers
+    assert captured["run_diffusion_maps_kwargs"]["n_components"] == 3
+    assert captured["run_diffusion_maps_kwargs"]["knn"] == 30
+    assert captured["run_diffusion_maps_kwargs"]["kernel_backend"] == "scanpy"
+    assert captured["run_magic_imputation_kwargs"]["n_jobs"] == 1
 
 
 def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
@@ -856,7 +871,7 @@ def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
     monkeypatch.setattr(pla.os.path, "exists", lambda _path: True)
     monkeypatch.setattr(pla.sc, "read_h5ad", lambda _path: cached)
 
-    _patch_diffusion_magic(
+    captured = _patch_diffusion_magic(
         monkeypatch,
         n_obs=preprocessed_adata.n_obs,
         multiscale_components=2,
@@ -875,6 +890,8 @@ def test_run_diffusion_and_magic_recomputes_when_cache_is_incomplete(
         2,
     )
     assert "MAGIC_imputed_data" in result.layers
+    assert captured["run_magic_imputation_kwargs"]["n_steps"] == 3
+    assert captured["imputation_key"] == "MAGIC_imputed_data"
 
 
 @pytest.mark.parametrize(
@@ -1650,4 +1667,320 @@ def test_plot_branch_early_late_genes_invalid_parameters(
             branches=["BranchA"],
             top_n=top_n,
             quantile_cutoff=quantile_cutoff,
+        )
+
+
+@pytest.mark.parametrize(
+    "branches,expected_branches",
+    [
+        (None, {"BranchA", "BranchB"}),
+        ("BranchA", {"BranchA"}),
+        (["BranchA", "BranchB"], {"BranchA", "BranchB"}),
+    ],
+)
+def test_plot_branch_gene_trend_panels_branch_selection(
+    monkeypatch,
+    gene_trend_adata,
+    branches,
+    expected_branches,
+):
+    """Branch selection should support automatic, single, and multiple branches."""
+
+    def fake_plot_trend(adata, branch, gene, ax=None, **kwargs):
+        if ax is None:
+            _, ax = plt.subplots()
+
+        ax.plot([0, 1], [0, 1])
+        cell_ax = ax.twinx()
+        cell_ax.scatter([0, 1], [0, 1])
+
+    monkeypatch.setattr(pla.palantir.plot, "plot_trend", fake_plot_trend)
+
+    result = pla.plot_branch_gene_trend_panels(
+        gene_trend_adata,
+        computed=None,
+        branches=branches,
+        genes=["Gene0", "Gene1"],
+        masks_key=None,
+        show=False,
+    )
+
+    assert set(result) == expected_branches
+
+    for branch in expected_branches:
+        assert result[branch]["genes"] == ["Gene0", "Gene1"]
+        assert result[branch]["gene_selection"] == "manual"
+        plt.close(result[branch]["figure"])
+
+
+def test_plot_branch_gene_trend_panels_automatic_genes(
+    monkeypatch,
+    gene_trend_adata,
+):
+    """Representative genes should be selected automatically from computed results."""
+
+    def fake_plot_trend(adata, branch, gene, ax=None, **kwargs):
+        if ax is None:
+            _, ax = plt.subplots()
+
+        ax.plot([0, 1], [0, 1])
+        cell_ax = ax.twinx()
+        cell_ax.scatter([0, 1], [0, 1])
+
+    monkeypatch.setattr(pla.palantir.plot, "plot_trend", fake_plot_trend)
+
+    computed = {
+        "BranchA": {
+            "cluster_representatives": {
+                "0": ["Gene0"],
+                "1": ["Gene1"],
+            },
+            "centroid_z": pd.DataFrame(index=["0", "1"]),
+        }
+    }
+
+    result = pla.plot_branch_gene_trend_panels(
+        gene_trend_adata,
+        computed=computed,
+        branches="BranchA",
+        genes=None,
+        genes_per_cluster=1,
+        masks_key=None,
+        show=False,
+    )
+
+    assert result["BranchA"]["genes"] == ["Gene0", "Gene1"]
+    assert result["BranchA"]["gene_selection"] == "automatic"
+    plt.close(result["BranchA"]["figure"])
+
+
+def test_plot_branch_gene_trend_panels_validates_computed_branches_before_plot(
+    monkeypatch,
+    gene_trend_adata,
+):
+    """Missing computed branches should fail before any branch is plotted."""
+    plotted_genes = []
+
+    def fake_plot_trend(adata, branch, gene, **kwargs):
+        plotted_genes.append((branch, gene))
+
+    monkeypatch.setattr(pla.palantir.plot, "plot_trend", fake_plot_trend)
+
+    computed = {
+        "BranchA": {
+            "cluster_representatives": {"0": ["Gene0"]},
+            "centroid_z": pd.DataFrame(index=["0"]),
+        }
+    }
+
+    with pytest.raises(ValueError, match="BranchB"):
+        pla.plot_branch_gene_trend_panels(
+            gene_trend_adata,
+            computed=computed,
+            branches=["BranchA", "BranchB"],
+            genes=None,
+            masks_key=None,
+            show=False,
+        )
+
+    assert plotted_genes == []
+
+
+def test_plot_branch_gene_trend_panels_single_gene(
+    monkeypatch,
+    gene_trend_adata,
+):
+    """A single requested gene should use the native Palantir trend path."""
+    captured = {}
+
+    def fake_plot_trend(adata, branch, gene, **kwargs):
+        captured["branch"] = branch
+        captured["gene"] = gene
+
+        ax = plt.subplots()[1]
+        ax.plot([0, 1], [0, 1])
+
+    monkeypatch.setattr(pla.palantir.plot, "plot_trend", fake_plot_trend)
+
+    result = pla.plot_branch_gene_trend_panels(
+        gene_trend_adata,
+        branches="BranchA",
+        genes="Gene0",
+        masks_key=None,
+        show=False,
+    )
+
+    assert captured["branch"] == "BranchA"
+    assert captured["gene"] == "Gene0"
+    assert result["BranchA"]["genes"] == ["Gene0"]
+    assert result["BranchA"]["gene_selection"] == "manual"
+    plt.close(result["BranchA"]["figure"])
+
+
+@pytest.mark.parametrize("n_fates", [2, 3, 5])
+def test_plot_fate_probability_projection_number_of_fates(
+    preprocessed_adata,
+    n_fates,
+):
+    """Fate projection should support two or more terminal states."""
+    adata = preprocessed_adata.copy()
+
+    rng = np.random.default_rng(42)
+    probabilities = rng.random((adata.n_obs, n_fates))
+    probabilities /= probabilities.sum(axis=1, keepdims=True)
+
+    fate_names = [f"Fate{i}" for i in range(n_fates)]
+    adata.obsm["palantir_fate_probabilities"] = pd.DataFrame(
+        probabilities,
+        index=adata.obs_names,
+        columns=fate_names,
+    )
+
+    fig, ax = pla.plot_fate_probability_projection(
+        adata,
+        color_by="celltype",
+        show=False,
+    )
+
+    assert fig is not None
+    assert ax is not None
+
+    plt.close(fig)
+
+
+def test_plot_fate_probability_projection_ndarray(preprocessed_adata):
+    """NumPy fate probabilities should use labels stored in adata.uns."""
+    adata = preprocessed_adata.copy()
+
+    probabilities = np.tile(
+        [[0.2, 0.3, 0.5]],
+        (adata.n_obs, 1),
+    )
+
+    adata.obsm["palantir_fate_probabilities"] = probabilities
+    adata.uns["palantir_fate_probabilities_columns"] = [
+        "FateA",
+        "FateB",
+        "FateC",
+    ]
+
+    fig, ax = pla.plot_fate_probability_projection(
+        adata,
+        show=False,
+    )
+
+    assert fig is not None
+    assert ax is not None
+
+    fate_labels = {text.get_text() for text in ax.texts}
+    assert {"FateA", "FateB", "FateC"} <= fate_labels
+
+    plt.close(fig)
+
+
+def test_plot_fate_probability_projection_accepts_non_unit_rows(preprocessed_adata):
+    """Positive non-unit fate-probability rows should be accepted."""
+    adata = preprocessed_adata.copy()
+
+    probabilities = np.tile(
+        [[0.20, 0.30, 0.49]],
+        (adata.n_obs, 1),
+    )
+
+    adata.obsm["palantir_fate_probabilities"] = pd.DataFrame(
+        probabilities,
+        index=adata.obs_names,
+        columns=["FateA", "FateB", "FateC"],
+    )
+
+    fig, ax = pla.plot_fate_probability_projection(
+        adata,
+        show=False,
+    )
+
+    assert fig is not None
+    assert ax is not None
+
+    plt.close(fig)
+
+
+@pytest.mark.parametrize(
+    ("probabilities", "message"),
+    [
+        ([-0.1, 0.5, 0.6], "must lie between 0 and 1"),
+        ([1.1, 0.0, 0.0], "must lie between 0 and 1"),
+        ([np.nan, 0.5, 0.5], "must contain only finite values"),
+        ([np.inf, 0.0, 0.0], "must contain only finite values"),
+    ],
+)
+def test_plot_fate_probability_projection_invalid_probabilities_raise(
+    preprocessed_adata,
+    probabilities,
+    message,
+):
+    """Invalid fate probabilities should raise a ValueError."""
+    adata = preprocessed_adata.copy()
+
+    values = np.tile(
+        [probabilities],
+        (adata.n_obs, 1),
+    )
+
+    adata.obsm["palantir_fate_probabilities"] = pd.DataFrame(
+        values,
+        index=adata.obs_names,
+        columns=["FateA", "FateB", "FateC"],
+    )
+
+    with pytest.raises(ValueError, match=message):
+        pla.plot_fate_probability_projection(
+            adata,
+            show=False,
+        )
+
+
+def test_plot_fate_probability_projection_rejects_zero_sum_rows(preprocessed_adata):
+    """Zero-sum fate-probability rows should raise a ValueError."""
+    adata = preprocessed_adata.copy()
+    adata.obsm["palantir_fate_probabilities"] = pd.DataFrame(
+        np.zeros((adata.n_obs, 3)),
+        index=adata.obs_names,
+        columns=["FateA", "FateB", "FateC"],
+    )
+
+    with pytest.raises(ValueError, match="must have a positive sum"):
+        pla.plot_fate_probability_projection(adata, show=False)
+
+
+def test_plot_fate_probability_projection_rejects_mismatched_ndarray_labels(
+    preprocessed_adata,
+):
+    """NumPy fate probabilities require one stored label per fate column."""
+    adata = preprocessed_adata.copy()
+    adata.obsm["palantir_fate_probabilities"] = np.tile(
+        [[0.2, 0.3, 0.5]],
+        (adata.n_obs, 1),
+    )
+    adata.uns["palantir_fate_probabilities_columns"] = ["FateA", "FateB"]
+
+    with pytest.raises(ValueError, match="contains 2 terminal-state labels"):
+        pla.plot_fate_probability_projection(adata, show=False)
+
+
+def test_plot_fate_probability_projection_rejects_single_fate(
+    preprocessed_adata,
+):
+    """A projection requires at least two terminal states."""
+    adata = preprocessed_adata.copy()
+
+    adata.obsm["palantir_fate_probabilities"] = pd.DataFrame(
+        np.ones((adata.n_obs, 1)),
+        index=adata.obs_names,
+        columns=["FateA"],
+    )
+
+    with pytest.raises(ValueError, match="at least two are required"):
+        pla.plot_fate_probability_projection(
+            adata,
+            show=False,
         )
