@@ -20,7 +20,15 @@ from sctoolbox.plotting.general import _save_figure
 
 logger = settings.logger
 
-#: Hotspot labels genes that could not be assigned to any module with this value.
+try:
+    # gseapy >= 1.3 raises its own exception classes
+    from gseapy.enrichr import EnrichrError
+except ImportError:  # pragma: no cover
+    EnrichrError = ValueError
+
+#: Label for genes without a clear module. Genes that Hotspot could not assign
+#: to any module, or that were not part of the Hotspot run, are designated as
+#: -1 in adata.var["hotspot_module"], which can be interpreted as n/a.
 UNASSIGNED_MODULE = -1
 
 
@@ -46,7 +54,8 @@ def ensure_pca(
     adata : AnnData
         AnnData object to add the PCA representation to.
     pca_key : str, default "X_pca"
-        Key in adata.obsm the PCA representation is stored under.
+        Key in adata.obsm the PCA is stored under. An existing PCA under this
+        key is reused unless force_recompute is True.
     n_comps : int, default 50
         Number of principal components to compute.
     use_highly_variable : bool, default True
@@ -71,7 +80,7 @@ def ensure_pca(
         logger.info(
             f"Existing PCA found: adata.obsm['{pca_key}'] with {existing_dims} "
             f"dimensions. n_comps={n_comps} is not applied to an existing "
-            "representation; set force_recompute_pca=True to recompute it."
+            "representation; set force_recompute=True to recompute it."
         )
         return pca_key
 
@@ -99,6 +108,7 @@ def ensure_harmony(
     basis: str = "X_pca",
     adjusted_basis: str = "X_pca_harmony",
     force_recompute: bool = False,
+    **kwargs: Any,
 ) -> str:
     """
     Ensure that a Harmony-corrected latent representation exists in adata.obsm.
@@ -118,6 +128,11 @@ def ensure_harmony(
         Key in adata.obsm the Harmony representation is stored under.
     force_recompute : bool, default False
         Whether to recompute even if adjusted_basis already exists.
+    **kwargs : Any
+        Additional parameters forwarded to scanpy.external.pp.harmony_integrate
+        and from there to harmonypy.run_harmony, e.g. theta, max_iter_harmony
+        or random_state. See
+        https://scanpy.readthedocs.io/en/stable/generated/scanpy.external.pp.harmony_integrate.html
 
     Returns
     -------
@@ -144,7 +159,9 @@ def ensure_harmony(
     logger.info(f"Computing Harmony (batch_key='{batch_key}', basis='{basis}').")
 
     try:
-        sce.pp.harmony_integrate(adata, key=batch_key, basis=basis, adjusted_basis=adjusted_basis)
+        sce.pp.harmony_integrate(
+            adata, key=batch_key, basis=basis, adjusted_basis=adjusted_basis, **kwargs
+        )
     except ImportError as e:
         raise ImportError(
             "Harmony requires harmonypy, which is not installed. "
@@ -158,18 +175,23 @@ def ensure_harmony(
 def ensure_umap(
     adata: AnnData,
     use_rep: str,
-    pca_key: str = "X_pca",
-    neighbors_key: str = "neighbors",
+    neighbors_key: str = "neighbors_umap",
     n_neighbors: int = 30,
-    n_pcs: int = 30,
-    metric: str = "euclidean",
+    n_pcs: Optional[int] = None,
+    metric: Literal[
+        "cityblock", "cosine", "euclidean", "l1", "l2", "manhattan",
+        "braycurtis", "canberra", "chebyshev", "correlation", "dice",
+        "hamming", "jaccard", "kulsinski", "mahalanobis", "minkowski",
+        "rogerstanimoto", "russellrao", "seuclidean", "sokalmichener",
+        "sokalsneath", "sqeuclidean", "yule",
+    ] = "euclidean",
     min_dist: float = 0.5,
     spread: float = 1.0,
     n_components: int = 2,
     random_state: int = 0,
     umap_key: str = "X_umap",
     force_recompute: bool = False,
-) -> str:
+) -> None:
     """
     Ensure that a UMAP representation exists in adata.obsm.
 
@@ -180,20 +202,28 @@ def ensure_umap(
     adata : AnnData
         AnnData object to add the UMAP to.
     use_rep : str
-        Key in adata.obsm used to build the neighbor graph.
-    pca_key : str, default "X_pca"
-        Key of the PCA representation. Only if use_rep equals this key is
-        n_pcs applied; other representations are used in full.
-    neighbors_key : str, default "neighbors"
-        Key in adata.uns the neighbor graph is stored under.
+        Key in adata.obsm the neighbor graph is built on, e.g. "X_pca",
+        "X_pca_harmony" or "X_scVI".
+    neighbors_key : str, default "neighbors_umap"
+        Key in adata.uns (and prefix in adata.obsp) the neighbor graph is
+        stored under. An existing graph under this key is only overwritten
+        if force_recompute is True. The default differs from scanpy's
+        "neighbors" so that the graph of the clustering is not replaced.
     n_neighbors : int, default 30
         Number of neighbors for the graph.
-    n_pcs : int, default 30
-        Number of components used when use_rep is the PCA key. Capped at the
-        number of dimensions the representation actually has, since earlier
-        notebooks may have dropped principal components.
+    n_pcs : Optional[int], default None
+        Number of dimensions of use_rep used for the neighbor graph, counted
+        from the first. None uses all dimensions. If use_rep has fewer
+        dimensions, e.g. because principal components were removed in an
+        earlier notebook, all of them are used.
     metric : str, default "euclidean"
-        Distance metric for the neighbor graph.
+        Distance metric for the neighbor graph. Possible values:
+        "cityblock", "cosine", "euclidean", "l1", "l2", "manhattan",
+        "braycurtis", "canberra", "chebyshev", "correlation", "dice",
+        "hamming", "jaccard", "kulsinski", "mahalanobis", "minkowski",
+        "rogerstanimoto", "russellrao", "seuclidean", "sokalmichener",
+        "sokalsneath", "sqeuclidean", "yule".
+        See https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.neighbors.html
     min_dist : float, default 0.5
         UMAP min_dist, controls how tightly cells are packed.
     spread : float, default 1.0
@@ -203,26 +233,21 @@ def ensure_umap(
     random_state : int, default 0
         Random seed for reproducible results.
     umap_key : str, default "X_umap"
-        Key in adata.obsm the UMAP is stored under. An existing
-        representation under this key is reused unless force_recompute
-        is True.
+        Key in adata.obsm the UMAP is stored under.
     force_recompute : bool, default False
-        Whether to recompute even if adata.obsm["X_umap"] already exists.
-
-    Returns
-    -------
-    str
-        Key of the UMAP representation in adata.obsm.
+        Whether to recompute the neighbor graph and the UMAP if a UMAP
+        already exists under umap_key. If False, the existing one is reused.
 
     Raises
     ------
     ValueError
-        If use_rep is not present in adata.obsm.
+        If use_rep is not present in adata.obsm, or if a neighbor graph
+        already exists under neighbors_key and force_recompute is False.
     """
 
     if umap_key in adata.obsm and not force_recompute:
-        logger.info(f"Existing UMAP found: adata.obsm['{umap_key}'].")
-        return umap_key
+        logger.info(f"Existing UMAP found: adata.obsm['{umap_key}']. Set force_recompute=True to overwrite.")
+        return
 
     if use_rep not in adata.obsm:
         raise ValueError(
@@ -230,26 +255,35 @@ def ensure_umap(
             "Cannot compute UMAP."
         )
 
-    # PCs may have been dropped in an earlier notebook, so the representation
-    # can hold fewer dimensions than n_pcs asks for
-    n_pcs_used = None
+    # sc.pp.neighbors fails if n_pcs is larger than the number of columns in
+    # use_rep. This happens e.g. when PCs were removed in an earlier notebook,
+    # so X_pca has 20 columns but n_pcs asks for 30. In that case all
+    # available columns are used instead.
+    available_dims = adata.obsm[use_rep].shape[1]
 
-    if use_rep == pca_key:
-        available_dims = adata.obsm[use_rep].shape[1]
-        n_pcs_used = min(n_pcs, available_dims)
+    if n_pcs is not None and n_pcs > available_dims:
+        logger.info(
+            f"adata.obsm['{use_rep}'] holds {available_dims} dimensions, "
+            f"using all of them instead of n_pcs={n_pcs}."
+        )
+        n_pcs = available_dims
 
-        if n_pcs_used < n_pcs:
-            logger.info(
-                f"adata.obsm['{use_rep}'] holds {available_dims} dimensions, "
-                f"using n_pcs={n_pcs_used} instead of {n_pcs}."
+    # sc.pp.neighbors overwrites an existing graph under the same key without
+    # warning, so this is checked here
+    if neighbors_key in adata.uns:
+        if not force_recompute:
+            raise ValueError(
+                f"A neighbor graph already exists under adata.uns['{neighbors_key}']. "
+                "Choose another neighbors_key or set force_recompute=True to overwrite it."
             )
+        logger.warning(f"Overwriting neighbor graph in adata.uns['{neighbors_key}'].")
 
     logger.info(f"Computing neighbors using representation: '{use_rep}'.")
 
     sc.pp.neighbors(
         adata,
         n_neighbors=n_neighbors,
-        n_pcs=n_pcs_used,
+        n_pcs=n_pcs,
         use_rep=use_rep,
         metric=metric,
         key_added=neighbors_key,
@@ -266,8 +300,6 @@ def ensure_umap(
         neighbors_key=neighbors_key,
         key_added=None if umap_key == "X_umap" else umap_key,
     )
-
-    return umap_key
 
 
 @beartype
@@ -298,13 +330,23 @@ def ensure_representation_for_umap(
     adata : AnnData
         AnnData object to select or compute the representation for.
     use_rep : str, default "X_pca"
-        Key of the representation to use.
+        Key in adata.obsm of the representation to use. Its value decides
+        what happens if the key is missing:
+
+        - equal to pca_key: a PCA is computed and stored under pca_key.
+        - equal to harmony_key: a PCA is computed (if missing) and Harmony is
+          computed on top of it and stored under harmony_key.
+        - any other key, e.g. "X_scVI": nothing is computed, the key must
+          already exist in adata.obsm.
     batch_key : Optional[str], default None
-        Batch column used for Harmony. Required if use_rep is harmony_key.
+        Column in adata.obs Harmony corrects for. Required if use_rep is
+        harmony_key, ignored otherwise.
     pca_key : str, default "X_pca"
-        Key of the PCA representation.
+        Key in adata.obsm the PCA is read from or stored under. Only change
+        it if the PCA should live under a different name.
     harmony_key : str, default "X_pca_harmony"
-        Key of the Harmony representation.
+        Key in adata.obsm the Harmony representation is read from or stored
+        under. Only change it if Harmony should live under a different name.
     n_comps : int, default 50
         Number of principal components, forwarded to ensure_pca.
     use_highly_variable : bool, default True
@@ -371,8 +413,10 @@ def ensure_representation_for_umap(
 
     if use_rep not in adata.obsm:
         raise KeyError(
-            f"use_rep '{use_rep}' was not found in adata.obsm. "
-            f"Use an existing representation or choose '{pca_key}' / '{harmony_key}'."
+            f"use_rep '{use_rep}' was not found in adata.obsm and cannot be "
+            f"computed here. Only use_rep='{pca_key}' (PCA) and "
+            f"use_rep='{harmony_key}' (Harmony) are computed automatically; "
+            "any other representation must be created beforehand."
         )
 
     logger.info(f"Using existing representation: adata.obsm['{use_rep}']")
@@ -396,8 +440,14 @@ def ensure_umap_for_visualization(
     svd_solver: Optional[str] = None,
     neighbors_key: str = "neighbors_umap",
     n_neighbors: int = 30,
-    n_pcs: int = 30,
-    metric: str = "euclidean",
+    n_pcs: Optional[int] = None,
+    metric: Literal[
+        "cityblock", "cosine", "euclidean", "l1", "l2", "manhattan",
+        "braycurtis", "canberra", "chebyshev", "correlation", "dice",
+        "hamming", "jaccard", "kulsinski", "mahalanobis", "minkowski",
+        "rogerstanimoto", "russellrao", "seuclidean", "sokalmichener",
+        "sokalsneath", "sqeuclidean", "yule",
+    ] = "euclidean",
     min_dist: float = 0.5,
     spread: float = 1.0,
     n_components: int = 2,
@@ -442,10 +492,12 @@ def ensure_umap_for_visualization(
         Key in adata.uns the neighbor graph is stored under.
     n_neighbors : int, default 30
         Number of neighbors for the graph.
-    n_pcs : int, default 30
-        Number of components used when use_rep is the PCA key.
+    n_pcs : Optional[int], default None
+        Number of dimensions of use_rep used for the neighbor graph. None
+        uses all dimensions.
     metric : str, default "euclidean"
-        Distance metric for the neighbor graph.
+        Distance metric for the neighbor graph, forwarded to ensure_umap.
+        See ensure_umap for the possible values.
     min_dist : float, default 0.5
         UMAP min_dist.
     spread : float, default 1.0
@@ -485,10 +537,9 @@ def ensure_umap_for_visualization(
         force_recompute=force_rep_effective,
     )
 
-    resolved_umap_key = ensure_umap(
+    ensure_umap(
         adata,
         use_rep=use_rep,
-        pca_key=pca_key,
         neighbors_key=neighbors_key,
         n_neighbors=n_neighbors,
         n_pcs=n_pcs,
@@ -501,7 +552,7 @@ def ensure_umap_for_visualization(
         force_recompute=force_umap_effective,
     )
 
-    return resolved_umap_key
+    return umap_key
 
 
 @beartype
@@ -547,7 +598,7 @@ def ensure_hotspot_latent_representation(  # noqa: C901
     Returns
     -------
     str
-        Key of the selected latent representation in adata.obsm.
+        Key of the selected latent representation in ``adata.obsm``.
 
     Raises
     ------
@@ -646,14 +697,11 @@ def ensure_hotspot_latent_representation(  # noqa: C901
     # --------------------------------------------------------
     for rep in priority:
 
-        # PCA is recomputable
+        # PCA is recomputable; reusing an existing one is handled by ensure_pca
         if rep == pca_key:
-            if rep in adata.obsm and not force_pca_effective:
-                logger.info(f"Using existing PCA representation: adata.obsm['{rep}']")
-                return rep
-            if not compute_pca_if_missing:
+            needs_compute = rep not in adata.obsm or force_pca_effective
+            if needs_compute and not compute_pca_if_missing:
                 continue
-            logger.info("Using PCA as Hotspot latent representation.")
             return ensure_pca(adata, force_recompute=force_pca_effective, **pca_settings)
 
         # Harmony is recomputable
@@ -1002,10 +1050,10 @@ def run_hotspot(  # noqa: C901
 
     All results that can be stored are written to adata: autocorrelation
     statistics, module assignments and the selected gene flag to adata.var,
-    module scores to adata.obs, run metadata to adata.uns. Genes that Hotspot
-    could not assign to any module, including genes that were not part of the
-    run, carry the label -1 (UNASSIGNED_MODULE) in
-    adata.var["hotspot_module"]. The returned dictionary additionally holds
+    module scores to adata.obs, run metadata to adata.uns. Genes without a
+    clear module, including genes that were not part of the run, are
+    designated as -1 (UNASSIGNED_MODULE) in adata.var["hotspot_module"],
+    which can be interpreted as n/a. The returned dictionary additionally holds
     the live Hotspot object, which is only needed for the local correlation
     heatmap, see plot_local_correlations.
 
@@ -1264,31 +1312,18 @@ def run_hotspot(  # noqa: C901
             adata, key=["hotspot", "local_correlations"], value=local_correlations
         )
 
-    # run metadata -> uns
+    # run results -> uns; the parameters of this call are already recorded
+    # by the log_anndata decorator. latent_obsm_key is kept because it is
+    # resolved automatically when None is passed.
     utils.adata.add_uns_info(adata, key=["hotspot", "run"], value={
         "latent_obsm_key_used": latent_obsm_key,
-        "umi_counts_obs_key_used": umi_counts_obs_key,
-        "gene_selection_method": gene_selection_method,
-        "autocorr_fdr_threshold": autocorr_fdr_threshold,
-        "top_n": top_n,
-        "n_neighbors": n_neighbors,
-        "weighted_graph": weighted_graph,
-        "model": model,
-        "min_gene_threshold": min_gene_threshold,
-        "core_only": core_only,
-        "module_fdr_threshold": module_fdr_threshold,
         "n_selected_genes": None if selected_genes is None else len(selected_genes),
         "n_modules": n_modules,
-        "module_prefix": module_prefix,
         "module_score_columns": module_score_columns,
         # stored as a scalar because h5ad has no writer for tuples
         "n_local_correlation_genes": (
             None if local_correlations is None else local_correlations.shape[0]
         ),
-        "local_correlations_stored": (
-            store_local_correlations and local_correlations is not None
-        ),
-        "n_genes_input": gene_var.shape[0],
         "n_zero_variance_genes_removed": n_removed,
         "n_genes_used": adata_hs.n_vars,
     })
@@ -1372,7 +1407,6 @@ def show_hotspot_results(  # noqa: C901
     ----------
     adata : AnnData
         AnnData object holding the Hotspot results written by run_hotspot.
-        Must contain the UMAP given by umap_key if UMAP plots are requested.
     fdr_threshold : float, default 0.05
         FDR threshold used to count significant genes.
     color_map : Optional[str], default None
@@ -1386,6 +1420,7 @@ def show_hotspot_results(  # noqa: C901
         Number of bins in the autocorrelation distribution histograms.
     umap_key : str, default "X_umap"
         Key in adata.obsm holding the UMAP used for the module score plots.
+        Must exist if plot_umap_modules is True.
     plot_umap_modules : bool, default True
         Whether to plot module scores on UMAP.
     plot_autocorrelation_distribution : bool, default True
@@ -1519,7 +1554,7 @@ def show_hotspot_results(  # noqa: C901
 
         logger.info(
             f"{module_sizes.shape[0]} modules, "
-            f"{int((modules == UNASSIGNED_MODULE).sum())} genes unassigned."
+            f"{int((modules == UNASSIGNED_MODULE).sum())} genes without a module (-1)."
         )
 
         summary["modules"] = modules
@@ -1567,124 +1602,21 @@ def show_hotspot_results(  # noqa: C901
             else:
                 logger.info("Plotting module score UMAPs...")
 
-                extra = {} if color_map is None else {"color_map": color_map}
-
-                _ = pl.embedding.plot_embedding(
+                pl.embedding.plot_embedding(
                     adata,
                     method=umap_key,
                     color=score_columns,
                     ncols=ncols,
                     suptitle="",
+                    color_map=color_map,
                     save=save_module_scores,
                     report=report_module_scores if settings.report_dir else None,
-                    **extra,
                 )
 
     else:
         logger.warning("No module score columns recorded in adata.uns.")
 
-    # ========================================================
-    # 6. Final summary
-    # ========================================================
-
-    # only scalars go into the log; the tables are returned to the caller
-    scalar_summary = {
-        key: value
-        for key, value in summary.items()
-        if isinstance(value, (int, float, str, tuple, type(None)))
-    }
-    logger.info(f"Hotspot result summary: {scalar_summary}")
-
     return summary
-
-
-@beartype
-def _detect_library_case(
-    gene_sets: list[str],
-    organism: str,
-) -> Optional[str]:
-    """
-    Determine the gene symbol casing used by the given Enrichr libraries.
-
-    Enrichr stores symbols in the casing of the respective database, e.g.
-    uppercase for human and for the modEnrichr databases such as FishEnrichr.
-    If the dataset uses a different casing, no gene matches and the enrichment
-    silently comes back empty, so the casing is taken from the library itself.
-
-    Parameters
-    ----------
-    gene_sets : list[str]
-        Enrichr libraries the genes will be tested against.
-    organism : str
-        Organism passed to gseapy.
-
-    Returns
-    -------
-    Optional[str]
-        "upper", "lower", or None if the casing could not be determined or
-        the libraries disagree.
-    """
-    detected = None
-
-    for name in gene_sets:
-        try:
-            library = gp.get_library(name=name, organism=organism)
-        except Exception as e:
-            logger.debug(f"Could not inspect library '{name}': {e}")
-            continue
-
-        symbols = [g for terms in library.values() for g in terms]
-
-        # count letters rather than whole symbols: names like "C1orf159" are
-        # neither isupper() nor islower() and would otherwise be miscounted
-        letters = [c for g in symbols for c in g if c.isalpha()]
-
-        if not letters:
-            continue
-
-        share_upper = sum(c.isupper() for c in letters) / len(letters)
-
-        if share_upper > 0.9:
-            case = "upper"
-        elif share_upper < 0.1:
-            case = "lower"
-        else:
-            case = None
-
-        if detected is None:
-            detected = case
-        elif detected != case:
-            logger.info(
-                "Enrichr libraries use different gene symbol casings. "
-                "Gene names are passed through unchanged."
-            )
-            return None
-
-    return detected
-
-
-@beartype
-def _apply_gene_case(genes: list[str], case: Optional[str]) -> list[str]:
-    """
-    Convert gene symbols to the given casing.
-
-    Parameters
-    ----------
-    genes : list[str]
-        Gene symbols as they appear in the dataset.
-    case : Optional[str]
-        "upper", "lower", or None to leave the symbols unchanged.
-
-    Returns
-    -------
-    list[str]
-        Gene symbols in the requested casing.
-    """
-    if case == "upper":
-        return [g.upper() for g in genes]
-    if case == "lower":
-        return [g.lower() for g in genes]
-    return genes
 
 
 @deco.log_anndata
@@ -1701,6 +1633,11 @@ def run_hotspot_module_enrichment(  # noqa: C901
 ) -> None:
     """
     Run Enrichr-based gene set enrichment for Hotspot modules.
+
+    Gene symbols of both the modules and the libraries are converted to
+    uppercase, as in tools.gsea.gene_set_enrichment, because the Enrichr
+    databases differ in casing. Gene names in the result table are therefore
+    uppercase.
 
     Parameters
     ----------
@@ -1778,17 +1715,20 @@ def run_hotspot_module_enrichment(  # noqa: C901
     module_ids = sorted(modules.unique())
 
     # Enrichr libraries differ in gene symbol casing, e.g. FishEnrichr stores
-    # zebrafish symbols in uppercase while datasets usually use lowercase
-    library_case = _detect_library_case(gene_sets, organism)
-
-    if library_case is not None:
-        logger.info(f"Enrichr libraries use {library_case}case gene symbols.")
+    # zebrafish symbols in uppercase while datasets usually use lowercase.
+    # As in tools.gsea.gene_set_enrichment, genes and gene sets are both
+    # converted to uppercase, so casing never prevents a match.
+    libraries = {
+        name: {
+            term: [g.upper() for g in genes]
+            for term, genes in gp.get_library(name=name, organism=organism).items()
+        }
+        for name in gene_sets
+    }
 
     for i, module_id in enumerate(module_ids, start=1):
-        genes = _apply_gene_case(
-            modules[modules == module_id].index.astype(str).tolist(),
-            library_case,
-        )
+        genes = modules[modules == module_id].index.astype(str).str.upper().tolist()
+
         logger.info(
             f"Running Enrichr for Hotspot module {module_id} "
             f"({i}/{len(module_ids)}), n_genes={len(genes)}."
@@ -1801,31 +1741,33 @@ def run_hotspot_module_enrichment(  # noqa: C901
             )
             continue
 
-        try:
-            enr = gp.enrichr(
-                gene_list=genes,
-                gene_sets=gene_sets,
-                organism=organism,
-                **kwargs,
-            )
+        for name, library in libraries.items():
+            try:
+                enr = gp.enrichr(gene_list=genes, gene_sets=library, **kwargs)
+            except (EnrichrError, ValueError) as e:
+                logger.warning(f"Module {module_id}, library {name}: enrichment failed: {e}")
+                continue
 
-            df = enr.results.copy()
+            # Enrichr returns every term that shares at least one gene with
+            # the module, significant or not. Without any overlap gseapy
+            # leaves an empty list instead of a DataFrame.
+            df = enr.results
 
-            if df.empty:
+            if not isinstance(df, pd.DataFrame) or df.empty:
                 logger.warning(
-                    f"Module {module_id}: Enrichr returned no terms. "
-                    "Check that organism and gene_sets match the gene symbols "
-                    "in adata.var_names."
+                    f"Module {module_id}: none of its genes occurs in {name}. "
+                    "Either the genes are not annotated in this library, or "
+                    "organism and gene_sets do not match the gene symbols in "
+                    "adata.var_names."
                 )
                 continue
 
+            df = df.copy()
+            df["Gene_set"] = name
             df["module"] = int(module_id)
             df["n_module_genes"] = len(genes)
 
             all_rows.append(df)
-
-        except Exception as e:
-            logger.warning(f"Module {module_id} enrichment failed: {e}")
 
     if all_rows:
         enrichment_table = pd.concat(all_rows, ignore_index=True)
@@ -1892,12 +1834,16 @@ def summarize_hotspot_module_enrichment(
     top_n : int, default 5
         Number of top terms to return per module.
     pvalue_column : str, default "Adjusted P-value"
-        Column used to rank the enriched terms.
+        Column used to rank the enriched terms. If the column is missing, a
+        warning is logged and the first top_n terms per module are returned
+        in their stored order, i.e. unranked.
 
     Returns
     -------
     pd.DataFrame
-        Table containing the top enriched terms for each Hotspot module.
+        Top enriched terms per module, sorted by module and pvalue_column.
+        If no enrichment results are stored in adata, a warning is logged and
+        an empty DataFrame is returned.
     """
 
     key = ["sctoolbox", "hotspot", "module_enrichment"]
@@ -1908,6 +1854,12 @@ def summarize_hotspot_module_enrichment(
     if enrichment_table is None or enrichment_table.empty:
         logger.warning("No Hotspot module enrichment table found.")
         return pd.DataFrame()
+
+    if pvalue_column not in enrichment_table.columns:
+        logger.warning(
+            f"Column '{pvalue_column}' not found in the enrichment table. "
+            "Terms are returned in stored order without ranking."
+        )
 
     rows = []
 

@@ -62,10 +62,10 @@ def get_adata_subsets(adata: sc.AnnData, groupby: str) -> dict[str, sc.AnnData]:
 def obs_subset(  # noqa: C901
     adata: sc.AnnData,
     subset_filters: Optional[dict[str, Any]] = None,
-    copy: bool = True,
+    inplace: bool = False,
     drop_unused_categories: bool = True,
     name: str = "obs_subset",
-) -> sc.AnnData:
+) -> Optional[sc.AnnData]:
     """
     Subset an anndata object based on one or multiple columns in adata.obs.
 
@@ -74,14 +74,21 @@ def obs_subset(  # noqa: C901
     adata : sc.AnnData
         Anndata object to subset.
     subset_filters : Optional[dict[str, Any]], default None
-        Dictionary mapping obs column names to one or multiple values.
+        Dictionary mapping obs column names to one or multiple values. A cell
+        is kept if its value in the column equals one of the given values.
         Within one column values are combined with OR, across columns with AND.
         If None or empty no filtering is applied.
 
-        Example: {"sample": [3, 6], "celltype": ["Epcam+", "Epcam-"]}
+        Values are compared as strings, so numerical columns work with exact
+        values: 3 and "3" both match 3. For float columns, give the value as
+        it is stored, e.g. 3.0 (3 does not match 3.0). Ranges such as
+        "column > 5" are not supported. Create a boolean column first, e.g.
+        adata.obs["high_counts"] = adata.obs["total_counts"] > 5000, and
+        filter on {"high_counts": [True]}.
 
-    copy : bool, default True
-        Whether to return a copy of the subsetted anndata object.
+        Example: {"sample": [3, 6], "celltype": ["Epcam+", "Epcam-"]}
+    inplace : bool, default False
+        Whether to subset adata in place instead of returning a subsetted copy.
     drop_unused_categories : bool, default True
         Whether to remove unused categories from categorical obs columns.
     name : str, default "obs_subset"
@@ -91,8 +98,8 @@ def obs_subset(  # noqa: C901
 
     Returns
     -------
-    sc.AnnData
-        Subsetted anndata object.
+    Optional[sc.AnnData]
+        Subsetted copy if inplace is False, otherwise None.
 
     Raises
     ------
@@ -103,7 +110,7 @@ def obs_subset(  # noqa: C901
         the subsetting removes all cells.
     """
     if not subset_filters:
-        return adata.copy() if copy else adata
+        return None if inplace else adata.copy()
 
     missing_columns = [col for col in subset_filters if col not in adata.obs.columns]
     if missing_columns:
@@ -144,17 +151,20 @@ def obs_subset(  # noqa: C901
     if mask.sum() == 0:
         raise ValueError("Subsetting removed all cells. Please check `subset_filters`.")
 
+    # stored before filtering, since adata shrinks with inplace=True
+    n_obs_before = adata.n_obs
+
     adata_subset = qc_filter.filter_cells(
         adata,
         cells=adata.obs_names[mask].tolist(),
         invert=True,
-        inplace=not copy,
+        inplace=inplace,
         name=name,
         value={"subset_filters": applied_filters},
         overwrite=True,
     )
 
-    if adata_subset is None:  # inplace=True returns None
+    if inplace:  # filter_cells returns None in this case
         adata_subset = adata
 
     if drop_unused_categories:
@@ -162,9 +172,10 @@ def obs_subset(  # noqa: C901
             if isinstance(adata_subset.obs[col].dtype, pd.CategoricalDtype):
                 adata_subset.obs[col] = adata_subset.obs[col].cat.remove_unused_categories()
 
-    logger.info(f"Subsetted adata: {adata_subset.n_obs} of {adata.n_obs} cells kept.")
+    logger.info(f"Subsetted adata: {adata_subset.n_obs} of {n_obs_before} cells kept.")
 
-    return adata_subset
+    if not inplace:
+        return adata_subset
 
 
 @beartype
