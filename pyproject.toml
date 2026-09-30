@@ -208,9 +208,8 @@ docs = [
     "sphinx-rtd-theme",
     "sphinx-exec-code",
     "nbsphinx",
-    "nbsphinx_link",
+    "nbsphinx_link>=1.4.1",  # support docutils>0.21 https://github.com/vidartf/nbsphinx-link/issues/25
     "myst-parser",
-    "docutils<=0.21",  # pinned until https://github.com/vidartf/nbsphinx-link/issues/25 is fixed
     "sphinxcontrib-youtube"
 ]
 dev = [

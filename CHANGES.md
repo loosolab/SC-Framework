@@ -48,6 +48,7 @@
 - run_scsa: select the top-scoring celltype row explicitly
 - run_scsa: move the SCSA results from adata.uns["SCSA"] to adata.uns["sctoolbox"]["SCSA"]
 - run_scsa: refresh the stale pandas downgrade note
+- unpin docutils (#421)
 
 ### Changes to notebooks
 - General/group_marker: Add gene expression scaling option for planet plots
