@@ -326,7 +326,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                        size_value: Literal["count", "percentage"] = "count",
                        color_value: Literal["value", "percentage_max"] = "value",
                        use_log_scale: bool = False,
-                       expression_scaling: Optional[Literal["row", "col", "log", "gene"]] = None,
+                       expression_scaling: Optional[Literal["log", "gene"]] = None,
                        planet_columns: Optional[list] = None,
                        color_schema: str = "Blues",
                        planet_color_schemas: Optional[list] = None,
@@ -397,13 +397,11 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
         2)"percentage_max": here the percentage value of the maximum value observed per gene (when planets correspond to genes) or max value observed for that column in case of other aggregate values.
     use_log_scale : bool, default False
         Set the value to true in order to use the log scale to represent sizes.
-    expression_scaling : Optional[Literal["row", "col", "log", "gene"]], default None
-        Scale the gene expression. There are five settings:
+    expression_scaling : Optional[Literal["log", "gene"]], default None
+        Scale the gene expression. There are three settings:
         1)None: No scaling.
         2)"log": log1p transform the gene expression.
-        3)"row": Scales gene expression values independently for each row, mapping them to a range between 0 and 1.
-        4)"col": Scales gene expression values independently for each column, mapping them to a range between 0 and 1.
-        5)"gene": Scales gene expression values independently for each gene, mapping them to a range between 0 and 1.
+        3)"gene": Scales gene expression values independently for each gene, mapping them to a range between 0 and 1.
     planet_columns: Optional[list], default None
         Give a list of up to 6 genes(or columns) to be represented as planets.
     color_schema: str, default "Blues"
@@ -867,42 +865,6 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                                 LEGEND_PLANET_Y_ALIGNMENT=-1.5
                                 )
     """
-    def minmax_group_scale(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
-        """
-        Min-max scale gene columns (ending in '_y') and 'agg_expression' grouped by a specified column.
-
-        Returns
-        -------
-        pd.Dataframe
-            Group scaled gene expressions.
-
-        Raises
-        ------
-        ValueError
-            If group column is not found in dataframe.
-        """
-        # 1. Explicit check: ensure group_col exists in the DataFrame
-        if group_col not in df.columns:
-            raise ValueError(f"Group column '{group_col}' not found in DataFrame. "
-                             f"Available columns: {list(df.columns)}")
-
-        # 2. Auto-detect columns to scale: all ending in '_y' + 'agg_expression'
-        cols_to_scale = [col for col in df.columns if col.endswith('_y') or col == 'agg_expression']
-
-        if not cols_to_scale:
-            raise ValueError("No columns ending in '_y' or named 'agg_expression' found to scale.")
-
-        df_scaled = df.copy()
-
-        # 3. Group-wise min & max aligned to original index
-        grp_min = df.groupby(group_col)[cols_to_scale].transform('min')
-        grp_max = df.groupby(group_col)[cols_to_scale].transform('max')
-
-        # 4. Min-max scaling to [0, 1] with zero-division protection
-        range_vals = grp_max - grp_min
-        df_scaled[cols_to_scale] = np.where(range_vals == 0, 0.0, (df[cols_to_scale] - grp_min) / range_vals)
-
-        return df_scaled
 
     # ---- Initialization parameters ---- #
     dpi = 100    # Dots per inches
@@ -934,20 +896,14 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
         cols_to_scale_group = cols_to_scale + [x_col, y_col]
         dot_color_df = plot_vars[cols_to_scale_group].copy()
 
-        if expression_scaling == "row":
-            dot_color_df = minmax_group_scale(dot_color_df, y_col)
-            suffix = " (row scaling)"
-        elif expression_scaling == "col":
-            dot_color_df = minmax_group_scale(dot_color_df, x_col)
-            suffix = " (column scaling)"
-        elif expression_scaling == "log":
+        if expression_scaling == "log":
             dot_color_df[cols_to_scale] = np.log1p(dot_color_df[cols_to_scale])
             suffix = " (log1p scaling)"
         elif expression_scaling == "gene":
             dot_color_df_sub = dot_color_df[cols_to_scale]
             dot_color_df_sub -= dot_color_df_sub.min(axis=0)
             dot_color_df[cols_to_scale] = (dot_color_df_sub / dot_color_df_sub.max(axis=0)).fillna(0)
-            suffix = " (gene scaling)"
+            suffix = " (per gene scaling)"
 
         plot_vars[cols_to_scale_group] = dot_color_df
         COLOR_BAR_TITLE += suffix

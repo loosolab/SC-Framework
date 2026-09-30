@@ -163,7 +163,7 @@ def test_planet_plot_anndata_preprocess(adata_planet_plot):
     assert np.array_equal(expected_df_array, np.array(plot_vars.values))
 
 
-@pytest.mark.parametrize("expression_scaling", [None, "row", "col", "gene"])
+@pytest.mark.parametrize("expression_scaling", [None, "log", "gene"])
 @pytest.mark.parametrize("mode, output_mode", [("aggregate", 1), ("planet", 2)])
 @pytest.mark.parametrize("size_value", ["count", "percentage"])
 @pytest.mark.parametrize("color_value", ["value", "percentage_max"])
