@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from beartype.roar import BeartypeCallHintParamViolation
+from scipy.sparse import issparse
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
@@ -149,9 +150,15 @@ def test_agg_feature_embedding(adata_fun_scope, features, fname, keep_score):
             assert features[0] not in adata_fun_scope.var.index
         elif fname == "invalid":
             fname = adata_fun_scope.obs.columns[0]
+            original = adata_fun_scope.obs[fname].copy()
 
         with pytest.raises(ValueError):
             pl.agg_feature_embedding(adata_fun_scope, features=feat_set, fname=fname)
+
+        if features == []:
+            # the pre-existing column survives with its original values
+            assert fname in adata_fun_scope.obs.columns
+            assert adata_fun_scope.obs[fname].equals(original)
     else:
         # make sure the column is not yet present
         assert fname not in adata_fun_scope.obs.columns
@@ -159,6 +166,58 @@ def test_agg_feature_embedding(adata_fun_scope, features, fname, keep_score):
         pl.agg_feature_embedding(adata_fun_scope, features=feat_set, fname=fname, keep_score=keep_score)
 
         assert (fname in adata_fun_scope.obs.columns) == keep_score
+
+
+def test_agg_feature_embedding_overwrite(adata_fun_scope):
+    """Test agg_feature_embedding with an existing fname."""
+    feat_set = list(adata_fun_scope.var.index[:3])
+    fname = adata_fun_scope.obs.columns[0]
+    original = adata_fun_scope.obs[fname].copy()
+
+    # default overwrite=False raises and keeps the column
+    with pytest.raises(ValueError):
+        pl.agg_feature_embedding(adata_fun_scope, features=feat_set, fname=fname, keep_score=False)
+    assert adata_fun_scope.obs[fname].equals(original)
+
+    # invalid feature with overwrite=True raises and keeps the column
+    with pytest.raises(ValueError):
+        pl.agg_feature_embedding(adata_fun_scope, features=feat_set + ["invalid"], fname=fname, overwrite=True)
+    assert adata_fun_scope.obs[fname].equals(original)
+
+    # overwrite=True, keep_score=True stores the new score
+    pl.agg_feature_embedding(adata_fun_scope, features=feat_set, fname=fname, overwrite=True, keep_score=True)
+    matrix = adata_fun_scope[:, feat_set].X
+    if issparse(matrix):
+        matrix = matrix.toarray()
+    np.testing.assert_allclose(adata_fun_scope.obs[fname].to_numpy(dtype=float), np.mean(matrix, axis=1))
+
+    # overwrite=True, keep_score=False removes the column
+    pl.agg_feature_embedding(adata_fun_scope, features=feat_set, fname=fname, overwrite=True, keep_score=False)
+    assert fname not in adata_fun_scope.obs.columns
+
+
+def test_agg_feature_embedding_gene_symbols(adata_fun_scope):
+    """Test agg_feature_embedding with gene_symbols."""
+    var_names = adata_fun_scope.var_names
+    sym = ("s_" + var_names).to_numpy(dtype=object)
+    sym[0] = sym[1] = "dup"
+    adata_fun_scope.var["sym"] = sym
+    sym_copy = adata_fun_scope.var["sym"].copy()
+    fname = "Feature set"
+
+    pl.agg_feature_embedding(adata_fun_scope, features=["dup_1", "s_" + var_names[2]],
+                             gene_symbols="sym", fname=fname, keep_score=True)
+
+    assert fname in adata_fun_scope.obs.columns
+    matrix = adata_fun_scope[:, [var_names[1], var_names[2]]].X
+    if issparse(matrix):
+        matrix = matrix.toarray()
+    np.testing.assert_allclose(adata_fun_scope.obs[fname].to_numpy(dtype=float), np.mean(matrix, axis=1))
+    assert adata_fun_scope.var["sym"].equals(sym_copy)
+
+    with pytest.raises(ValueError):
+        pl.agg_feature_embedding(adata_fun_scope, features=["unknown_symbol"], gene_symbols="sym",
+                                 fname="other", keep_score=True)
 
 
 def test_search_umap_parameters(adata):

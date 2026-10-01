@@ -80,6 +80,86 @@ def test_get_adata_subsets(adata):
         assert sub_adata.obs["group"].nunique() == 1
 
 
+@pytest.mark.parametrize("sparse", [True, False])
+def test_add_expr_to_obs(adata, sparse):
+    """Test add_expr_to_obs for single genes, gene lists, layers and gene symbols."""
+
+    if sparse:
+        adata.X = scipy.sparse.csr_matrix(adata.X)
+        adata.layers["layer"] = scipy.sparse.csr_matrix(adata.layers["layer"])
+    X = np.asarray(adata.X.todense()) if sparse else adata.X
+
+    gene = adata.var.index[0]
+    genes3 = list(adata.var.index[:3])
+
+    # single gene: identical to the plain column
+    utils.add_expr_to_obs(adata, gene)
+    expected_single = adata.X[:, 0].todense().A1 if sparse else X[:, 0]
+    assert np.array_equal(adata.obs[gene], expected_single)
+
+    # gene list with default mean
+    utils.add_expr_to_obs(adata, genes3, obs_name="score")
+    assert np.allclose(adata.obs["score"], X[:, :3].mean(axis=1))
+
+    # gene list with custom function
+    utils.add_expr_to_obs(adata, genes3, obs_name="score_sum", fun=np.sum)
+    assert np.allclose(adata.obs["score_sum"], X[:, :3].sum(axis=1))
+
+    # layer
+    utils.add_expr_to_obs(adata, genes3, obs_name="score_layer", layer="layer")
+    assert np.allclose(adata.obs["score_layer"], 2 * adata.obs["score"])
+
+    # gene symbols
+    adata.var["sym"] = "s_" + adata.var.index
+    utils.add_expr_to_obs(adata, "s_" + gene, gene_symbols="sym")
+    assert np.array_equal(adata.obs["s_" + gene], expected_single)
+
+
+@pytest.mark.parametrize("gene,obs_name", [("invalid", None),
+                                           (["invalid"], "score"),
+                                           ("list", None)])
+def test_add_expr_to_obs_invalid(adata, gene, obs_name):
+    """Test add_expr_to_obs raises on missing genes and a list without obs_name."""
+
+    if gene == "list":
+        gene = list(adata.var.index[:2])
+    elif isinstance(gene, list):
+        gene = [adata.var.index[0]] + gene
+
+    with pytest.raises(ValueError):
+        utils.add_expr_to_obs(adata, gene, obs_name=obs_name)
+
+
+def test_add_expr_to_obs_overwrite(adata):
+    """Test add_expr_to_obs keeps existing columns unless overwrite=True."""
+
+    genes = list(adata.var.index[:3])
+    adata.obs["score"] = np.arange(adata.n_obs, dtype=float)
+    original = adata.obs["score"].copy()
+
+    with pytest.raises(ValueError):
+        utils.add_expr_to_obs(adata, genes, obs_name="score")
+    assert adata.obs["score"].equals(original)
+
+    utils.add_expr_to_obs(adata, genes, obs_name="score", overwrite=True)
+    assert np.allclose(adata.obs["score"], adata.X[:, :3].mean(axis=1))
+
+
+def test_add_expr_to_obs_duplicates(adata, caplog, add_logger_handler):
+    """Test add_expr_to_obs warns on duplicated var names and raises on duplicated gene symbols."""
+
+    adata.var["sym"] = ["dup", "dup"] + list(adata.var.index[2:])
+    with pytest.raises(ValueError):
+        utils.add_expr_to_obs(adata, "dup", gene_symbols="sym")
+
+    adata.var.index = ["dup", "dup"] + list(adata.var.index[2:])
+    with add_logger_handler(utils.logger, caplog.handler):
+        utils.add_expr_to_obs(adata, "dup")
+
+    assert np.array_equal(adata.obs["dup"], adata.X[:, 0])
+    assert any(rec.levelname == "WARNING" and "Using the first match" in rec.message for rec in caplog.records)
+
+
 @pytest.mark.parametrize("raw", [True, False])
 def test_save_and_load_h5ad(adata, raw, caplog, tmp_path, add_logger_handler):
     """Test if h5ad file is saved correctly. Then test loading."""
