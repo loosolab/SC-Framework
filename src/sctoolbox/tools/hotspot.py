@@ -31,6 +31,10 @@ except ImportError:  # pragma: no cover
 #: -1 in adata.var["hotspot_module"], which can be interpreted as n/a.
 UNASSIGNED_MODULE = -1
 
+#: Label for cells whose best module score is below the chosen threshold in
+#: assign_cells_to_modules, i.e. cells in which no module is clearly active.
+UNASSIGNED_CELL = "unassigned"
+
 
 @beartype
 def ensure_pca(
@@ -1367,6 +1371,164 @@ def plot_local_correlations(
         _save_figure(report, report=True, bbox_inches="tight")
 
     plt.show()
+
+
+@beartype
+def _scaled_module_scores(adata: AnnData) -> pd.DataFrame:
+    """
+    Return the Hotspot module scores z-scaled per module.
+
+    The raw scores differ in range between modules, so they are scaled to
+    mean 0 and standard deviation 1 before modules are compared per cell.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object holding the module scores written by run_hotspot.
+
+    Returns
+    -------
+    pd.DataFrame
+        Scaled module scores, one column per module.
+
+    Raises
+    ------
+    KeyError
+        If no module scores were recorded by run_hotspot.
+    """
+    key = ["sctoolbox", "hotspot", "run"]
+    run_info = utils.adata.get_uns(adata, key) if utils.adata.in_uns(adata, key) else {}
+
+    # h5ad turns the stored list into an array, so normalize before testing
+    stored_columns = run_info.get("module_score_columns")
+    columns = [] if stored_columns is None else list(stored_columns)
+
+    if not columns:
+        raise KeyError(
+            "No module scores found. Run run_hotspot with compute_module_scores=True first."
+        )
+
+    scores = adata.obs[columns]
+
+    return (scores - scores.mean()) / scores.std()
+
+
+@deco.log_anndata
+@beartype
+def inspect_module_assignment(
+    adata: AnnData,
+    thresholds_to_show: Sequence[float | int] = (0.0, 0.5, 1.0, 1.5, 2.0),
+    plot: bool = True,
+    bins: int = 50,
+    save: Optional[str] = None,
+    report: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Show how clearly the cells can be assigned to one Hotspot module.
+
+    For every cell, the highest of its z-scaled module scores is taken. The
+    histogram and the table show how many cells would be assigned at
+    different thresholds. Nothing is assigned here; the result is the basis
+    for choosing min_score in assign_cells_to_modules.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object holding the module scores written by run_hotspot.
+    thresholds_to_show : Sequence[float | int], default (0.0, 0.5, 1.0, 1.5, 2.0)
+        Thresholds reported in the overview table, in standard deviations
+        above the mean of each module.
+    plot : bool, default True
+        Whether to plot a histogram of the best score per cell.
+    bins : int, default 50
+        Number of histogram bins.
+    save : Optional[str], default None
+        File name for the saved figure. If None, the figure is not saved.
+    report : Optional[str], default None
+        Name of the output file used for report creation. Will be silently
+        skipped if sctoolbox.settings.report_dir is None.
+
+    Returns
+    -------
+    pd.DataFrame
+        Per threshold: how many cells would be assigned to a module.
+    """
+    best_score = _scaled_module_scores(adata).max(axis=1)
+
+    if plot:
+        plt.figure(figsize=(7, 4))
+        plt.hist(best_score, bins=bins)
+        plt.xlabel("Highest scaled module score per cell")
+        plt.ylabel("Number of cells")
+        plt.title("How clearly cells belong to one module")
+        plt.tight_layout()
+
+        _save_figure(save, bbox_inches="tight")
+
+        if settings.report_dir and report:
+            _save_figure(report, report=True, bbox_inches="tight")
+
+        plt.show()
+
+    rows = []
+
+    for threshold in thresholds_to_show:
+        n_assigned = int((best_score >= threshold).sum())
+        rows.append({
+            "min_score": threshold,
+            "n_cells_assigned": n_assigned,
+            "pct_cells_assigned": round(100 * n_assigned / adata.n_obs, 1),
+        })
+
+    return pd.DataFrame(rows).set_index("min_score")
+
+
+@deco.log_anndata
+@beartype
+def assign_cells_to_modules(
+    adata: AnnData,
+    min_score: Optional[float | int] = None,
+    key_added: str = "hotspot_module_assignment",
+) -> None:
+    """
+    Assign every cell to the Hotspot module with the highest module score.
+
+    Hotspot gives each cell a continuous score per module, not a discrete
+    module. Many downstream analyses expect groups, e.g. marker genes or a
+    comparison with a clustering, so each cell is assigned to its most
+    active module. The scores are z-scaled per module first, since their raw
+    range differs between modules and would otherwise favor modules with a
+    wide range.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object holding the module scores written by run_hotspot.
+    min_score : Optional[float], default None
+        Minimum scaled score a cell needs in its best module, in standard
+        deviations above the module mean. Cells below it are labeled
+        "unassigned" (UNASSIGNED_CELL). None assigns every cell, including
+        cells in which no module is particularly active. Choose the value
+        with inspect_module_assignment.
+    key_added : str, default "hotspot_module_assignment"
+        Column in adata.obs the assignment is written to, as a categorical
+        holding the module score column names.
+    """
+    scores = _scaled_module_scores(adata)
+
+    labels = scores.idxmax(axis=1).astype(object)
+    categories = list(scores.columns)
+
+    if min_score is not None:
+        labels[scores.max(axis=1) < min_score] = UNASSIGNED_CELL
+        categories.append(UNASSIGNED_CELL)
+
+    adata.obs[key_added] = pd.Categorical(labels, categories=categories)
+
+    logger.info(
+        f"Cells per module in adata.obs['{key_added}']: "
+        f"{adata.obs[key_added].value_counts().to_dict()}"
+    )
 
 
 @deco.log_anndata
