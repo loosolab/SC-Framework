@@ -67,7 +67,11 @@ def ensure_pca(
     layer : Optional[str], default None
         Layer used for the PCA. If None, adata.X is used.
     svd_solver : Optional[str], default None
-        SVD solver passed to scanpy. If None, scanpy chooses.
+        SVD solver used by scanpy.pp.pca, e.g. "arpack", "randomized" or
+        "auto". None lets scanpy pick a suitable solver itself, depending on
+        whether the data is sparse or dense. The available options depend on
+        the scanpy version, see
+        https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.pca.html
     random_state : int, default 0
         Random seed for reproducible results.
     force_recompute : bool, default False
@@ -307,7 +311,7 @@ def ensure_umap(
 
 
 @beartype
-def ensure_representation_for_umap(
+def ensure_representation(
     adata: AnnData,
     use_rep: str = "X_pca",
     batch_key: Optional[str] = None,
@@ -321,13 +325,12 @@ def ensure_representation_for_umap(
     force_recompute: bool = False,
 ) -> str:
     """
-    Ensure that the representation used for UMAP exists.
+    Ensure that a latent representation exists in adata.obsm.
 
-    Automatically computable:
-    - X_pca
-    - X_pca_harmony
-
-    Other representations, e.g. X_scVI or X_scanorama, must already exist.
+    Used both for the representation Hotspot computes on and for the one the
+    UMAP is built on. PCA (pca_key) and Harmony (harmony_key) are computed if
+    missing or if force_recompute is True. Other representations, e.g.
+    X_scVI or X_scanorama, are only reused and must already exist.
 
     Parameters
     ----------
@@ -358,11 +361,14 @@ def ensure_representation_for_umap(
     layer : Optional[str], default None
         Layer used for the PCA. If None, adata.X is used.
     svd_solver : Optional[str], default None
-        SVD solver passed to scanpy.
+        SVD solver used for the PCA, forwarded to ensure_pca. None lets
+        scanpy pick a suitable solver. See ensure_pca for the options.
     random_state : int, default 0
         Random seed for reproducible results.
     force_recompute : bool, default False
-        Whether to recompute the representation even if it already exists.
+        Whether to recompute PCA or Harmony even if they already exist. Set
+        this to True after subsetting. Other representations cannot be
+        recomputed here; a warning is logged instead.
 
     Returns
     -------
@@ -421,6 +427,15 @@ def ensure_representation_for_umap(
             f"computed here. Only use_rep='{pca_key}' (PCA) and "
             f"use_rep='{harmony_key}' (Harmony) are computed automatically; "
             "any other representation must be created beforehand."
+        )
+
+    if force_recompute:
+        # taken over from the former ensure_hotspot_latent_representation
+        logger.warning(
+            f"'{use_rep}' cannot be recomputed by this function and is used as "
+            "is. If cells or genes were removed, it still describes the full "
+            "dataset; recompute it in its own notebook or use "
+            f"'{pca_key}' / '{harmony_key}' instead."
         )
 
     logger.info(f"Using existing representation: adata.obsm['{use_rep}']")
@@ -491,7 +506,8 @@ def ensure_umap_for_visualization(
     layer : Optional[str], default None
         Layer used for the PCA. If None, adata.X is used.
     svd_solver : Optional[str], default None
-        SVD solver passed to scanpy.
+        SVD solver used for the PCA, forwarded to ensure_pca. None lets
+        scanpy pick a suitable solver. See ensure_pca for the options.
     neighbors_key : str, default "neighbors_umap"
         Key in adata.uns the neighbor graph is stored under.
     n_neighbors : int, default 30
@@ -527,7 +543,7 @@ def ensure_umap_for_visualization(
         f"force_rep={force_rep_effective}, force_umap={force_umap_effective}"
     )
 
-    use_rep = ensure_representation_for_umap(
+    use_rep = ensure_representation(
         adata,
         use_rep=use_rep,
         batch_key=batch_key,
@@ -557,188 +573,6 @@ def ensure_umap_for_visualization(
     )
 
     return umap_key
-
-
-@beartype
-def ensure_hotspot_latent_representation(  # noqa: C901
-    adata: AnnData,
-    representation_settings: dict[str, Any],
-    pca_settings: dict[str, Any],
-    harmony_settings: dict[str, Any],
-    is_subset: bool = False,
-) -> str:
-    """
-    Ensure and select a latent representation for Hotspot.
-
-    This function is independent from UMAP. PCA and Harmony can be computed
-    automatically. External representations such as X_scVI or X_scanorama are
-    only reused if they already exist in adata.obsm.
-
-    Two modes are supported, and they differ in how strict they are:
-
-    - Explicit (``preferred_rep`` is a key): the requested representation is
-      computed or reused, and any problem raises.
-    - Automatic (``preferred_rep="auto"``): the entries in ``priority`` are
-      tried in order, and an unusable entry is skipped rather than raised.
-
-    Parameters
-    ----------
-    adata : AnnData
-        AnnData object to select or compute the latent representation for.
-    representation_settings : dict[str, Any]
-        Selection behaviour. Recognised keys: "preferred_rep", "priority",
-        "compute_pca_if_missing", "compute_harmony_if_missing",
-        "recompute_if_subset", "force_recompute_pca", "force_recompute_harmony",
-        "allow_existing_external_after_subset".
-    pca_settings : dict[str, Any]
-        Keyword arguments forwarded to ensure_pca. Must contain "pca_key".
-    harmony_settings : dict[str, Any]
-        Keyword arguments forwarded to ensure_harmony. Must contain
-        "adjusted_basis" and "batch_key".
-    is_subset : bool, default False
-        Whether adata is a subset of a larger object. Combined with
-        "recompute_if_subset" this forces recomputation of PCA and Harmony.
-
-    Returns
-    -------
-    str
-        Key of the selected latent representation in ``adata.obsm``.
-
-    Raises
-    ------
-    KeyError
-        If a requested representation is missing from adata.obsm and cannot be
-        computed, or if a required configuration key is missing.
-    ValueError
-        If the Harmony key is requested explicitly but no batch_key was given,
-        if an external representation exists but the data was subsetted, or if
-        no suitable representation can be selected.
-    """
-    preferred_rep = representation_settings.get("preferred_rep", "auto")
-    priority = representation_settings.get(
-        "priority",
-        ["X_pca_harmony", "X_scVI", "X_scanorama", "X_pca"],
-    )
-
-    compute_pca_if_missing = representation_settings.get("compute_pca_if_missing", True)
-    compute_harmony_if_missing = representation_settings.get("compute_harmony_if_missing", True)
-    recompute_if_subset = representation_settings.get("recompute_if_subset", True)
-    force_recompute_pca = representation_settings.get("force_recompute_pca", False)
-    force_recompute_harmony = representation_settings.get("force_recompute_harmony", False)
-    allow_existing_external_after_subset = representation_settings.get(
-        "allow_existing_external_after_subset", False
-    )
-
-    pca_key = pca_settings["pca_key"]
-    harmony_key = harmony_settings["adjusted_basis"]
-    batch_key = harmony_settings.get("batch_key")
-
-    external_reps = {"X_scVI", "X_scanorama"}
-
-    # a subset invalidates the existing representations, since they describe
-    # the cells and genes they were computed on
-    force_pca_effective = force_recompute_pca or (is_subset and recompute_if_subset)
-    force_harmony_effective = force_recompute_harmony or (is_subset and recompute_if_subset)
-
-    logger.debug(
-        f"Hotspot latent representation: preferred_rep={preferred_rep}, "
-        f"is_subset={is_subset}, force_pca={force_pca_effective}, "
-        f"force_harmony={force_harmony_effective}"
-    )
-
-    harmony_possible = batch_key is not None and batch_key in adata.obs.columns
-
-    # --------------------------------------------------------
-    # Case 1: User explicitly requests one representation
-    # --------------------------------------------------------
-    if preferred_rep != "auto":
-
-        if preferred_rep == pca_key:
-            return ensure_pca(adata, force_recompute=force_pca_effective, **pca_settings)
-
-        if preferred_rep == harmony_key:
-            if batch_key is None:
-                raise ValueError(
-                    f"preferred_rep='{harmony_key}' requires a batch_key in "
-                    f"harmony_settings. Provide one or use preferred_rep='{pca_key}'."
-                )
-            ensure_pca(adata, force_recompute=force_pca_effective, **pca_settings)
-            return ensure_harmony(
-                adata, force_recompute=force_harmony_effective, **harmony_settings
-            )
-
-        if preferred_rep not in adata.obsm:
-            raise KeyError(
-                f"Requested representation '{preferred_rep}' was not found in "
-                "adata.obsm. This tool cannot compute it automatically."
-            )
-
-        if (
-            preferred_rep in external_reps
-            and is_subset
-            and recompute_if_subset
-            and not allow_existing_external_after_subset
-        ):
-            raise ValueError(
-                f"'{preferred_rep}' exists, but the data was subsetted and "
-                "recompute_if_subset=True. This tool cannot recompute external "
-                "representations such as scVI or Scanorama automatically. Either "
-                "recompute it before this step, use preferred_rep='X_pca' or "
-                f"'{harmony_key}', or set allow_existing_external_after_subset=True."
-            )
-
-        if is_subset and recompute_if_subset:
-            logger.warning(
-                f"'{preferred_rep}' exists but is not recomputed by this tool. "
-                "Using the existing representation."
-            )
-
-        logger.info(f"Using existing representation: adata.obsm['{preferred_rep}']")
-        return preferred_rep
-
-    # --------------------------------------------------------
-    # Case 2: Auto mode with priority
-    # --------------------------------------------------------
-    for rep in priority:
-
-        # PCA is recomputable; reusing an existing one is handled by ensure_pca
-        if rep == pca_key:
-            needs_compute = rep not in adata.obsm or force_pca_effective
-            if needs_compute and not compute_pca_if_missing:
-                continue
-            return ensure_pca(adata, force_recompute=force_pca_effective, **pca_settings)
-
-        # Harmony is recomputable
-        if rep == harmony_key:
-            if rep in adata.obsm and not force_harmony_effective:
-                logger.info(f"Using existing Harmony representation: adata.obsm['{rep}']")
-                return rep
-            if not compute_harmony_if_missing:
-                continue
-            if not harmony_possible:
-                logger.info("Skipping Harmony: no usable batch_key.")
-                continue
-            logger.info("Using Harmony as Hotspot latent representation.")
-            ensure_pca(adata, force_recompute=force_pca_effective, **pca_settings)
-            return ensure_harmony(
-                adata, force_recompute=force_harmony_effective, **harmony_settings
-            )
-
-        # External representations are only reusable
-        if rep in external_reps and rep in adata.obsm:
-            if is_subset and recompute_if_subset and not allow_existing_external_after_subset:
-                logger.info(
-                    f"Skipping existing '{rep}': data was subsetted and external "
-                    "representations are not recomputed automatically."
-                )
-                continue
-            logger.info(f"Using existing external representation: adata.obsm['{rep}']")
-            return rep
-
-    raise ValueError(
-        "No suitable Hotspot latent representation could be selected or computed. "
-        "Please check preferred_rep, priority, or enable PCA/Harmony computation."
-    )
 
 
 @deco.log_anndata
@@ -1504,7 +1338,7 @@ def assign_cells_to_modules(
     ----------
     adata : AnnData
         AnnData object holding the module scores written by run_hotspot.
-    min_score : Optional[float], default None
+    min_score : Optional[float | int], default None
         Minimum scaled score a cell needs in its best module, in standard
         deviations above the module mean. Cells below it are labeled
         "unassigned" (UNASSIGNED_CELL). None assigns every cell, including
@@ -1785,7 +1619,7 @@ def show_hotspot_results(  # noqa: C901
 @beartype
 def run_hotspot_module_enrichment(  # noqa: C901
     adata: AnnData,
-    organism: str,
+    organism: Literal["human", "mouse", "fish", "fly", "worm", "yeast"],
     gene_sets: list[str] = ["GO_Biological_Process_2018"],
     min_module_size: int = 5,
     exclude_unassigned: bool = True,
@@ -1806,8 +1640,14 @@ def run_hotspot_module_enrichment(  # noqa: C901
     adata : AnnData
         AnnData object holding the module assignments written by run_hotspot
         in adata.var["hotspot_module"]. Results are stored in adata.uns.
-    organism : str
-        Organism passed to gseapy.enrichr.
+    organism : Literal["human", "mouse", "fish", "fly", "worm", "yeast"]
+        Organism of the Enrichr database, must match the species of the
+        dataset. "human" and "mouse" use Enrichr, the others the modEnrichr
+        databases: "fish" = zebrafish (D. rerio), "fly" = D. melanogaster,
+        "worm" = C. elegans, "yeast" = S. cerevisiae.
+        See https://maayanlab.cloud/modEnrichr/
+        The organism determines which libraries are available for gene_sets;
+        list them with gseapy.get_library_name(organism=organism).
     gene_sets : list[str], default ["GO_Biological_Process_2018"]
         Enrichr libraries to use. Availability differs per organism; the
         current list is at https://maayanlab.cloud/Enrichr/#libraries
