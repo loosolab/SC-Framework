@@ -401,7 +401,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
         Scale the gene expression. There are three settings:
         1)None: No scaling.
         2)"log": log1p transform the gene expression.
-        3)"gene": Scales gene expression values independently for each gene, mapping them to a range between 0 and 1.
+        3)"gene": Scales gene expression values independently for each gene, mapping them to a range between 0 and 1. This only allows comparison between bubbles related to the same gene.
     planet_columns: Optional[list], default None
         Give a list of up to 6 genes(or columns) to be represented as planets.
     color_schema: str, default "Blues"
@@ -608,10 +608,13 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
     The expression_scaling parameter enables flexible scaling of gene expression values to improve visual interpretation.
 
     .. note::
-        Scaling choice directly impacts visualization and biological interpretation.
-        Log transforms preserve multiplicative relationships and reduce skewness, while
-        min-max scaling emphasizes relative expression patterns within each row/column/gene.
-        Ensure the scaling aligns with your analytical goal.
+        The scaling method changes both the visual output and the biological
+        interpretation. Log transforms reduce skew and keep fold-change (multiplicative)
+        relationships intact.
+        Min-max scaling is applied per gene, rescaling each gene
+        to a 0-1 range individually so you can see where it is relatively high or low across
+        samples. A comparsion between multiple genes is not possible when using this scaling.
+        Choose the method that fits your analysis goal.
 
     .. plot::
         :context: close-figs
