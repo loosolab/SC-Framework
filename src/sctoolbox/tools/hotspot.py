@@ -12,7 +12,6 @@ import gseapy as gp
 import sctoolbox.utils.decorator as deco
 import scanpy.external as sce
 
-from anndata import AnnData
 from beartype import beartype
 from beartype.typing import Optional, Any, Sequence, Literal
 from sctoolbox import settings
@@ -26,19 +25,19 @@ try:
 except ImportError:  # pragma: no cover
     EnrichrError = ValueError
 
-#: Label for genes without a clear module. Genes that Hotspot could not assign
-#: to any module, or that were not part of the Hotspot run, are designated as
-#: -1 in adata.var["hotspot_module"], which can be interpreted as n/a.
+# Label for genes without a clear module. Genes that Hotspot could not assign
+# to any module, or that were not part of the Hotspot run, are designated as
+# -1 in adata.var["hotspot_module"], which can be interpreted as n/a.
 UNASSIGNED_MODULE = -1
 
-#: Label for cells whose best module score is below the chosen threshold in
-#: assign_cells_to_modules, i.e. cells in which no module is clearly active.
+# Label for cells whose best module score is below the chosen threshold in
+# assign_cells_to_modules, i.e. cells in which no module is clearly active.
 UNASSIGNED_CELL = "unassigned"
 
 
 @beartype
 def ensure_pca(
-    adata: AnnData,
+    adata: sc.AnnData,
     pca_key: str = "X_pca",
     n_comps: int = 50,
     use_highly_variable: bool = True,
@@ -55,7 +54,7 @@ def ensure_pca(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : sc.AnnData
         AnnData object to add the PCA representation to.
     pca_key : str, default "X_pca"
         Key in adata.obsm the PCA is stored under. An existing PCA under this
@@ -111,7 +110,7 @@ def ensure_pca(
 
 @beartype
 def ensure_harmony(
-    adata: AnnData,
+    adata: sc.AnnData,
     batch_key: str,
     basis: str = "X_pca",
     adjusted_basis: str = "X_pca_harmony",
@@ -126,7 +125,7 @@ def ensure_harmony(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : sc.AnnData
         AnnData object to add the Harmony representation to.
     batch_key : str
         Column in adata.obs used as batch variable.
@@ -181,7 +180,7 @@ def ensure_harmony(
 
 @beartype
 def ensure_umap(
-    adata: AnnData,
+    adata: sc.AnnData,
     use_rep: str,
     neighbors_key: str = "neighbors_umap",
     n_neighbors: int = 30,
@@ -203,12 +202,12 @@ def ensure_umap(
     """
     Ensure that a UMAP representation exists in adata.obsm.
 
-    UMAP is used for visualization, not as the main Hotspot input.
+    Builds and potentially overwrites a neighbor graph and UMAP from the given representation. UMAP is used for visualization, not as      the main Hotspot input.
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object to add the UMAP to.
+    adata : sc.AnnData
+        sc.AnnData object to add the UMAP to.
     use_rep : str
         Key in adata.obsm the neighbor graph is built on, e.g. "X_pca",
         "X_pca_harmony" or "X_scVI".
@@ -312,7 +311,7 @@ def ensure_umap(
 
 @beartype
 def ensure_representation(
-    adata: AnnData,
+    adata: sc.AnnData,
     use_rep: str = "X_pca",
     batch_key: Optional[str] = None,
     pca_key: str = "X_pca",
@@ -334,8 +333,8 @@ def ensure_representation(
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object to select or compute the representation for.
+    adata : sc.AnnData
+        sc.AnnData object to select or compute the representation for.
     use_rep : str, default "X_pca"
         Key in adata.obsm of the representation to use. Its value decides
         what happens if the key is missing:
@@ -444,7 +443,7 @@ def ensure_representation(
 
 @beartype
 def ensure_umap_for_visualization(
-    adata: AnnData,
+    adata: sc.AnnData,
     use_rep: str = "X_pca",
     batch_key: Optional[str] = None,
     is_subset: bool = False,
@@ -472,7 +471,7 @@ def ensure_umap_for_visualization(
     n_components: int = 2,
     random_state: int = 0,
     umap_key: str = "X_umap",
-) -> str:
+) -> None:
     """
     Ensure that UMAP exists for visualization.
 
@@ -481,8 +480,8 @@ def ensure_umap_for_visualization(
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object to compute the UMAP for.
+    adata : sc.AnnData
+        sc.AnnData object to compute the UMAP for.
     use_rep : str, default "X_pca"
         Representation used to build the neighbor graph.
     batch_key : Optional[str], default None
@@ -528,11 +527,6 @@ def ensure_umap_for_visualization(
         Random seed for reproducible results.
     umap_key : str, default "X_umap"
         Key in adata.obsm the UMAP is stored under.
-
-    Returns
-    -------
-    str
-        Key of the UMAP representation stored in adata.obsm.
     """
 
     force_rep_effective = force_recompute_rep or (is_subset and recompute_if_subset)
@@ -572,13 +566,11 @@ def ensure_umap_for_visualization(
         force_recompute=force_umap_effective,
     )
 
-    return umap_key
-
 
 @deco.log_anndata
 @beartype
 def inspect_gene_detection(
-    adata: AnnData,
+    adata: sc.AnnData,
     layer_key: Optional[str] = "raw",
     thresholds_to_show: Optional[Sequence[int]] = None,
     var_column: str = "hotspot_n_cells_detected",
@@ -596,17 +588,23 @@ def inspect_gene_detection(
 
     Parameters
     ----------
-    adata : AnnData
-        Input AnnData object.
+    adata : sc.AnnData
+        Input sc.AnnData object.
     layer_key : Optional[str], default "raw"
         Layer used for the detection counts. If None, adata.X is used; note
-        that anndata >= 0.13 stores .X in adata.layers under the None key, so
+        that sc.AnnData >= 0.13 stores .X in adata.layers under the None key, so
         both spellings refer to the same matrix.
     thresholds_to_show : Optional[Sequence[int]], default None
-        Thresholds reported in the overview table. If None, they are derived
-        from the current cell number as 0.1%, 0.25%, 0.5%, 1% and 2% of
-        adata.n_obs, so that the candidates fit the size of the current
-        (sub)set instead of a fixed dataset size.
+        Minimum numbers of cells (absolute counts, not percentages) a gene
+        must be detected in, one table row per value. For each value the
+        overview table reports how many genes would be kept, and also gives
+        the value as a percentage of adata.n_obs in the "pct_of_cells"
+        column. If None, the counts are derived from the current number of
+        cells as 0.1%, 0.25%, 0.5%, 1% and 2% of adata.n_obs, each rounded
+        to the nearest integer (at least 1), with duplicates removed. With
+        20,000 cells, for example, this gives 20, 50, 100, 200 and 400
+        cells. This way the defaults fit the size of the current (sub)set
+        instead of a fixed dataset size.
     var_column : str, default "hotspot_n_cells_detected"
         Column in adata.var the detection counts are written to. The counts
         are always computed from the current object rather than reused from
@@ -756,10 +754,10 @@ def inspect_gene_detection(
 @deco.log_anndata
 @beartype
 def filter_genes_by_cell_detection(
-    adata: AnnData,
+    adata: sc.AnnData,
     min_cells: Optional[int],
     copy: bool = True,
-) -> tuple[AnnData, dict[str, Any]]:
+) -> tuple[sc.AnnData, dict[str, Any]]:
     """
     Remove genes detected in fewer than min_cells cells.
 
@@ -768,8 +766,8 @@ def filter_genes_by_cell_detection(
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object inspected with inspect_gene_detection.
+    adata : sc.AnnData
+        sc.AnnData object inspected with inspect_gene_detection.
     min_cells : Optional[int]
         Minimum number of cells in which a gene must be detected. None keeps
         all genes, which is the state the notebook ships in. There is no
@@ -781,8 +779,8 @@ def filter_genes_by_cell_detection(
 
     Returns
     -------
-    adata_out : AnnData
-        Filtered AnnData object.
+    adata_out : sc.AnnData
+        Filtered sc.AnnData object.
     summary : dict
         Gene numbers before and after filtering.
 
@@ -854,7 +852,7 @@ def filter_genes_by_cell_detection(
     if adata_out is None:  # inplace=True returns None
         adata_out = adata
 
-    logger.info(f"Filtered AnnData: {adata_out.n_obs} cells x {adata_out.n_vars} genes.")
+    logger.info(f"Filtered sc.AnnData: {adata_out.n_obs} cells x {adata_out.n_vars} genes.")
 
     return adata_out, summary
 
@@ -862,7 +860,7 @@ def filter_genes_by_cell_detection(
 @deco.log_anndata
 @beartype
 def run_hotspot(  # noqa: C901
-    adata: AnnData,
+    adata: sc.AnnData,
     layer_key: str = "raw",
     latent_obsm_key: Optional[str] = None,
     umi_counts_obs_key: str = "total_counts",
@@ -884,7 +882,7 @@ def run_hotspot(  # noqa: C901
     overwrite_obs_key: bool = False,
 ) -> dict[str, Any]:
     """
-    Run Hotspot analysis on an AnnData object.
+    Run Hotspot analysis on an sc.AnnData object.
 
     All results that can be stored are written to adata: autocorrelation
     statistics, module assignments and the selected gene flag to adata.var,
@@ -897,8 +895,8 @@ def run_hotspot(  # noqa: C901
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object containing expression data and embeddings.
+    adata : sc.AnnData
+        sc.AnnData object containing expression data and embeddings.
     layer_key : str, default "raw"
         Layer used as count input for Hotspot.
     latent_obsm_key : Optional[str], default None
@@ -981,7 +979,7 @@ def run_hotspot(  # noqa: C901
         jobs = settings.get_threads()
 
     if layer_key not in adata.layers:
-        # anndata >= 0.13 stores .X in layers under the None key, which is not
+        # sc.AnnData >= 0.13 stores .X in layers under the None key, which is not
         # a layer name the user can pass here
         available = [k for k in adata.layers if k is not None]
         raise KeyError(
@@ -1181,7 +1179,7 @@ def plot_local_correlations(
     Genes are ordered by the linkage Hotspot computed during module creation,
     so that modules appear as blocks along the diagonal. This is the only
     Hotspot plot that needs the live Hotspot object, because the linkage is
-    not stored in AnnData.
+    not stored in sc.AnnData.
 
     Parameters
     ----------
@@ -1208,7 +1206,7 @@ def plot_local_correlations(
 
 
 @beartype
-def _scaled_module_scores(adata: AnnData) -> pd.DataFrame:
+def _scaled_module_scores(adata: sc.AnnData) -> pd.DataFrame:
     """
     Return the Hotspot module scores z-scaled per module.
 
@@ -1217,8 +1215,8 @@ def _scaled_module_scores(adata: AnnData) -> pd.DataFrame:
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object holding the module scores written by run_hotspot.
+    adata : sc.AnnData
+        sc.AnnData object holding the module scores written by run_hotspot.
 
     Returns
     -------
@@ -1250,7 +1248,7 @@ def _scaled_module_scores(adata: AnnData) -> pd.DataFrame:
 @deco.log_anndata
 @beartype
 def inspect_module_assignment(
-    adata: AnnData,
+    adata: sc.AnnData,
     thresholds_to_show: Sequence[float | int] = (0.0, 0.5, 1.0, 1.5, 2.0),
     plot: bool = True,
     bins: int = 50,
@@ -1267,8 +1265,8 @@ def inspect_module_assignment(
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object holding the module scores written by run_hotspot.
+    adata : sc.AnnData
+        sc.AnnData object holding the module scores written by run_hotspot.
     thresholds_to_show : Sequence[float | int], default (0.0, 0.5, 1.0, 1.5, 2.0)
         Thresholds reported in the overview table, in standard deviations
         above the mean of each module.
@@ -1320,12 +1318,12 @@ def inspect_module_assignment(
 @deco.log_anndata
 @beartype
 def assign_cells_to_modules(
-    adata: AnnData,
-    min_score: Optional[float | int] = None,
+    adata: sc.AnnData,
+    min_score: Optional[float | int],
     key_added: str = "hotspot_module_assignment",
 ) -> None:
     """
-    Assign every cell to the Hotspot module with the highest module score.
+    Assign each cell to the Hotspot module with the highest module score.
 
     Hotspot gives each cell a continuous score per module, not a discrete
     module. Many downstream analyses expect groups, e.g. marker genes or a
@@ -1336,9 +1334,9 @@ def assign_cells_to_modules(
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object holding the module scores written by run_hotspot.
-    min_score : Optional[float | int], default None
+    adata : sc.AnnData
+        sc.AnnData object holding the module scores written by run_hotspot.
+    min_score : Optional[float | int]
         Minimum scaled score a cell needs in its best module, in standard
         deviations above the module mean. Cells below it are labeled
         "unassigned" (UNASSIGNED_CELL). None assigns every cell, including
@@ -1368,7 +1366,7 @@ def assign_cells_to_modules(
 @deco.log_anndata
 @beartype
 def show_hotspot_results(  # noqa: C901
-    adata: AnnData,
+    adata: sc.AnnData,
     fdr_threshold: float = 0.05,
     color_map: Optional[str] = None,
     ncols: int = 3,
@@ -1401,8 +1399,8 @@ def show_hotspot_results(  # noqa: C901
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object holding the Hotspot results written by run_hotspot.
+    adata : sc.AnnData
+        sc.AnnData object holding the Hotspot results written by run_hotspot.
     fdr_threshold : float, default 0.05
         FDR threshold used to count significant genes.
     color_map : Optional[str], default None
@@ -1618,7 +1616,7 @@ def show_hotspot_results(  # noqa: C901
 @deco.log_anndata
 @beartype
 def run_hotspot_module_enrichment(  # noqa: C901
-    adata: AnnData,
+    adata: sc.AnnData,
     organism: Literal["human", "mouse", "fish", "fly", "worm", "yeast"],
     gene_sets: list[str] = ["GO_Biological_Process_2018"],
     min_module_size: int = 5,
@@ -1637,8 +1635,8 @@ def run_hotspot_module_enrichment(  # noqa: C901
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object holding the module assignments written by run_hotspot
+    adata : sc.AnnData
+        sc.AnnData object holding the module assignments written by run_hotspot
         in adata.var["hotspot_module"]. Results are stored in adata.uns.
     organism : Literal["human", "mouse", "fish", "fly", "worm", "yeast"]
         Organism of the Enrichr database, must match the species of the
@@ -1822,7 +1820,7 @@ def run_hotspot_module_enrichment(  # noqa: C901
 
 @beartype
 def summarize_hotspot_module_enrichment(
-    adata: AnnData,
+    adata: sc.AnnData,
     top_n: int = 5,
     pvalue_column: str = "Adjusted P-value",
 ) -> pd.DataFrame:
@@ -1831,8 +1829,8 @@ def summarize_hotspot_module_enrichment(
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object containing the enrichment results in adata.uns.
+    adata : sc.AnnData
+        sc.AnnData object containing the enrichment results in adata.uns.
     top_n : int, default 5
         Number of top terms to return per module.
     pvalue_column : str, default "Adjusted P-value"
@@ -1892,7 +1890,7 @@ def summarize_hotspot_module_enrichment(
 @deco.log_anndata
 @beartype
 def plot_hotspot_module_enrichment(
-    adata: AnnData,
+    adata: sc.AnnData,
     top_n: int = 5,
     pvalue_column: str = "Adjusted P-value",
     term_column: str = "Term",
@@ -1910,8 +1908,8 @@ def plot_hotspot_module_enrichment(
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object containing the enrichment results in adata.uns.
+    adata : sc.AnnData
+        sc.AnnData object containing the enrichment results in adata.uns.
     top_n : int, default 5
         Number of top terms shown per module.
     pvalue_column : str, default "Adjusted P-value"
