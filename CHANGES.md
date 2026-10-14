@@ -15,6 +15,13 @@
 - reduce test runtime hotspots, right-size fixture scopes, dedup fixtures/orphan data, and fix warnings (#445)
 - pin the conda environment to Python >=3.9,<3.13 (#460)
 - fix SCSA for Python >= 3.13
+- fix gsea_dot top pathway selection (#457)
+- prepare_for_cellxgene: added na check (#458)
+- fix _filter_anndata: replacing eval to allow mathematical symbols in column names (#452)
+- fix cut off slider number (#439)
+- add obs_names_make_unique option to `sctoolbox.utils.assemblers.from_R` (#438)
+- add `utils.adata.remove_group` function
+- add additional parameters to `group_expression_boxplot()` (#456)
 - add compatibility with pandas 3 and anndata 0.13 (!533)
 - make pygenometracks an optional 'genometracks' extra to resolve the matplotlib conflict in .[all] (!533)
 - drop the typing_extensions pin and exclude anndata 0.13.0 (!533)
@@ -24,6 +31,7 @@
 - fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
 - bump palantir floor to >=1.4.5 for pandas 3 / anndata 0.13 compatibility (!533)
 - add robust terminal-state handling, branch gene-program plotting, interactive embedding improvements, and extended Palantir tests (!531)
+- Add gene expression scaling for planet plots (#466)
 - save_h5ad: normalise uns '*_colors' to hex so Palantir results are writable (#470)
 - replace `numpy.typing.NDArray` type hints with the expanded `np.ndarray[shape, dtype]` generic to fix beartype PEP 484 errors under numpy 2.5 (#469)
 - document the `dev` dependency group in `development.rst`
@@ -45,9 +53,12 @@
 - run_scsa: refresh the stale pandas downgrade note
 - fix Palantir interactive plots, figure formats, and the gene-program Excel export (#443)
 - add an `ax` parameter to `plot_fate_probability_projection`, an `eigvec_key` parameter to `select_early_cell`, and raise Palantir test coverage (#443)
+- unpin docutils (#421)
 
 ### Changes to notebooks
 - move three verbose Palantir cells into sctoolbox helper functions (#443)
+- General/group_marker: Add gene expression scaling option for planet plots
+- General/GSEA: Additional parameters for gsea_dot
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict

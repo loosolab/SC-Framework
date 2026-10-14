@@ -8,7 +8,7 @@ from matplotlib.axes import Axes
 from matplotlib.colors import rgb2hex
 from sctoolbox.plotting.general import _save_figure
 from beartype import beartype
-from beartype.typing import Literal, Any
+from beartype.typing import Literal, Any, Optional
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -136,18 +136,18 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,  # noqa: C901
                                    x_col: str,
                                    y_col: str,
                                    genes: list | str,
-                                   gene_symbols: str | None = None,
-                                   x_col_subset: list | None = None,
-                                   y_col_subset: list | None = None,
-                                   input_layer: str | None = None,
+                                   gene_symbols: Optional[str] = None,
+                                   x_col_subset: Optional[list] = None,
+                                   y_col_subset: Optional[list] = None,
+                                   input_layer: Optional[str] = None,
                                    expression_threshold: int | float = 0.0,
                                    layer_value_aggregator: str = "mean",
                                    gene_count_aggregator: str = "median",
                                    gene_expression_aggregator: str = "median",
                                    fillna: int | float = 0.0,
-                                   obs_columns: list | None = None,
-                                   obs_thresholds: list | None = None,
-                                   obs_aggregator_array: list | None = None,
+                                   obs_columns: Optional[list] = None,
+                                   obs_thresholds: Optional[list] = None,
+                                   obs_aggregator_array: Optional[list] = None,
                                    **kwargs: Any) -> pd.DataFrame:
     """
     Preprocess data from an anndata object and return a dataframe for the planet_plot_render function.
@@ -164,13 +164,13 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,  # noqa: C901
         Name of the obs column of the AnnData to be shown on the y-axis of the plot.
     genes : list | str
         List of genes to be to consider for plotting and aggregation.
-    gene_symbols : str | None, default None
+    gene_symbols : Optional[str], default None
         Name of the var column of the AnnData object used for the gene names. If set None, the index of AnnData.var is used.
-    x_col_subset: list | None, default None
+    x_col_subset: Optional[list], default None
         To plot a specific subset of the entries in x_col instead of all the entries.
-    y_col_subset: list | None, default None
+    y_col_subset: Optional[list], default None
         To plot a specific subset of the entries in y_col instead of all the entries.
-    input_layer: str | None, default None
+    input_layer: Optional[str], default None
         Layer of the AnnData object to be considered for the gene expression values. If None, then the index of AnnData.var is used.
     expression_threshold: int | float, default 0.0
         The threshold value to calculate the threshold exceedence count. This count is then used to calculate the size of the dots.
@@ -189,14 +189,14 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,  # noqa: C901
         Note that 'count_weighted_expression' cannot be used as gene_expression_aggregator when 'expression_weighted_count' is used as gene_count_aggregator!
     fillna: int | float, default 0.0
         Value to fill up the NaN values that are created during aggregation.
-    obs_columns: list | None, default None
+    obs_columns: Optional[list], default None
         The obs columns of the AnnData object to be additionally considered for aggregation.
         Note that these values must have numeric values!
-    obs_thresholds: list | None, default None
+    obs_thresholds: Optional[list], default None
         A corresponding list of threshold values for the obs_columns.
         Make sure that len(obs_thresholds) == len(obs_columns).
         If this argument is not passed then expression_threshold is used instead.
-    obs_aggregator_array: list | None, default None
+    obs_aggregator_array: Optional[list], default None
         A list of standard numpy aggregators (eg. 'mean', 'median', etc.) to aggregate the values mentioned in the obs_columns.
         Make sure that len(obs_aggregator_array) == len(obs_columns).
         If this argument is not passed then layer_value_aggregator is used instead.
@@ -320,15 +320,16 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,  # noqa: C901
 def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                        x_col: str,
                        y_col: str,
-                       x_label: str | None = None,
-                       y_label: str | None = None,
+                       x_label: Optional[str] = None,
+                       y_label: Optional[str] = None,
                        mode: Literal["aggregate", "planet"] = "aggregate",
                        size_value: Literal["count", "percentage"] = "count",
                        color_value: Literal["value", "percentage_max"] = "value",
                        use_log_scale: bool = False,
-                       planet_columns: list | None = None,
+                       expression_scaling: Optional[Literal["log", "gene"]] = None,
+                       planet_columns: Optional[list] = None,
                        color_schema: str = "Blues",
-                       planet_color_schemas: list | None = None,
+                       planet_color_schemas: Optional[list] = None,
                        FIG_SIZE_SCALER: int | float = 2,
                        PLANET_DIST_SCALER: int | float = 1.25,
                        MAX_DOT_SIZE: int = 300,
@@ -358,14 +359,14 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                        LEGEND_FONT_SIZE: int = 8,
                        COLOR_BAR_TITLE: str = 'Gene Expression',
                        COLOR_BAR_TITLE_PMV: str = 'Percentage of max expression\nobserved for the gene',
-                       colorbar_label_array: list | None = None,
+                       colorbar_label_array: Optional[list] = None,
                        SIZE_LEGEND_TITLE: str = 'Cell Count',
                        SIZE_LEGEND_TITLE_PERCENTAGE: str = 'Percentage cells expressed',
                        OUTER_CIRCLE_LABEL: str = 'Total count',
                        INNER_DOT_LABEL: str = 'Expressed count',
                        ORIENTATION_LEGEND_TITLE: str = 'Genes',
                        ORIENTATION_LEGEND_CENTER_LABEL: str = 'Aggregate value',
-                       orientation_labels_array: list | None = None,
+                       orientation_labels_array: Optional[list] = None,
                        save: str | None = None) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     r"""
     Render the planet plot on the basis of the preprocessed data.
@@ -378,9 +379,9 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
         Name of the column representing the x-axis of the plot.
     y_col : str
         Name of the column representing the y-axis of the plot.
-    x_label : str | None, default None
+    x_label : Optional[str], default None
         Label for the x-axis of the plot.
-    y_label : str | None, default None
+    y_label : Optional[str], default None
         Label for the y-axis of the plot.
     mode : Literal["aggregate", "planet"], default "aggregate"
         There are two modes:
@@ -396,11 +397,16 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
         2)"percentage_max": here the percentage value of the maximum value observed per gene (when planets correspond to genes) or max value observed for that column in case of other aggregate values.
     use_log_scale : bool, default False
         Set the value to true in order to use the log scale to represent sizes.
-    planet_columns: list | None, default None
+    expression_scaling : Optional[Literal["log", "gene"]], default None
+        Scale the gene expression. There are three settings:
+        1)None: No scaling.
+        2)"log": log1p transform the gene expression.
+        3)"gene": Scales gene expression values independently for each gene, mapping them to a range between 0 and 1. This only allows comparison between bubbles related to the same gene.
+    planet_columns: Optional[list], default None
         Give a list of up to 6 genes(or columns) to be represented as planets.
     color_schema: str, default "Blues"
         The color schema for the color of the dots.
-    planet_color_schemas: list | None, default None
+    planet_color_schemas: Optional[list], default None
         Color schemas for individual planets, use this parameter when entities other than genes are represented as planets. Make sure that len(planet_color_schemas) == len(planet_columns).
         Multiple color bars are displayed for the legend in this case.
     FIG_SIZE_SCALER: int | float, default 2
@@ -465,7 +471,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
         Title of the color bar legend (when color_value == "value"). Note that the planet names in planet_columns are used as the titles for the extra legends by default (when planet_color_schemas != None).
     COLOR_BAR_TITLE_PMV: str, default 'Percentage of max expression\nobserved for the gene'
         Title of the color bar legend (when color_value == "percentage_max").
-    colorbar_label_array: list | None, default = None
+    colorbar_label_array: Optional[list], default = None
         Give a list of the cbar titles for the planets (when planet_color_schemas != None).
     SIZE_LEGEND_TITLE: str, default 'Cell Count'
         Title for the size legend (when size_value == "count").
@@ -479,7 +485,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
         Title for the planet legend.
     ORIENTATION_LEGEND_CENTER_LABEL: str, default 'Aggregate value'
         Annotation for the centre dot in the planet legend. Note that the planets are by default annotated as per the names present in planet_columns.
-    orientation_labels_array: list | None, default None
+    orientation_labels_array: Optional[list], default None
         Give a list of annotations for individual planets.
     save : Optional[str], default None
         Filename to save the figure.
@@ -597,6 +603,53 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                                 use_log_scale = True,
                                 planet_columns = selected_genes,
                                 color_schema = color_schema)
+
+    Expression scaling:
+    The expression_scaling parameter enables flexible scaling of gene expression values to improve visual interpretation.
+
+    .. note::
+        The scaling method changes both the visual output and the biological
+        interpretation. Log transforms reduce skew and keep fold-change (multiplicative)
+        relationships intact.
+        Min-max scaling is applied per gene, rescaling each gene
+        to a 0-1 range individually so you can see where it is relatively high or low across
+        samples. A comparsion between multiple genes is not possible when using this scaling.
+        Choose the method that fits your analysis goal.
+
+    .. plot::
+        :context: close-figs
+
+        # Using "log" scaling for gene expression
+        pl.planet_plot.planet_plot_render(
+            plot_vars,
+            x_col,
+            y_col,
+            mode = "planet",
+            size_value = "count",
+            color_value = "value",
+            use_log_scale = False,
+            expression_scaling = "log",
+            planet_columns = selected_genes,
+            color_schema = color_schema
+        )
+
+
+    .. plot::
+        :context: close-figs
+
+        # Using "gene" scaling
+        pl.planet_plot.planet_plot_render(
+            plot_vars,
+            x_col,
+            y_col,
+            mode = "planet",
+            size_value = "count",
+            color_value = "value",
+            use_log_scale = False,
+            expression_scaling = "gene",
+            planet_columns = selected_genes,
+            color_schema = color_schema
+        )
 
     Plotting obs_columns:
     We have many scoring metrics stored in the obs column.
@@ -838,6 +891,25 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
     if orientation_labels_array is not None:
         if len(orientation_labels_array) != len(planet_columns):
             raise ValueError("planet_columns and orientation_labels_array should have the same lengths")
+
+    # ---- Expression scaling ---- #
+    if expression_scaling is not None:
+        plot_vars = plot_vars.copy()
+        cols_to_scale = [col for col in plot_vars.columns if col.endswith('_y')] + ['agg_expression']
+        cols_to_scale_group = cols_to_scale + [x_col, y_col]
+        dot_color_df = plot_vars[cols_to_scale_group].copy()
+
+        if expression_scaling == "log":
+            dot_color_df[cols_to_scale] = np.log1p(dot_color_df[cols_to_scale])
+            suffix = " (log1p scaling)"
+        elif expression_scaling == "gene":
+            dot_color_df_sub = dot_color_df[cols_to_scale]
+            dot_color_df_sub -= dot_color_df_sub.min(axis=0)
+            dot_color_df[cols_to_scale] = (dot_color_df_sub / dot_color_df_sub.max(axis=0)).fillna(0)
+            suffix = " (per gene scaling)"
+
+        plot_vars[cols_to_scale_group] = dot_color_df
+        COLOR_BAR_TITLE += suffix
 
     # max cell count
     max_count = np.max(plot_vars[OUTER_SIZE_COUNT_COLUMN])

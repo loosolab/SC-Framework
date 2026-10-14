@@ -450,3 +450,77 @@ def test_tidy_layer_keep_and_X(adata, keep_X, replace_X, keep):
             # this expects dense matrices
             assert not np.array_equal(adata_out.layers[replace_X], adata.X)
             assert np.array_equal(adata_out.layers[replace_X], adata_out.X)
+
+# --------------------------------------------------------------------------
+# Test remove_group
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("table, col_name, value", [
+    ("obs", "group", "C1"),
+    ("obs", "group", ["C1", "C2"]),
+    ("var", "gene_group", "G1"),
+    ("var", "gene_group", ["G1", "G2"]),
+    ("obs", "group", None),
+    ("var", "gene_group", None),
+    ("obs", "group", "nonexistent"),
+    ("var", "gene_group", "nonexistent")
+])
+@pytest.mark.parametrize("inplace, expected_return_type", [
+    (True, type(None)),
+    (False, sc.AnnData),
+])
+def test_remove_group(table, col_name, value, inplace, expected_return_type, adata_fun_scope):
+    """Test removal of None/single/multiple/all groups from obs/var with inplace=True/False."""
+    adata = adata_fun_scope
+
+    # Setup var column if testing var table
+    if table == "var":
+        n_vars = adata.n_vars
+        adata.var["gene_group"] = np.random.choice(["G1", "G2", "G3"], size=n_vars)
+        col = adata.var[col_name]
+        original_n = adata.n_vars
+        value = value if value is not None else adata.var[col_name].unique().tolist()
+    else:
+        col = adata.obs[col_name]
+        original_n = adata.n_obs
+        value = value if value is not None else adata.obs[col_name].unique().tolist()
+
+    # Ensure value is always a list for isin()
+    values_to_remove = value if isinstance(value, (list, tuple)) else [value]
+    n_removed = col.isin(values_to_remove).sum()
+
+    result = utils.remove_group(adata, col_name=col_name, value=value, table=table, inplace=inplace)
+
+    # 1. Check return type
+    assert isinstance(result, expected_return_type)
+
+    # 2. Determine which object to inspect
+    target = adata if inplace else result
+
+    # 3. Verify specified values are removed
+    remaining = getattr(target, table)[col_name].values
+    if isinstance(value, str):
+        assert value not in remaining
+    else:
+        assert not any(v in remaining for v in value)
+
+    # 4. Verify shape changes correctly
+    if inplace:
+        assert (adata.n_obs if table == "obs" else adata.n_vars) == original_n - n_removed
+    else:
+        # Original object should be untouched
+        assert (adata.n_obs if table == "obs" else adata.n_vars) == original_n
+        # Returned object should have reduced dimensions
+        assert (result.n_obs if table == "obs" else result.n_vars) == original_n - n_removed
+
+
+@pytest.mark.parametrize("table, col_name, expected_msg", [
+    ("obs", "nonexistent_col", "not found in 'obs' table"),
+    ("var", "nonexistent_col", "not found in 'var' table"),
+])
+def test_remove_group_invalid_col_raises(table, col_name, expected_msg, adata):
+    """Test that a ValueError is raised when col_name is missing from the specified table."""
+    adata = adata.copy()
+    with pytest.raises(ValueError, match=expected_msg):
+        utils.remove_group(adata, col_name=col_name, value="C1", table=table)
