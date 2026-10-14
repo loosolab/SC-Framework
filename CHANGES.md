@@ -43,6 +43,11 @@
 - run_scsa: select the top-scoring celltype row explicitly
 - run_scsa: move the SCSA results from adata.uns["SCSA"] to adata.uns["sctoolbox"]["SCSA"]
 - run_scsa: refresh the stale pandas downgrade note
+- fix Palantir interactive plots, figure formats, and the gene-program Excel export (#443)
+- add an `ax` parameter to `plot_fate_probability_projection`, an `eigvec_key` parameter to `select_early_cell`, and raise Palantir test coverage (#443)
+
+### Changes to notebooks
+- move three verbose Palantir cells into sctoolbox helper functions (#443)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict

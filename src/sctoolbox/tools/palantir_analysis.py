@@ -1,6 +1,7 @@
 """Helper functions for Palantir."""
 
 import os
+import re
 import textwrap
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from scipy.sparse import issparse, spmatrix
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+import plotly as po
 import plotly.express as px
 import seaborn as sns
 from plotly.graph_objects import Figure as PlotlyFigure
@@ -347,7 +349,7 @@ def run_diffusion_and_magic(
 
 @deco.log_anndata
 @beartype
-def compare_all_layers(adata: AnnData, exclude_layers: list[str] = None) -> tuple[plt.Figure, np.ndarray]:
+def compare_all_layers(adata: AnnData, exclude_layers: list[str] | None = None) -> tuple[plt.Figure, np.ndarray]:
     """
     Compare total counts per cell for `adata.X` and all layers in `adata.layers`, working with both dense and sparse matrices.
 
@@ -355,7 +357,7 @@ def compare_all_layers(adata: AnnData, exclude_layers: list[str] = None) -> tupl
     ----------
     adata : AnnData
         The annotated data object with multiple layers.
-    exclude_layers : list[str], optional
+    exclude_layers : list[str] | None, optional
         Layers to skip from comparison.
 
     Returns
@@ -487,7 +489,8 @@ def select_early_cell(
     celltype: str,
     celltype_column: str,
     early_cell: str | None = None,
-    fallback_seed: int = 42,
+    fallback_seed: int | None = 42,
+    eigvec_key: str = "DM_EigenVectors_multiscaled",
 ) -> str:
     """Select or validate the early cell used for Palantir.
 
@@ -502,8 +505,13 @@ def select_early_cell(
     early_cell : str | None, default=None
         Manually selected early-cell ID. If ``None``, Palantir selects
         the cell automatically.
-    fallback_seed : int, default=42
-        Seed used by Palantir for fallback early-cell selection.
+    fallback_seed : int | None, default=42
+        Seed used by Palantir for fallback early-cell selection. ``None`` disables
+        the fallback; Palantir then raises ``CellNotFoundException`` if no cell of
+        ``celltype`` lies at an extreme of the diffusion components.
+    eigvec_key : str, default="DM_EigenVectors_multiscaled"
+        Key in ``adata.obsm`` holding the diffusion components used for automatic
+        early-cell selection.
 
     Returns
     -------
@@ -520,6 +528,7 @@ def select_early_cell(
             adata,
             celltype=celltype,
             celltype_column=celltype_column,
+            eigvec_key=eigvec_key,
             fallback_seed=fallback_seed,
         )
 
@@ -550,7 +559,8 @@ def plot_early_cell(
     early_cell : str
         Cell ID to highlight.
     embedding_key : str, default="X_umap"
-        Key in ``adata.obsm`` containing the embedding.
+        Key in ``adata.obsm`` containing the embedding. Embeddings with more than
+        two dimensions use the first two dimensions.
     save : str | None, default=None
         Path and filename appended to ``settings.full_figure_prefix``.
     report_save : str | None, default=None
@@ -574,8 +584,22 @@ def plot_early_cell(
     if embedding_key not in adata.obsm:
         raise ValueError(f"Embedding '{embedding_key}' not found in adata.obsm.")
 
+    # Palantir's highlight plot only knows x and y; pass higher-dimensional
+    # embeddings as a two-dimensional table instead of modifying adata.
+    plot_data = adata
+    embedding = np.asarray(adata.obsm[embedding_key])
+
+    if embedding.shape[1] > 2:
+        logger.warning(
+            "Embedding '%s' contains %d dimensions. "
+            "Using the first two dimensions for the early-cell plot.",
+            embedding_key,
+            embedding.shape[1],
+        )
+        plot_data = pd.DataFrame(embedding[:, :2], index=adata.obs_names, columns=["x", "y"])
+
     fig, ax = palantir.plot.highlight_cells_on_umap(
-        adata,
+        plot_data,
         [early_cell],
         embedding_basis=embedding_key,
         figsize=(6, 6),
@@ -701,6 +725,7 @@ def plot_interactive_embedding_cell_ids(
     fig.update_layout(width=800, height=700)
 
     if show:
+        po.offline.init_notebook_mode(connected=True)  # prints a dict when not run in notebook
         fig.show(renderer=renderer)
 
     return fig
@@ -811,14 +836,11 @@ def detect_and_plot_terminal_states(  # noqa: C901
     # are reduced to the first two dimensions below.
     embedding = np.asarray(adata.obsm[embedding_key])
 
-    if embedding.ndim != 2:
-        raise ValueError(f"Embedding '{embedding_key}' must be a 2D array of cells by coordinates.")
-
-    if embedding.shape[1] < 2:
-        raise ValueError(f"Embedding '{embedding_key}' must contain at least two dimensions.")
-
-    plot_adata = adata
-    plot_embedding = embedding
+    if embedding.ndim != 2 or embedding.shape[1] < 2:
+        raise ValueError(
+            f"Embedding '{embedding_key}' must be a 2D array with at least two "
+            "coordinate dimensions."
+        )
 
     if embedding.shape[1] > 2:
         logger.warning(
@@ -827,9 +849,6 @@ def detect_and_plot_terminal_states(  # noqa: C901
             embedding_key,
             embedding.shape[1],
         )
-        plot_adata = adata.copy()
-        plot_embedding = embedding[:, :2]
-        plot_adata.obsm[embedding_key] = plot_embedding
 
     # Store excluded diffusion boundaries from automatic detection.
     # These are not used as final terminal states, but can be shown for QC.
@@ -930,14 +949,11 @@ def detect_and_plot_terminal_states(  # noqa: C901
     # Step 3: Plot terminal cells on the chosen 2D embedding
     # ------------------------------------------------------------------
     if plot:
-        palantir.plot.highlight_cells_on_umap(
-            plot_adata,
-            terminal_cells,
-            embedding_basis=embedding_key,
-        )
-
-        # Build a small coordinate table for easier annotation.
-        coords = pd.DataFrame(plot_embedding, index=adata.obs_names, columns=["x", "y"])
+        # Palantir's highlight plot only knows x and y; pass the first two
+        # dimensions as a table instead of copying adata. The same table
+        # serves the QC overlay below.
+        coords = pd.DataFrame(embedding[:, :2], index=adata.obs_names, columns=["x", "y"])
+        palantir.plot.highlight_cells_on_umap(coords, terminal_cells)
 
         # Optional QC overlay:
         # Show excluded boundaries as "x" markers.
@@ -1012,6 +1028,14 @@ def analyze_top_genes_communities(  # noqa: C901
 
         - If ``str``, interpreted as a key in ``adata.uns`` and resolved via ``marker_genes.get_rank_genes_tables``.
         - If ``dict``, expected format is ``group -> DataFrame``.
+
+        Each table needs a ``names`` (or ``gene``) and a ``scores`` column. If
+        ``pvals_adj`` is present, markers are first filtered to
+        ``pvals_adj <= 0.05``; the remaining markers are ranked by ``abs(scores)``
+        only. ``logfoldchanges`` is optional and not part of the ranking, and no
+        effect-size filter is applied here. Pass a pre-filtered table (e.g. the
+        ``*_filtered`` output of ``marker_genes.run_rank_genes``) if effect-size
+        filtering is wanted.
 
     gene_trend_base_key : str, default="gene_trends"
         Base key for branch trend matrices in ``adata.varm``. Expected format:
@@ -1130,7 +1154,9 @@ def analyze_top_genes_communities(  # noqa: C901
                     "Expected at least: ['names' (or 'gene'), 'scores']."
                 )
 
-            # Rank significant markers by the magnitude of the marker-test score.
+            # Rank significant markers by the magnitude of the marker-test score only.
+            # logfoldchanges is deliberately not part of the score; effect-size
+            # filtering is left to the caller (see docstring).
             df2["rank_score"] = df2["scores"].abs()
 
             df2 = (
@@ -1724,6 +1750,7 @@ def plot_branch_gene_programs(  # noqa: C901
     save: str | None = None,
     save_excel: str | None = None,
     plot_format: str = "pdf",
+    report_save: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Identify and visualize branch-wise gene programs from Palantir gene trends.
 
@@ -1776,6 +1803,12 @@ def plot_branch_gene_programs(  # noqa: C901
         cluster-level information across branches.
     plot_format : str, default="pdf"
         File format used when saving plots.
+    report_save : str | None, default=None
+        Filename prefix appended to ``settings.report_dir``. The representative
+        gene trend figure of each branch is saved as
+        ``{report_save}_{branch}.png`` (characters in the branch name other than
+        letters, digits, ``_`` and ``-`` are replaced by ``_``). If None, nothing is
+        written to the report directory.
 
     Returns
     -------
@@ -1858,6 +1891,8 @@ def plot_branch_gene_programs(  # noqa: C901
 
     # Process each branch independently.
     for br in branches_to_process:
+        # Filename-safe branch name; `br` itself stays unchanged for data access.
+        safe_branch = re.sub(r"[^\w-]", "_", str(br))
         trend_key = f"{gene_trend_base_key}_{br}"
         trends_obj = adata.varm.get(trend_key)
 
@@ -2065,7 +2100,7 @@ def plot_branch_gene_programs(  # noqa: C901
             f"Branch '{br}' — Palantir trend clusters (n={len(selected_genes)} genes)",
             y=1.02,
         )
-        _save_fig(fig_clusters, f"_branch-{br}_clusters.{plot_format}")
+        _save_fig(fig_clusters, f"_branch-{safe_branch}_clusters.{plot_format}")
         plt.show()
 
         # Compute one centroid curve per trend cluster using the median trend.
@@ -2141,7 +2176,7 @@ def plot_branch_gene_programs(  # noqa: C901
         ax_hm.set_ylabel("Trend cluster (hierarchical similarity)")
 
         cg.fig.suptitle(f"Branch '{br}' — centroid similarity", y=1.02)
-        _save_fig(cg.fig, f"_branch-{br}_centroid_heatmap.{plot_format}")
+        _save_fig(cg.fig, f"_branch-{safe_branch}_centroid_heatmap.{plot_format}")
         plt.show()
 
         # Select representative genes per trend cluster.
@@ -2322,7 +2357,13 @@ def plot_branch_gene_programs(  # noqa: C901
                     y=1.02,
                 )
                 fig_reps.tight_layout()
-                _save_fig(fig_reps, f"_branch-{br}_representatives.{plot_format}")
+                _save_fig(fig_reps, f"_branch-{safe_branch}_representatives.{plot_format}")
+
+                # Save for the report before plt.show(), which may close the figure.
+                if report_save is not None:
+                    plt.figure(fig_reps.number)
+                    _save_figure(path=f"{report_save}_{safe_branch}.png", report=True)
+
                 plt.show()
 
         # Build a gene-level export table for this branch.
@@ -2403,45 +2444,46 @@ def plot_branch_gene_programs(  # noqa: C901
             },
         }
 
-        # Optionally save all branch tables into one Excel file.
-        # The framework helper sanitizes sheet names internally.
-        if save_excel is not None and excel_tables:
-            sheets: dict[str, pd.DataFrame] = {}
+    # Optionally save all branch tables into one Excel file. This runs after the
+    # branch loop so the workbook is written once, with every branch in it.
+    # The framework helper sanitizes sheet names internally.
+    if save_excel is not None and excel_tables:
+        sheets: dict[str, pd.DataFrame] = {}
 
-            for br, table in excel_tables.items():
-                sheet = table.copy()
+        for branch_name, table in excel_tables.items():
+            sheet = table.copy()
 
-                # Round pseudotime columns for readability in Excel.
-                # Round each column separately to avoid assignment issues with duplicated labels.
-                pt_cols = [
-                    col for col in sheet.columns
-                    if isinstance(col, str) and col.startswith("pt_")
-                ]
-                for col in pt_cols:
-                    sheet[col] = sheet[col].round(3)
+            # Round pseudotime columns for readability in Excel.
+            # Round each column separately to avoid assignment issues with duplicated labels.
+            pt_cols = [
+                col for col in sheet.columns
+                if isinstance(col, str) and col.startswith("pt_")
+            ]
+            for col in pt_cols:
+                sheet[col] = sheet[col].round(3)
 
-                sheets[str(br)] = sheet
+            sheets[str(branch_name)] = sheet
 
-            if summary_tables:
-                summary_df = pd.concat(summary_tables, ignore_index=True).copy()
+        if summary_tables:
+            summary_df = pd.concat(summary_tables, ignore_index=True).copy()
 
-                # Round selected summary columns for readability.
-                for col in ("start_value", "end_value"):
-                    if col in summary_df.columns:
-                        summary_df[col] = summary_df[col].round(3)
+            # Round selected summary columns for readability.
+            for col in ("start_value", "end_value"):
+                if col in summary_df.columns:
+                    summary_df[col] = summary_df[col].round(3)
 
-                sheets["summary"] = summary_df
+            sheets["summary"] = summary_df
 
-            filename = Path(settings.full_table_prefix) / save_excel
-            filename.parent.mkdir(parents=True, exist_ok=True)
+        filename = Path(settings.full_table_prefix) / save_excel
+        filename.parent.mkdir(parents=True, exist_ok=True)
 
-            # Use the framework table writer for consistent Excel export handling.
-            utils.tables.write_excel(
-                table_dict=sheets,
-                filename=str(filename),
-                index=False,
-            )
-            logger.info("Saved branch gene program tables to '%s'.", filename)
+        # Use the framework table writer for consistent Excel export handling.
+        utils.tables.write_excel(
+            table_dict=sheets,
+            filename=str(filename),
+            index=False,
+        )
+        logger.info("Saved branch gene program tables to '%s'.", filename)
 
     return results
 
@@ -2732,9 +2774,10 @@ def plot_fate_probability_projection(  # noqa: C901
     adata: AnnData,
     fate_prob_key: str = "palantir_fate_probabilities",
     color_by: str | None = None,
-    fate_order: Optional[Iterable[str]] = None,
+    fate_order: Iterable[str] | None = None,
     point_size: float = 8.0,
     alpha: float = 0.45,
+    ax: Axes | None = None,
     figsize: tuple[float, float] | None = None,
     label_wrap: int | None = 28,
     legend_height: float | None = None,
@@ -2767,7 +2810,7 @@ def plot_fate_probability_projection(  # noqa: C901
         ``adata.uns[f"{fate_prob_key}_columns"]`` when available.
     color_by : str | None, default=None
         Column in ``adata.obs`` used to color cells.
-    fate_order : Optional[Iterable[str]], default=None
+    fate_order : Iterable[str] | None, default=None
         Optional order of terminal states in the projection. If None, the
         column order in the fate-probability table is retained. For more than
         three terminal states, this order also determines which states are
@@ -2776,6 +2819,11 @@ def plot_fate_probability_projection(  # noqa: C901
         Size of individual cell points.
     alpha : float, default=0.45
         Transparency of individual cell points.
+    ax : Axes | None, default=None
+        Axes to draw the projection on. If None, a new figure and axes are
+        created. A categorical legend is placed on a dedicated axes below the
+        projection only when the axes are created internally; otherwise it is
+        drawn on ``ax``. ``figsize`` is ignored when ``ax`` is given.
     figsize : tuple[float, float] | None, default=None
         Figure size. If None, a suitable size is chosen automatically.
     label_wrap : int | None, default=28
@@ -2930,7 +2978,12 @@ def plot_fate_probability_projection(  # noqa: C901
     if not np.isfinite(probability_values).all():
         raise ValueError("Fate probabilities must contain only finite values.")
 
-    # Allow only tiny floating-point excursions around the valid [0, 1] range.
+    # Palantir projects waypoint probabilities onto cells with a weighted sum
+    # (``W.T @ branch_probs``) and does not clip above 1 or renormalize rows,
+    # so genuine results can sit a few ulp outside [0, 1]. Anything beyond the
+    # tolerance is not a probability matrix and is rejected; the remaining
+    # within-tolerance excursions are snapped back so the convex weights below
+    # are exactly non-negative.
     tolerance = 1e-8
     if np.any(probability_values < -tolerance) or np.any(
         probability_values > 1 + tolerance
@@ -2950,8 +3003,8 @@ def plot_fate_probability_projection(  # noqa: C901
         logger.warning(
             "%d fate-probability rows do not sum to 1 and will be normalized "
             "before projection (maximum deviation: %.4g).",
-            int(non_unit_rows.sum()),
-            float(np.max(np.abs(row_sums[non_unit_rows] - 1.0))),
+            non_unit_rows.sum(),
+            np.max(np.abs(row_sums[non_unit_rows] - 1.0)),
         )
 
     # The projection uses convex weights, therefore normalize each row.
@@ -3046,7 +3099,11 @@ def plot_fate_probability_projection(  # noqa: C901
     if figsize is None:
         figsize = (9.0, 7.0 + legend_height) if categorical_color else (7.0, 7.0)
 
-    if categorical_color:
+    legend_ax = None
+
+    if ax is not None:
+        fig = ax.get_figure()
+    elif categorical_color:
         fig = plt.figure(figsize=figsize)
 
         grid = fig.add_gridspec(
@@ -3091,7 +3148,7 @@ def plot_fate_probability_projection(  # noqa: C901
             if finite_colors.any():
                 logger.warning(
                     "%d cells have non-finite '%s' values; they are drawn in light gray.",
-                    int((~finite_colors).sum()),
+                    (~finite_colors).sum(),
                     color_by,
                 )
 
@@ -3156,11 +3213,12 @@ def plot_fate_probability_projection(  # noqa: C901
 
         # Separate axis for the legend: keeps a wide, multi-column legend below the
         # projection from shrinking or distorting the (equal-aspect) projection axes.
-        legend_ax.legend(
+        # Caller-supplied axes have no such companion, so the legend goes on them.
+        (legend_ax if legend_ax is not None else ax).legend(
             handles,
             legend_labels,
             title=legend_title,
-            loc="center",
+            loc="center" if legend_ax is not None else "best",
             frameon=False,
             ncol=legend_columns,
             markerscale=legend_marker_scale,
@@ -3249,9 +3307,9 @@ def plot_fate_probability_projection(  # noqa: C901
     plt.figure(fig.number)
 
     if save is not None:
-        _save_figure(path=save, bbox_inches="tight")
+        _save_figure(path=save)
     if report_save is not None:
-        _save_figure(path=report_save, report=True, bbox_inches="tight")
+        _save_figure(path=report_save, report=True)
     if show:
         plt.show()
 
@@ -3278,7 +3336,7 @@ def plot_branch_gene_trend_panels(  # noqa: C901
     trend_linewidth: float = 2.0,
     save: str | None = None,
     report_save: str | None = None,
-    plot_format: str = "png",
+    plot_format: str = "pdf",
     show: bool = True,
 ) -> dict[str, dict[str, Any]]:
     """Plot branch-specific Palantir gene trends together with individual cells.
@@ -3293,8 +3351,12 @@ def plot_branch_gene_trend_panels(  # noqa: C901
     adata : AnnData
         AnnData containing Palantir results and expression data.
     computed : dict[str, dict[str, Any]] | None, default=None
-        Results returned by :func:`plot_branch_gene_programs`. Required when
-        ``genes=None`` for automatic representative-gene selection.
+        Output of :func:`plot_branch_gene_programs`. Only used when
+        ``genes=None``: representative genes are then taken from each branch's
+        ``cluster_representatives``, so every plotted branch must be present and
+        ``plot_branch_gene_programs`` must have run with
+        ``plot_representative_genes=True``. Can be left ``None`` when ``genes``
+        is given; it is ignored in that case.
     branches : str | Iterable[str] | None, default=None
         Branches to plot. If None, all branches with stored gene trends in
         ``adata.varm`` are used.
@@ -3303,7 +3365,8 @@ def plot_branch_gene_trend_panels(  # noqa: C901
     genes_per_cluster : int, default=1
         Number of representative genes selected per trend cluster.
     color : str | None, default=None
-        ``adata.obs`` column or gene used to color individual cells.
+        ``adata.obs`` column or ``adata.var_names`` entry used to color
+        individual cells, like ``color`` in ``scanpy.pl.embedding``.
     position_layer : str | None, default=None
         Expression layer used for individual cell positions.
     masks_key : str | None, default="branch_masks"
@@ -3326,8 +3389,9 @@ def plot_branch_gene_trend_panels(  # noqa: C901
         Filename prefix for saving figures.
     report_save : str | None, default=None
         Filename prefix for saving figures to the report directory.
-    plot_format : str, default="png"
-        File format used for saved figures.
+    plot_format : str, default="pdf"
+        File format used for figures written to ``save``. Figures written to
+        ``report_save`` are always png.
     show : bool, default=True
         Whether to display generated figures.
 
@@ -3352,9 +3416,6 @@ def plot_branch_gene_trend_panels(  # noqa: C901
     if trend_linewidth <= 0:
         raise ValueError("trend_linewidth must be > 0.")
 
-    plot_format = plot_format.lstrip(".")
-    if not plot_format:
-        raise ValueError("plot_format must not be empty.")
     if position_layer is not None and position_layer not in adata.layers:
         raise ValueError(f"Layer '{position_layer}' not found in adata.layers.")
     if masks_key is not None and masks_key not in adata.obsm:
@@ -3384,15 +3445,12 @@ def plot_branch_gene_trend_panels(  # noqa: C901
             f"No branch-specific gene trends with prefix '{trend_prefix}' found for plotting."
         )
 
-    manual_genes = genes is not None
     if isinstance(genes, str):
         requested_genes = [genes]
     elif genes is not None:
         requested_genes = list(genes)
     else:
         requested_genes = []
-
-    requested_genes = list(dict.fromkeys(str(gene) for gene in requested_genes))
 
     # Validate automatic-gene inputs before plotting so a missing branch cannot
     # fail midway after earlier branch figures have already been created or saved.
@@ -3418,19 +3476,37 @@ def plot_branch_gene_trend_panels(  # noqa: C901
         branch_name: str,
         report: bool,
     ) -> None:
+        """Save one branch figure, or do nothing if ``prefix`` is None.
+
+        Parameters
+        ----------
+        fig : matplotlib.figure.Figure
+            Figure to save.
+        prefix : str | None
+            Filename prefix; the file is written as
+            ``{prefix}_branch-{branch_name}.{extension}``. If None, nothing is saved.
+        branch_name : str
+            Branch name; characters other than letters, digits, ``_`` and ``-``
+            are replaced by ``_`` for the filename.
+        report : bool
+            If True, save as png to ``settings.report_dir``; otherwise use
+            ``plot_format`` and ``settings.full_figure_prefix``.
+        """
         if prefix is None:
             return
 
-        safe_branch = "".join(
-            character if character.isalnum() or character in "-_." else "_"
-            for character in branch_name
-        )
-        path = f"{prefix}_branch-{safe_branch}.{plot_format}"
+        safe_branch = re.sub(r"[^\w-]", "_", branch_name)
+        # Report figures are png: the report deck does not use high-resolution
+        # images. Every other figure follows `plot_format`, which defaults to the
+        # more easily editable pdf.
+        extension = "png" if report else plot_format
+        path = f"{prefix}_branch-{safe_branch}.{extension}"
         plt.figure(fig.number)
-        _save_figure(path=path, report=report, bbox_inches="tight")
+        _save_figure(path=path, report=report)
 
     results: dict[str, dict[str, Any]] = {}
 
+    # Each branch gets its own figure.
     for branch in branch_list:
         trend_key = f"{gene_trend_key}_{branch}"
         if trend_key not in adata.varm:
@@ -3443,12 +3519,14 @@ def plot_branch_gene_trend_panels(  # noqa: C901
                 f"Branch trends '{trend_key}' must be a DataFrame in adata.varm."
             )
 
-        if manual_genes:
+        # Manual genes are plotted for every branch as given; otherwise take the
+        # top `genes_per_cluster` representatives of each trend cluster.
+        if genes is not None:
             branch_genes = requested_genes.copy()
             selection_mode = "manual"
         else:
-            representatives = computed[branch].get("cluster_representatives")
-            if not isinstance(representatives, dict) or not representatives:
+            representatives = computed[branch]["cluster_representatives"]
+            if not representatives:
                 raise ValueError(
                     f"No representative genes available for branch '{branch}'. "
                     "Provide genes manually or run plot_branch_gene_programs with "
@@ -3456,22 +3534,17 @@ def plot_branch_gene_trend_panels(  # noqa: C901
                 )
 
             # Preserve the trend-cluster order from plot_branch_gene_programs().
-            centroid_z = computed[branch].get("centroid_z")
-            cluster_order = (
-                centroid_z.index.astype(str).tolist()
-                if isinstance(centroid_z, pd.DataFrame)
-                else [str(cluster) for cluster in representatives]
-            )
+            cluster_order = computed[branch]["centroid_z"].index.astype(str).tolist()
 
             branch_genes = []
             for cluster in cluster_order:
                 cluster_genes = representatives.get(str(cluster), [])
                 branch_genes.extend(str(gene) for gene in cluster_genes[:genes_per_cluster])
 
-            # A gene may represent multiple clusters; deduplicate while keeping its first occurrence.
-            branch_genes = list(dict.fromkeys(branch_genes))
             selection_mode = "automatic"
 
+        # Genes without a stored trend for this branch are skipped with a warning,
+        # so one missing gene does not stop the remaining panels.
         available_genes = set(map(str, trends.index))
         missing_genes = [gene for gene in branch_genes if gene not in available_genes]
 
@@ -3487,6 +3560,8 @@ def plot_branch_gene_trend_panels(  # noqa: C901
             logger.warning("Branch '%s': no genes available for plotting.", branch)
             continue
 
+        # A single gene needs no panel grid: Palantir creates the figure itself,
+        # including its own legend or colorbar.
         if len(branch_genes) == 1:
             gene = branch_genes[0]
 
@@ -3522,6 +3597,10 @@ def plot_branch_gene_trend_panels(  # noqa: C901
 
         ncols_eff = min(ncols, len(branch_genes))
         nrows_eff = int(np.ceil(len(branch_genes) / ncols_eff))
+
+        # Non-numeric obs columns get one shared legend. Booleans count as categorical
+        # although pandas treats them as numeric. Numeric columns and genes get one
+        # shared colorbar instead.
         has_categorical_legend = (
             color is not None
             and color in adata.obs.columns
@@ -3532,6 +3611,7 @@ def plot_branch_gene_trend_panels(  # noqa: C901
         )
         has_numeric_color = color is not None and not has_categorical_legend
 
+        # The legend row is added on top of the panel height, so panels keep their size.
         legend_height = 1.4 if has_categorical_legend else 0.0
         figure_height = figsize[1] * nrows_eff + legend_height
         fig = plt.figure(figsize=(figsize[0] * ncols_eff, figure_height))
@@ -3598,9 +3678,11 @@ def plot_branch_gene_trend_panels(  # noqa: C901
                 alpha=alpha,
             )
 
+            # The first line on the main axis is Palantir's trend curve.
             if ax.lines:
                 ax.lines[0].set_linewidth(trend_linewidth)
 
+            # Axis labels only on the outer panels: x on the last row, y on the first column.
             row = i // ncols_eff
             col = i % ncols_eff
             last_row = (len(branch_genes) - 1) // ncols_eff
@@ -3625,9 +3707,11 @@ def plot_branch_gene_trend_panels(  # noqa: C901
                         legend_handles, legend_labels = cell_ax.get_legend_handles_labels()
                     legend.remove()
 
+        # Hide unused cells of the last grid row.
         for i in range(len(branch_genes), len(axes)):
             axes[i].axis("off")
 
+        # Reserve space for the suptitle; fewer rows need a larger share of the height.
         if nrows_eff == 1:
             layout_top = 0.85
         elif nrows_eff == 2:
@@ -3660,6 +3744,7 @@ def plot_branch_gene_trend_panels(  # noqa: C901
 
         fig.subplots_adjust(top=layout_top)
 
+        # One colorbar for all panels, built from the first panel's scatter.
         if has_numeric_color and numeric_mappable is not None:
             colorbar = fig.colorbar(
                 numeric_mappable,
@@ -3685,3 +3770,253 @@ def plot_branch_gene_trend_panels(  # noqa: C901
         }
 
     return results
+
+
+@deco.log_anndata
+@beartype
+def plot_palantir_results(
+    adata: AnnData,
+    fate_prob_key: str = "palantir_fate_probabilities",
+    pseudotime_key: str = "palantir_pseudotime",
+    entropy_key: str = "palantir_entropy",
+    method: str = "umap",
+    ncols: int = 4,
+    point_size: int | float = 30,
+    save: str | None = None,
+    report_save: str | None = None,
+    show: bool = True,
+) -> np.ndarray:
+    """Plot Palantir pseudotime, entropy and per-fate probabilities on one embedding.
+
+    Terminal states are ordered by their highest fate probability, so the most
+    informative panels come first. The probabilities are written to ``adata.obs``
+    only for the duration of the plot and removed again afterwards, leaving
+    ``adata`` unchanged.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData containing Palantir results.
+    fate_prob_key : str, default="palantir_fate_probabilities"
+        Key in ``adata.obsm`` containing cell-by-terminal-state fate probabilities.
+    pseudotime_key : str, default="palantir_pseudotime"
+        Column in ``adata.obs`` containing Palantir pseudotime.
+    entropy_key : str, default="palantir_entropy"
+        Column in ``adata.obs`` containing Palantir entropy.
+    method : str, default="umap"
+        Embedding used for plotting.
+    ncols : int, default=4
+        Maximum number of panel columns.
+    point_size : int | float, default=30
+        Size of individual cell points.
+    save : str | None, default=None
+        Path and filename appended to ``settings.full_figure_prefix``.
+    report_save : str | None, default=None
+        Path and filename appended to ``settings.report_dir``.
+    show : bool, default=True
+        Whether to display the figure.
+
+    Returns
+    -------
+    np.ndarray
+        Array of axes, one per plotted panel.
+
+    Raises
+    ------
+    ValueError
+        If ``fate_prob_key`` is missing from ``adata.obsm`` or does not hold a
+        DataFrame with terminal-state columns, or if ``adata.obs`` already
+        contains a ``"fate_prob: <terminal state>"`` column.
+    """
+    if fate_prob_key not in adata.obsm:
+        raise ValueError(f"Fate probabilities '{fate_prob_key}' not found in adata.obsm.")
+
+    fate_probabilities = adata.obsm[fate_prob_key]
+
+    if not isinstance(fate_probabilities, pd.DataFrame):
+        raise ValueError(
+            f"adata.obsm['{fate_prob_key}'] must be a DataFrame with terminal-state columns."
+        )
+
+    ordered_fates = fate_probabilities.max().sort_values(ascending=False).index.tolist()
+    fate_columns = [f"fate_prob: {fate}" for fate in ordered_fates]
+
+    # The temporary columns are dropped again below; never touch existing ones.
+    existing = [column for column in fate_columns if column in adata.obs.columns]
+    if existing:
+        raise ValueError(f"adata.obs already contains column(s) {existing}; rename or remove them first.")
+
+    adata.obs[fate_columns] = fate_probabilities[ordered_fates].to_numpy()
+
+    try:
+        axes = pl.plot_embedding(
+            adata,
+            method=method,
+            color=[pseudotime_key, entropy_key, *fate_columns],
+            ncols=ncols,
+            show_title=True,
+            size=point_size,
+            frameon=False,
+            save=save,
+            report=report_save,
+        )
+
+        if show:
+            plt.show()
+    finally:
+        # The probability columns are a plotting detail; never leave them behind.
+        adata.obs.drop(columns=fate_columns, inplace=True)
+
+    return axes
+
+
+@deco.log_anndata
+@beartype
+def plot_branch_cell_selection(
+    adata: AnnData,
+    pseudotime_key: str = "palantir_pseudotime",
+    fate_prob_key: str = "palantir_fate_probabilities",
+    masks_key: str = "branch_masks",
+    embedding_key: str = "X_umap",
+    figsize: tuple[float, float] = (15.0, 5.0),
+    save: str | None = None,
+    report_save: str | None = None,
+    show: bool = True,
+) -> Figure:
+    """Plot the cells selected for each Palantir branch along pseudotime.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData containing Palantir results and branch masks.
+    pseudotime_key : str, default="palantir_pseudotime"
+        Column in ``adata.obs`` containing Palantir pseudotime.
+    fate_prob_key : str, default="palantir_fate_probabilities"
+        Key in ``adata.obsm`` containing the fate probabilities.
+    masks_key : str, default="branch_masks"
+        Key in ``adata.obsm`` containing the branch masks.
+    embedding_key : str, default="X_umap"
+        Key in ``adata.obsm`` containing the embedding.
+    figsize : tuple[float, float], default=(15.0, 5.0)
+        Figure size.
+    save : str | None, default=None
+        Path and filename appended to ``settings.full_figure_prefix``.
+    report_save : str | None, default=None
+        Path and filename appended to ``settings.report_dir``.
+    show : bool, default=True
+        Whether to display the figure.
+
+    Returns
+    -------
+    Figure
+        Matplotlib figure containing one branch-selection panel per branch.
+    """
+    fig = palantir.plot.plot_branch_selection(
+        adata,
+        pseudo_time_key=pseudotime_key,
+        fate_prob_key=fate_prob_key,
+        masks_key=masks_key,
+        fates=None,
+        embedding_basis=embedding_key,
+        figsize=figsize,
+    )
+
+    plt.figure(fig.number)
+
+    if save is not None:
+        _save_figure(path=save)
+    if report_save is not None:
+        _save_figure(path=report_save, report=True)
+    if show:
+        plt.show()
+
+    return fig
+
+
+@deco.log_anndata
+@beartype
+def plot_branch_trajectories(
+    adata: AnnData,
+    pseudotime_key: str = "palantir_pseudotime",
+    entropy_key: str = "palantir_entropy",
+    branch_key: str = "branch_selection",
+    pseudotime_interval: tuple[float, float] = (0.0, 0.9),
+    cmap: str = "viridis",
+    figsize: tuple[float, float] = (15.0, 5.0),
+    save: str | None = None,
+    report_save: str | None = None,
+    show: bool = True,
+) -> tuple[Figure, np.ndarray]:
+    """Plot Palantir pseudotime, entropy and branch selection side by side.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData containing Palantir results and branch masks.
+    pseudotime_key : str, default="palantir_pseudotime"
+        Column in ``adata.obs`` used to color the pseudotime panel.
+    entropy_key : str, default="palantir_entropy"
+        Column in ``adata.obs`` used to color the entropy panel.
+    branch_key : str, default="branch_selection"
+        Cell coloring used for the branch-selection panel.
+    pseudotime_interval : tuple[float, float], default=(0.0, 0.9)
+        Pseudotime interval shown in each panel.
+    cmap : str, default="viridis"
+        Colormap used for the continuous pseudotime and entropy panels.
+    figsize : tuple[float, float], default=(15.0, 5.0)
+        Figure size.
+    save : str | None, default=None
+        Path and filename appended to ``settings.full_figure_prefix``.
+    report_save : str | None, default=None
+        Path and filename appended to ``settings.report_dir``.
+    show : bool, default=True
+        Whether to display the figure.
+
+    Returns
+    -------
+    tuple[Figure, np.ndarray]
+        Matplotlib figure and its three panel axes.
+    """
+    fig, axes = plt.subplots(1, 3, figsize=figsize)
+
+    palantir.plot.plot_trajectories(
+        adata,
+        pseudo_time_key=pseudotime_key,
+        cell_color=pseudotime_key,
+        pseudotime_interval=pseudotime_interval,
+        ax=axes[0],
+        scanpy_kwargs={"cmap": cmap},
+    )
+
+    axes[0].set_title("Pseudotime", fontsize=16)
+
+    palantir.plot.plot_trajectories(
+        adata,
+        pseudo_time_key=pseudotime_key,
+        cell_color=entropy_key,
+        pseudotime_interval=pseudotime_interval,
+        ax=axes[1],
+        scanpy_kwargs={"cmap": cmap},
+    )
+    axes[1].set_title("Entropy", fontsize=16)
+
+    palantir.plot.plot_trajectories(
+        adata,
+        pseudo_time_key=pseudotime_key,
+        cell_color=branch_key,
+        pseudotime_interval=pseudotime_interval,
+        ax=axes[2],
+    )
+    axes[2].set_title("Branch Selection", fontsize=16)
+
+    fig.tight_layout()
+    plt.figure(fig.number)
+
+    if save is not None:
+        _save_figure(path=save)
+    if report_save is not None:
+        _save_figure(path=report_save, report=True)
+    if show:
+        plt.show()
+
+    return fig, axes
