@@ -613,7 +613,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
         relationships intact.
         Min-max scaling is applied per gene, rescaling each gene
         to a 0-1 range individually so you can see where it is relatively high or low across
-        samples. A comparsion between multiple genes is not possible when using this scaling.
+        samples. A comparison between multiple genes is not possible when using this scaling.
         Choose the method that fits your analysis goal.
 
     .. plot::
