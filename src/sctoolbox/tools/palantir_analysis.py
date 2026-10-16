@@ -2324,6 +2324,7 @@ def plot_branch_gene_programs(  # noqa: C901
                                 pt_gene,
                                 trend_df_sel.loc[gene].values,
                                 linewidth=2,
+                                label=gene,
                             )
 
                     ax_i.set_title(f"Cluster {cl}: {pattern}", fontsize=11)
@@ -2331,17 +2332,11 @@ def plot_branch_gene_programs(  # noqa: C901
                     ax_i.set_ylim(y_low, y_high)
                     ax_i.grid(alpha=0.2)
 
-                    # Add gene labels at the end of each curve.
-                    x_end = pt_gene[-1]
-                    for gene in cluster_representatives[cl]:
-                        if gene in trend_df_sel.index:
-                            ax_i.text(
-                                x_end,
-                                trend_df_sel.loc[gene].values[-1],
-                                f" {gene}",
-                                fontsize=8,
-                                va="center",
-                            )
+                    # Name the curves in a legend inside the panel: labels at the curve
+                    # ends overlap when curves end close together, and long names
+                    # (e.g. ATAC peaks) run into the neighbouring panel.
+                    if ax_i.lines:
+                        ax_i.legend(fontsize=8, loc="best", frameon=False)
 
                     if i % ncols_eff == 0:
                         ax_i.set_ylabel("Trend")
@@ -2353,7 +2348,7 @@ def plot_branch_gene_programs(  # noqa: C901
                     axes_arr[j].axis("off")
 
                 fig_reps.suptitle(
-                    f"Branch '{br}' — representative gene trends",
+                    f"Branch '{br}' — representative feature trends",
                     y=1.02,
                 )
                 fig_reps.tight_layout()
@@ -3696,7 +3691,7 @@ def plot_branch_gene_trend_panels(  # noqa: C901
             if new_axes:
                 cell_ax = new_axes[0]
                 cell_ax.set_title("")
-                cell_ax.set_ylabel("Expression" if col == ncols_eff - 1 else "")
+                cell_ax.set_ylabel("Feature value" if col == ncols_eff - 1 else "")
 
                 if has_numeric_color and numeric_mappable is None and cell_ax.collections:
                     numeric_mappable = cell_ax.collections[0]
@@ -3719,7 +3714,7 @@ def plot_branch_gene_trend_panels(  # noqa: C901
         else:
             layout_top = 0.96
 
-        fig.suptitle(f"Branch '{branch}' — Palantir gene trends", fontsize=14, y=0.99)
+        fig.suptitle(f"Branch '{branch}' — Palantir feature trends", fontsize=14, y=0.99)
 
         if legend_ax is not None and legend_handles and legend_labels:
             n_categories = len(legend_labels)

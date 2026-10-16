@@ -53,6 +53,7 @@
 - run_scsa: refresh the stale pandas downgrade note
 - fix Palantir interactive plots, figure formats, and the gene-program Excel export (#443)
 - add an `ax` parameter to `plot_fate_probability_projection`, an `eigvec_key` parameter to `select_early_cell`, and raise Palantir test coverage (#443)
+- use modality-neutral titles, axis labels, and legends in the Palantir trend plots (#443)
 - unpin docutils (#421)
 
 ### Changes to notebooks

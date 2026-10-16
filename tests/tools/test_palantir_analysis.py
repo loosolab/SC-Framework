@@ -1835,7 +1835,14 @@ def test_plot_branch_gene_trend_panels_report_figures_stay_png(
         ("08_branch_gene_trends_branch-BranchA.png", True),
     ]
 
-    plt.close(result["BranchA"]["figure"])
+    # The report figure is built from RNA genes or ATAC peaks, so its labels name neither.
+    fig = result["BranchA"]["figure"]
+    assert fig.get_suptitle() == "Branch 'BranchA' — Palantir feature trends"
+    panel_axes = set(np.ravel(result["BranchA"]["axes"]))
+    cell_axes = [ax for ax in fig.axes if ax not in panel_axes]
+    assert [ax.get_ylabel() for ax in cell_axes] == ["", "Feature value"]
+
+    plt.close(fig)
 
 
 def test_plot_branch_gene_trend_panels_sanitizes_branch_name_in_filenames(
@@ -2335,3 +2342,56 @@ def test_plot_branch_gene_programs_sanitizes_branch_names_in_filenames(
     # Data access and return values keep the original branch names.
     assert set(result) == {"T cell/CD4", "B cell"}
     assert sorted(plotted_branches) == ["B cell", "T cell/CD4"]
+
+
+def test_plot_branch_gene_programs_names_representatives_in_legend(
+    monkeypatch, gene_trend_adata
+):
+    """Long feature names on curves that end together should stay readable."""
+    adata = gene_trend_adata.copy()
+    peaks = [f"chr{i + 1}:110345000-110350000" for i in range(adata.n_vars)]
+    trends = adata.varm["gene_trends_BranchA"].copy()
+    # All curves end within 1e-3 of each other, where end-of-curve labels would collide.
+    trends.iloc[:, -1] = 0.5 + np.arange(adata.n_vars) * 1e-4
+    adata.var_names = peaks
+    trends.index = peaks
+    adata.varm["gene_trends_BranchA"] = trends
+    del adata.varm["gene_trends_BranchB"]
+
+    _patch_gene_program_clustering(monkeypatch)
+
+    result = pla.plot_branch_gene_programs(
+        adata,
+        branch="BranchA",
+        n_dynamic_genes=6,
+        gene_ranking_mode="union",
+        trend_knn_neighbors=2,
+        plot_representative_genes=True,
+        representatives_per_cluster=3,
+    )
+
+    representatives = result["BranchA"]["cluster_representatives"]
+    fig = next(
+        plt.figure(number)
+        for number in plt.get_fignums()
+        if "representative" in plt.figure(number).get_suptitle()
+    )
+    assert fig.get_suptitle() == "Branch 'BranchA' — representative feature trends"
+    fig.canvas.draw()
+
+    panels = [ax for ax in fig.axes if ax.lines]
+    assert len(panels) == len(representatives)
+
+    for ax in panels:
+        cluster = ax.get_title().split(":")[0].removeprefix("Cluster ")
+        legend = ax.get_legend()
+
+        # Every curve is named once in the panel's legend, and nowhere else.
+        assert [text.get_text() for text in legend.get_texts()] == representatives[cluster]
+        assert not ax.texts
+
+        # The legend stays inside its panel.
+        legend_box = legend.get_window_extent()
+        panel_box = ax.get_window_extent()
+        assert panel_box.x0 <= legend_box.x0 and legend_box.x1 <= panel_box.x1
+        assert panel_box.y0 <= legend_box.y0 and legend_box.y1 <= panel_box.y1
