@@ -57,6 +57,7 @@
 
 ### Changes to notebooks
 - move three verbose Palantir cells into sctoolbox helper functions (#443)
+- RNA+ATAC/99-report: show the Palantir per-branch program and trend grids in one row (!531)
 - General/group_marker: Add gene expression scaling option for planet plots
 - General/GSEA: Additional parameters for gsea_dot
 
