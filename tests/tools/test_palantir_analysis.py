@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sp
 from matplotlib.axes import Axes
+from matplotlib.colors import to_hex
 from matplotlib.figure import Figure
 from plotly.graph_objects import Figure as PlotlyFigure
 import sctoolbox.tools.palantir_analysis as pla
@@ -1328,7 +1329,7 @@ def test_analyze_top_genes_communities_invalid_input_raises(
 
 
 def test_analyze_top_genes_communities_hvg_selection(monkeypatch, gene_trend_adata):
-    """HVG-based community analysis should return selected genes and communities."""
+    """Without a ranking column, HVGs keep their adata.var order (documented fallback)."""
     _patch_gene_program_clustering(monkeypatch)
 
     selected_genes, communities = pla.analyze_top_genes_communities(
@@ -1346,6 +1347,128 @@ def test_analyze_top_genes_communities_hvg_selection(monkeypatch, gene_trend_ada
     assert (
         "test_store" in gene_trend_adata.uns["sctoolbox"]["palantir_gene_communities"]
     )
+
+
+def _hvg_ranking_adata(gene_trend_adata, highly_variable=True, **columns):
+    """Copy ``gene_trend_adata`` with the given HVG flags and ranking columns.
+
+    Returns
+    -------
+    anndata.AnnData
+        Copy with ``adata.var["highly_variable"]`` and the extra ``adata.var`` columns set.
+    """
+    adata = gene_trend_adata.copy()
+    adata.var["highly_variable"] = highly_variable
+    for name, values in columns.items():
+        adata.var[name] = values
+    return adata
+
+
+@pytest.mark.parametrize(
+    ("columns", "expected_order", "expected_ranking", "warns"),
+    [
+        (
+            {"dispersions_norm": [0.1, 0.9, 0.5, 0.3, 0.8, 0.2, 0.7, 0.4]},
+            ["Gene1", "Gene4", "Gene6", "Gene2", "Gene7", "Gene3", "Gene5", "Gene0"],
+            "dispersions_norm",
+            False,
+        ),
+        (
+            # The rank is preferred over dispersions_norm; smaller is more variable.
+            {
+                "highly_variable_rank": [3.0, 8.0, 1.0, 2.0, 7.0, 4.0, 6.0, 5.0],
+                "dispersions_norm": [0.1, 0.9, 0.5, 0.3, 0.8, 0.2, 0.7, 0.4],
+            },
+            ["Gene2", "Gene3", "Gene0", "Gene5", "Gene7", "Gene6", "Gene4", "Gene1"],
+            "highly_variable_rank",
+            False,
+        ),
+        (
+            # Missing and infinite scores are ranked last, in gene-name order.
+            {"dispersions_norm": [0.1, np.nan, 0.5, np.inf, 0.8, np.nan, 0.7, 0.4]},
+            ["Gene4", "Gene6", "Gene2", "Gene7", "Gene0", "Gene1", "Gene3", "Gene5"],
+            "dispersions_norm",
+            True,
+        ),
+        (
+            # Equal scores are ordered by gene name.
+            {"dispersions_norm": [1.0] * 8},
+            [f"Gene{i}" for i in range(8)],
+            "dispersions_norm",
+            False,
+        ),
+        (
+            # A rank column without values falls through to dispersions_norm.
+            {"highly_variable_rank": [np.nan] * 8, "dispersions_norm": [0.1, 0.9, 0.5, 0.3, 0.8, 0.2, 0.7, 0.4]},
+            ["Gene1", "Gene4", "Gene6", "Gene2", "Gene7", "Gene3", "Gene5", "Gene0"],
+            "dispersions_norm",
+            False,
+        ),
+        (
+            # Without any usable ranking, the adata.var order is kept.
+            {"dispersions_norm": [np.nan] * 8},
+            [f"Gene{i}" for i in range(8)],
+            "adata.var order",
+            True,
+        ),
+    ],
+    ids=["dispersions-norm", "rank-preferred", "missing-scores", "ties", "empty-rank-column", "no-usable-ranking"],
+)
+def test_rank_highly_variable_genes(monkeypatch, gene_trend_adata, columns, expected_order, expected_ranking, warns):
+    """HVGs are ordered by the available variability ranking, deterministically."""
+    warnings = []
+    monkeypatch.setattr(pla.logger, "warning", lambda message, *args: warnings.append(message % args))
+    adata = _hvg_ranking_adata(gene_trend_adata, **columns)
+
+    order, ranking = pla._rank_highly_variable_genes(adata)
+
+    assert order == expected_order
+    assert ranking == expected_ranking
+    assert bool(warnings) == warns
+
+
+def test_rank_highly_variable_genes_ignores_gene_order_and_non_hvgs(gene_trend_adata):
+    """Only flagged genes are ranked, and the result does not depend on the gene order."""
+    scores = [0.1, 0.9, 0.5, 0.5, 0.8, 0.2, 0.7, 0.4]
+    flags = [True, True, True, True, False, True, True, True]  # Gene4 is not an HVG
+    adata = _hvg_ranking_adata(gene_trend_adata, highly_variable=flags, dispersions_norm=scores)
+    shuffled = adata[:, ["Gene7", "Gene3", "Gene0", "Gene5", "Gene2", "Gene6", "Gene1", "Gene4"]].copy()
+
+    order, _ = pla._rank_highly_variable_genes(adata)
+
+    assert order == ["Gene1", "Gene6", "Gene2", "Gene3", "Gene7", "Gene5", "Gene0"]
+    assert "Gene4" not in order
+    assert pla._rank_highly_variable_genes(shuffled)[0] == order
+
+
+@pytest.mark.parametrize(
+    ("top_n", "flags", "expected"),
+    [
+        (20, True, ["Gene1", "Gene4", "Gene6", "Gene2", "Gene7", "Gene3", "Gene5", "Gene0"]),
+        (3, True, ["Gene1", "Gene4", "Gene6"]),
+        (3, False, None),
+    ],
+    ids=["top-n-above-hvg-count", "top-n", "no-hvg"],
+)
+def test_analyze_top_genes_communities_selects_most_variable_hvgs(
+    monkeypatch, gene_trend_adata, top_n, flags, expected
+):
+    """The HVG source uses the ranked HVGs; no HVG at all is reported clearly."""
+    _patch_gene_program_clustering(monkeypatch)
+    adata = _hvg_ranking_adata(
+        gene_trend_adata, highly_variable=flags, dispersions_norm=[0.1, 0.9, 0.5, 0.3, 0.8, 0.2, 0.7, 0.4]
+    )
+    kwargs = {"trend_branches": "BranchA", "gene_source": "hvg", "top_n": top_n, "n_neighbors": 2}
+
+    if expected is None:
+        with pytest.raises(ValueError, match="No genes selected"):
+            pla.analyze_top_genes_communities(adata, **kwargs)
+        return
+
+    selected_genes, communities = pla.analyze_top_genes_communities(adata, **kwargs)
+
+    assert selected_genes == expected
+    assert list(communities["BranchA"].index) == expected
 
 
 def test_analyze_top_genes_communities_forwards_n_neighbors(
@@ -2395,3 +2518,313 @@ def test_plot_branch_gene_programs_names_representatives_in_legend(
         panel_box = ax.get_window_extent()
         assert panel_box.x0 <= legend_box.x0 and legend_box.x1 <= panel_box.x1
         assert panel_box.y0 <= legend_box.y0 and legend_box.y1 <= panel_box.y1
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ([0.0, 1.0, 4.0], (-0.2, 4.2)),
+        ([2.0, 2.0], (1.9, 2.1)),
+        ([0.0, 0.0], (-0.05, 0.05)),
+        ([np.nan, 1.0, np.inf, 3.0, -np.inf], (0.9, 3.1)),
+        ([np.nan, np.inf], None),
+        ([], None),
+    ],
+    ids=["range", "constant", "constant-zero", "non-finite-ignored", "no-finite-value", "empty"],
+)
+def test_padded_limits(values, expected):
+    """Limits contain every finite value; constant and empty inputs are handled."""
+    limits = pla._padded_limits(np.array(values, dtype=float))
+
+    if expected is None:
+        assert limits is None
+    else:
+        assert limits == pytest.approx(expected)
+
+
+def _representative_figure():
+    """Find the open representative-trend figure of ``plot_branch_gene_programs``.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The figure whose title names the representative trends.
+    """
+    return next(
+        plt.figure(number)
+        for number in plt.get_fignums()
+        if "representative" in plt.figure(number).get_suptitle()
+    )
+
+
+def test_plot_branch_gene_programs_representative_limits_cover_all_curves(
+    monkeypatch, gene_trend_adata
+):
+    """A single spike must stay visible: no representative curve is clipped."""
+    adata = gene_trend_adata.copy()
+    trends = adata.varm["gene_trends_BranchA"].copy()
+    trends.iloc[0, 5] = 25.0  # one bin far above all other values
+    adata.varm["gene_trends_BranchA"] = trends
+
+    _patch_gene_program_clustering(monkeypatch)
+
+    pla.plot_branch_gene_programs(
+        adata,
+        branch="BranchA",
+        n_dynamic_genes=6,
+        trend_knn_neighbors=2,
+        plot_representative_genes=True,
+        representatives_per_cluster=4,  # every selected gene is drawn
+    )
+
+    panels = [ax for ax in _representative_figure().axes if ax.lines]
+    curve_values = np.concatenate([line.get_ydata() for ax in panels for line in ax.lines])
+
+    assert curve_values.max() == 25.0
+    for ax in panels:
+        low, high = ax.get_ylim()
+        assert low < curve_values.min() and curve_values.max() < high
+        # The y-axis stays shared, so panels remain comparable.
+        assert ax.get_ylim() == panels[0].get_ylim()
+
+
+@pytest.mark.parametrize("plot_representative_genes", [True, False])
+def test_plot_branch_gene_programs_returns_cluster_gene_ranking(
+    monkeypatch, gene_trend_adata, plot_representative_genes
+):
+    """The full per-cluster ranking starts with the representatives."""
+    _patch_gene_program_clustering(monkeypatch)
+
+    result = pla.plot_branch_gene_programs(
+        gene_trend_adata,
+        branch="BranchA",
+        n_dynamic_genes=6,
+        trend_knn_neighbors=2,
+        plot_representative_genes=plot_representative_genes,
+        representatives_per_cluster=1,
+    )["BranchA"]
+
+    ranking = result["cluster_gene_ranking"]
+    if not plot_representative_genes:
+        assert ranking == {}
+        return
+
+    clusters = result["trend_clusters"]
+    assert set(ranking) == set(result["cluster_representatives"])
+    for cluster, genes in ranking.items():
+        assert sorted(genes) == sorted(clusters[clusters == cluster].index)
+        assert genes[:1] == result["cluster_representatives"][cluster]
+
+
+def _patch_plot_trend_with_ranges(monkeypatch):
+    """Patch Palantir's trend plot with a trend in [0, 1] and cells in [0, 5]."""
+
+    def fake_plot_trend(adata, branch, gene, ax=None, **kwargs):
+        if ax is None:
+            _, ax = plt.subplots()
+
+        ax.plot([0, 1], [0.0, 1.0])
+        cell_ax = ax.twinx()
+        cell_ax.scatter([0, 1], [0.0, 5.0])
+
+    monkeypatch.setattr(pla.palantir.plot, "plot_trend", fake_plot_trend)
+
+
+@pytest.mark.parametrize("genes", [["Gene0", "Gene1"], ["Gene0"]], ids=["panel-grid", "single-gene"])
+@pytest.mark.parametrize(
+    ("trend_layer", "shared"),
+    [(None, False), ("imputed", True), ("other", False)],
+    ids=["no-trend-layer", "same-layer", "different-layer"],
+)
+def test_plot_branch_gene_trend_panels_shared_y_scale(
+    monkeypatch, gene_trend_adata, genes, trend_layer, shared
+):
+    """Trends and cells share one y-scale only if both come from the same layer."""
+    _patch_plot_trend_with_ranges(monkeypatch)
+    warnings = []
+    monkeypatch.setattr(pla.logger, "warning", lambda message, *args: warnings.append(message % args))
+
+    adata = gene_trend_adata.copy()
+    adata.layers["imputed"] = adata.X.copy()
+    adata.layers["other"] = adata.X.copy()
+
+    result = pla.plot_branch_gene_trend_panels(
+        adata,
+        branches="BranchA",
+        genes=genes,
+        position_layer="imputed",
+        masks_key=None,
+        show=False,
+        trend_layer=trend_layer,
+    )["BranchA"]
+
+    fig = result["figure"]
+    fig.canvas.draw()
+    trend_axes = [ax for ax in fig.axes if ax.lines]
+    assert len(trend_axes) == len(genes)
+
+    for trend_ax in trend_axes:
+        cell_ax = next(
+            ax for ax in fig.axes
+            if ax.collections and ax.get_position().bounds == trend_ax.get_position().bounds
+        )
+        if shared:
+            assert trend_ax.get_ylim() == cell_ax.get_ylim()
+            low, high = trend_ax.get_ylim()
+            assert low < 0.0 and 5.0 < high
+            assert not any(tick.label2.get_visible() for tick in cell_ax.yaxis.get_major_ticks())
+        else:
+            assert trend_ax.get_ylim() != cell_ax.get_ylim()
+
+    assert any("separate y-scales" in message for message in warnings) == (trend_layer == "other")
+
+
+def test_plot_branch_gene_trend_panels_unknown_trend_layer_raises(gene_trend_adata):
+    """A trend layer that does not exist is rejected before plotting."""
+    with pytest.raises(ValueError, match="not found in adata.layers"):
+        pla.plot_branch_gene_trend_panels(
+            gene_trend_adata,
+            branches="BranchA",
+            genes=["Gene0"],
+            masks_key=None,
+            show=False,
+            trend_layer="missing",
+        )
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected_cmap"),
+    [({}, "viridis"), ({"cmap": "magma"}, "magma")],
+    ids=["default", "custom"],
+)
+def test_plot_palantir_results_uses_continuous_colormap(
+    monkeypatch, fate_probability_adata, kwargs, expected_cmap
+):
+    """All panels use a continuous colormap instead of the grey-for-zero default."""
+    captured = {}
+
+    def fake_plot_embedding(adata, **plot_kwargs):
+        captured.update(plot_kwargs)
+        return np.array([plt.subplots()[1]])
+
+    monkeypatch.setattr(pla.pl, "plot_embedding", fake_plot_embedding)
+
+    pla.plot_palantir_results(fate_probability_adata, show=False, **kwargs)
+
+    assert captured["color_map"] == expected_cmap
+
+
+@pytest.mark.parametrize("color_by", [None, "group"], ids=["no-color", "categorical"])
+@pytest.mark.parametrize("n_fates", [2, 3, 4, 5])
+def test_plot_fate_probability_projection_reference_in_legend(preprocessed_adata, n_fates, color_by):
+    """The equal-probability marker is explained in a legend clear of cells and fate labels."""
+    adata = preprocessed_adata.copy()
+    rng = np.random.default_rng(0)
+    # Powers spread the cells from the centre towards the vertices and edges.
+    probabilities = rng.random((adata.n_obs, n_fates)) ** 4
+    probabilities /= probabilities.sum(axis=1, keepdims=True)
+    adata.obsm["palantir_fate_probabilities"] = pd.DataFrame(
+        probabilities,
+        index=adata.obs_names,
+        columns=[f"Fate{i}" for i in range(n_fates)],
+    )
+    adata.obs["group"] = pd.Categorical(rng.choice(["A", "B"], adata.n_obs))
+
+    def cell_offsets(axis):
+        return next(
+            collection.get_offsets()
+            for collection in axis.collections
+            if len(collection.get_offsets()) == adata.n_obs
+        )
+
+    fig, ax = pla.plot_fate_probability_projection(adata, color_by=color_by, show=False)
+    fig.canvas.draw()
+
+    reference = "equal fate probability" if n_fates <= 3 else "equal-probability reference"
+    assert reference not in [text.get_text() for text in ax.texts]
+    legend = ax.get_legend()
+    assert [text.get_text() for text in legend.get_texts()] == [reference]
+
+    # The legend sits inside the axes, away from every cell and every fate label.
+    legend_box = legend.get_window_extent()
+    axes_box = ax.get_window_extent()
+    assert axes_box.x0 <= legend_box.x0 and legend_box.x1 <= axes_box.x1
+    assert axes_box.y0 <= legend_box.y0 and legend_box.y1 <= axes_box.y1
+    x, y = ax.transData.transform(cell_offsets(ax)).T
+    inside = (legend_box.x0 <= x) & (x <= legend_box.x1) & (legend_box.y0 <= y) & (y <= legend_box.y1)
+    assert not inside.any()
+    for text in ax.texts:
+        assert not legend_box.overlaps(text.get_window_extent())
+
+    # A categorical legend is kept next to the reference legend.
+    if color_by is not None:
+        category_texts = [
+            text.get_text()
+            for axis in fig.axes
+            for legend_artist in [axis.get_legend(), *[a for a in axis.artists if a is not axis.get_legend()]]
+            if legend_artist is not None and legend_artist is not legend
+            for text in legend_artist.get_texts()
+        ]
+        assert {"A", "B"} <= set(category_texts)
+
+    # Probabilities and cell positions are unchanged by the marker and its legend.
+    fig_without, ax_without = pla.plot_fate_probability_projection(
+        adata, color_by=color_by, show_equal_probability=False, show=False
+    )
+    assert np.allclose(cell_offsets(ax), cell_offsets(ax_without))
+
+    plt.close(fig)
+    plt.close(fig_without)
+
+
+def _patch_plot_trend_with_legend(monkeypatch):
+    """Patch Palantir's trend plot to draw one legend entry per category of ``color``."""
+
+    def fake_plot_trend(adata, branch, gene, ax=None, color=None, **kwargs):
+        if ax is None:
+            _, ax = plt.subplots()
+
+        ax.plot([0, 1], [0.0, 1.0])
+        cell_ax = ax.twinx()
+        for i, category in enumerate(adata.obs[color].cat.categories):
+            cell_ax.scatter([i], [i], color=f"C{i}", label=str(category))
+        cell_ax.legend()
+
+    monkeypatch.setattr(pla.palantir.plot, "plot_trend", fake_plot_trend)
+
+
+def test_plot_branch_gene_trend_panels_title_space_and_branch_legend(monkeypatch, gene_trend_adata):
+    """The suptitle clears the panel titles; the legend lists only drawn categories."""
+    _patch_plot_trend_with_legend(monkeypatch)
+
+    adata = gene_trend_adata.copy()
+    adata.obs["group"] = pd.Categorical(np.resize(["A", "B", "C"], adata.n_obs), categories=["A", "B", "C"])
+    # No cell of category "B" belongs to the branch.
+    adata.obsm["branch_masks"] = pd.DataFrame(
+        {"BranchA": (adata.obs["group"] != "B").to_numpy()},
+        index=adata.obs_names,
+    )
+
+    result = pla.plot_branch_gene_trend_panels(
+        adata,
+        branches="BranchA",
+        genes=[f"Gene{i}" for i in range(7)],  # three panel rows
+        color="group",
+        show=False,
+    )["BranchA"]
+
+    fig = result["figure"]
+    fig.canvas.draw()
+
+    suptitle = next(text for text in fig.texts if text.get_text().startswith("Branch 'BranchA'"))
+    suptitle_box = suptitle.get_window_extent()
+    for ax in result["axes"]:
+        assert ax.title.get_window_extent().y1 <= suptitle_box.y0
+
+    legend = next(axis.get_legend() for axis in fig.axes if axis.get_legend() is not None)
+    assert [text.get_text() for text in legend.get_texts()] == ["A", "C"]
+    # Colors stay those Palantir assigned to the categories (A -> C0, C -> C2).
+    handle_colors = [to_hex(handle.get_facecolor()[0]) for handle in legend.legend_handles]
+    assert handle_colors == [to_hex("C0"), to_hex("C2")]
+
+    plt.close(fig)

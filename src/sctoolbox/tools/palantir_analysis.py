@@ -13,6 +13,7 @@ from scipy.sparse import issparse, spmatrix
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 import plotly as po
 import plotly.express as px
 import seaborn as sns
@@ -991,6 +992,54 @@ def detect_and_plot_terminal_states(  # noqa: C901
     return terminal_state_series
 
 
+@beartype
+def _rank_highly_variable_genes(adata: AnnData) -> tuple[list[str], str]:
+    """Order the highly variable genes of ``adata`` from most to least variable.
+
+    The first usable ranking column in ``adata.var`` is used:
+    ``highly_variable_rank`` (smaller is more variable, e.g. ``flavor="seurat_v3"``),
+    then ``dispersions_norm`` (larger is more variable, e.g. ``flavor="seurat"``).
+    Genes without a finite score come last, and ties are broken by gene name, so the
+    order does not depend on the gene order in ``adata``. Without a usable ranking
+    column, the genes keep their ``adata.var`` order and a warning is logged.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData with a boolean ``adata.var["highly_variable"]`` column.
+
+    Returns
+    -------
+    tuple[list[str], str]
+        Ordered highly variable genes and the name of the ranking used.
+    """
+    hvg = adata.var.loc[adata.var["highly_variable"].eq(True)]
+
+    for column, ascending in (("highly_variable_rank", True), ("dispersions_norm", False)):
+        if column not in hvg.columns:
+            continue
+        score = pd.to_numeric(hvg[column], errors="coerce").replace([np.inf, -np.inf], np.nan)
+        if score.isna().all():
+            continue
+
+        n_missing = int(score.isna().sum())
+        if n_missing:
+            logger.warning("%d highly variable genes have no '%s' value and are ranked last.", n_missing, column)
+
+        ranking = pd.DataFrame({"score": score.to_numpy(), "gene": hvg.index.astype(str)})
+        ranking = ranking.sort_values(
+            ["score", "gene"], ascending=[ascending, True], na_position="last", kind="stable"
+        )
+        return ranking["gene"].tolist(), column
+
+    if len(hvg):
+        logger.warning(
+            "adata.var has no usable 'highly_variable_rank' or 'dispersions_norm' column; "
+            "highly variable genes are used in their adata.var order."
+        )
+    return hvg.index.astype(str).tolist(), "adata.var order"
+
+
 @deco.log_anndata
 @beartype
 def analyze_top_genes_communities(  # noqa: C901
@@ -1022,7 +1071,12 @@ def analyze_top_genes_communities(  # noqa: C901
     trend_branches : str | list[str]
         Branch name(s) to cluster.
     gene_source : Literal["markers", "hvg"], default="markers"
-        Which gene set to use for clustering.
+        Which gene set to use for clustering. With ``"hvg"``, the ``top_n`` most
+        variable genes flagged in ``adata.var["highly_variable"]`` are used, ranked by
+        ``adata.var["highly_variable_rank"]`` (smaller first) or, if absent,
+        ``adata.var["dispersions_norm"]`` (larger first). Ties are broken by gene name
+        and genes without a score come last. Without either column the genes keep
+        their ``adata.var`` order and a warning is logged.
     marker_table : str | dict[str, pd.DataFrame] | None, default=None
         Marker definitions used when ``gene_source="markers"``.
 
@@ -1041,7 +1095,7 @@ def analyze_top_genes_communities(  # noqa: C901
         Base key for branch trend matrices in ``adata.varm``. Expected format:
         ``{gene_trend_base_key}_{branch}``.
     top_n : int, default=300
-        Number of genes selected for clustering.
+        Number of genes selected for clustering (all available genes if fewer).
     n_neighbors : int, default=30
         Neighborhood size used by Palantir for clustering gene-trend profiles.
     save_excel : str | None, default=None
@@ -1097,9 +1151,11 @@ def analyze_top_genes_communities(  # noqa: C901
         if "highly_variable" not in adata.var.columns:
             raise ValueError("gene_source='hvg' requires adata.var['highly_variable'].")
 
-        hvgs = adata.var_names[adata.var["highly_variable"]]
-        selected_genes = list(hvgs[:top_n])
-        logger.info("Selected %d/%d HVGs for clustering.", len(selected_genes), hvgs.size)
+        ranked_hvgs, ranking = _rank_highly_variable_genes(adata)
+        selected_genes = ranked_hvgs[:top_n]
+        logger.info(
+            "Selected %d/%d HVGs for clustering (ranked by %s).", len(selected_genes), len(ranked_hvgs), ranking
+        )
 
     else:
         if not marker_table:
@@ -1656,6 +1712,61 @@ def plot_branch_qc_distributions(  # noqa: C901
 
 
 @beartype
+def _padded_limits(values: np.ndarray, pad_fraction: float = 0.05) -> tuple[float, float] | None:
+    """Return axis limits that contain every finite value plus a relative margin.
+
+    Parameters
+    ----------
+    values : np.ndarray
+        Values that must lie inside the limits. NaN and infinite values are ignored.
+    pad_fraction : float, default=0.05
+        Margin added below the minimum and above the maximum, as a fraction of the
+        value range.
+
+    Returns
+    -------
+    tuple[float, float] | None
+        Lower and upper limit, or ``None`` if ``values`` contains no finite value.
+    """
+    finite = np.asarray(values, dtype=float).ravel()
+    finite = finite[np.isfinite(finite)]
+    if finite.size == 0:
+        return None
+
+    low, high = float(finite.min()), float(finite.max())
+    # A constant curve has no range; pad by its magnitude (at least 1) so it stays visible.
+    span = high - low if high > low else max(abs(high), 1.0)
+    return low - pad_fraction * span, high + pad_fraction * span
+
+
+@beartype
+def _share_trend_and_cell_scale(trend_ax: Axes, cell_ax: Axes) -> None:
+    """Put a trend axis and its twin cell axis on one common y-scale.
+
+    The limits span the trend curves of ``trend_ax`` and the cell points of
+    ``cell_ax``. As both axes then show the same numbers, the tick labels and the
+    label of the twin axis are hidden.
+
+    Parameters
+    ----------
+    trend_ax : Axes
+        Axis holding the trend curves.
+    cell_ax : Axes
+        Twin axis holding the individual cells as scatter points.
+    """
+    values = [np.asarray(line.get_ydata(), dtype=float) for line in trend_ax.lines]
+    values += [np.asarray(points.get_offsets(), dtype=float)[:, 1] for points in cell_ax.collections]
+    limits = _padded_limits(np.concatenate(values)) if values else None
+    if limits is None:
+        return
+
+    trend_ax.set_ylim(*limits)
+    cell_ax.set_ylim(*limits)
+    cell_ax.tick_params(axis="y", right=False, labelright=False)
+    cell_ax.set_ylabel("")
+
+
+@beartype
 def _classify_trend_pattern(curve: pd.Series) -> str:
     """Classify a centroid trend into a simple biological pattern label.
 
@@ -1822,6 +1933,10 @@ def plot_branch_gene_programs(  # noqa: C901
         - ``cluster_patterns``: simple biological pattern labels per cluster
         - ``cluster_summary``: per-cluster summary table
         - ``cluster_representatives``: representative genes per cluster
+        - ``cluster_gene_ranking``: all genes of each cluster, ordered by the
+          representative score (most representative first); the first
+          ``representatives_per_cluster`` genes equal ``cluster_representatives``.
+          Empty if ``plot_representative_genes=False``.
         - ``figures``: generated matplotlib figure handles
 
     Raises
@@ -2185,6 +2300,7 @@ def plot_branch_gene_programs(  # noqa: C901
         # - dynamic strength in the current branch
         # - branch specificity relative to the other available branches
         cluster_representatives: dict[str, list[str]] = {}
+        cluster_gene_ranking: dict[str, list[str]] = {}
         fig_reps = None
 
         if plot_representative_genes:
@@ -2268,13 +2384,11 @@ def plot_branch_gene_programs(  # noqa: C901
                     sim_rank + range_rank + var_rank + specificity_rank
                 )
 
-                best = (
-                    representative_score.sort_values(ascending=True)
-                    .head(int(representatives_per_cluster))
-                    .index
-                    .tolist()
-                )
-                cluster_representatives[str(cl)] = best
+                # Keep the full ranking: callers can show more genes of one cluster
+                # than the representatives drawn here.
+                ranked_genes = representative_score.sort_values(ascending=True).index.tolist()
+                cluster_gene_ranking[str(cl)] = ranked_genes
+                cluster_representatives[str(cl)] = ranked_genes[: int(representatives_per_cluster)]
 
             # Reuse the heatmap row order so the representative plots follow the same order.
             row_order = cg.dendrogram_row.reordered_ind
@@ -2297,21 +2411,17 @@ def plot_branch_gene_programs(  # noqa: C901
                 axes_arr = np.atleast_1d(axes_grid).ravel()
                 pt_gene = trend_df_sel.columns.astype(float).values
 
-                # Use common y-limits so all panels can be compared visually.
+                # Use common y-limits so all panels can be compared visually. The limits
+                # span every plotted value, so no representative curve is clipped.
                 rep_genes_all = [
                     gene
                     for cl in clusters_to_plot
                     for gene in cluster_representatives[cl]
                     if gene in trend_df_sel.index
                 ]
-                if rep_genes_all:
-                    y_mat = trend_df_sel.loc[rep_genes_all].values
-                    y_low, y_high = np.percentile(y_mat, [1, 99])
-                else:
-                    y_low, y_high = (
-                        np.nanmin(trend_df_sel.values),
-                        np.nanmax(trend_df_sel.values),
-                    )
+                y_limits = _padded_limits(
+                    trend_df_sel.loc[rep_genes_all].values if rep_genes_all else trend_df_sel.values
+                )
 
                 for i, cl in enumerate(clusters_to_plot):
                     ax_i = axes_arr[i]
@@ -2329,7 +2439,8 @@ def plot_branch_gene_programs(  # noqa: C901
 
                     ax_i.set_title(f"Cluster {cl}: {pattern}", fontsize=11)
                     ax_i.set_xlim(pt_gene.min(), pt_gene.max())
-                    ax_i.set_ylim(y_low, y_high)
+                    if y_limits is not None:
+                        ax_i.set_ylim(*y_limits)
                     ax_i.grid(alpha=0.2)
 
                     # Name the curves in a legend inside the panel: labels at the curve
@@ -2432,6 +2543,7 @@ def plot_branch_gene_programs(  # noqa: C901
             "cluster_patterns": cluster_patterns,
             "cluster_summary": cluster_summary,
             "cluster_representatives": cluster_representatives,
+            "cluster_gene_ranking": cluster_gene_ranking,
             "figures": {
                 "clusters": fig_clusters,
                 "centroid_heatmap": cg.fig,
@@ -3282,15 +3394,31 @@ def plot_fate_probability_projection(  # noqa: C901
             else "equal-probability reference"
         )
 
-        ax.annotate(
-            reference_label,
-            xy=equal_position,
-            xytext=(0, -14),
-            textcoords="offset points",
-            ha="center",
-            va="top",
-            fontsize=8,
+        # Explain the marker in a compact legend in the upper-left corner: cells always lie
+        # inside the polygon, so this corner stays free of data for two to five fates.
+        # A categorical legend drawn on the same axes is kept as a separate artist.
+        reference_handle = Line2D(
+            [],
+            [],
+            linestyle="none",
+            marker="o",
+            markersize=6,
+            markerfacecolor="white",
+            markeredgecolor="black",
+            markeredgewidth=1.0,
+            label=reference_label,
         )
+        category_legend = ax.get_legend()
+        ax.legend(
+            handles=[reference_handle],
+            loc="upper left",
+            frameon=False,
+            fontsize=8,
+            handletextpad=0.4,
+            borderaxespad=0.2,
+        )
+        if category_legend is not None:
+            ax.add_artist(category_legend)
 
     ax.set_title(title, fontsize=14)
     ax.set_aspect("equal", adjustable="box")
@@ -3333,6 +3461,7 @@ def plot_branch_gene_trend_panels(  # noqa: C901
     report_save: str | None = None,
     plot_format: str = "pdf",
     show: bool = True,
+    trend_layer: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Plot branch-specific Palantir gene trends together with individual cells.
 
@@ -3389,6 +3518,13 @@ def plot_branch_gene_trend_panels(  # noqa: C901
         ``report_save`` are always png.
     show : bool, default=True
         Whether to display generated figures.
+    trend_layer : str | None, default=None
+        Layer in ``adata.layers`` from which the gene trends were computed, i.e. the
+        ``expression_key`` passed to ``palantir.presults.compute_gene_trends``.
+        Palantir does not record this layer, so it has to be stated here. If it
+        equals ``position_layer``, trend curves and cells share one y-scale.
+        Otherwise (including ``None``), both keep separate y-scales, because their
+        values are not on a comparable scale.
 
     Returns
     -------
@@ -3413,6 +3549,19 @@ def plot_branch_gene_trend_panels(  # noqa: C901
 
     if position_layer is not None and position_layer not in adata.layers:
         raise ValueError(f"Layer '{position_layer}' not found in adata.layers.")
+    if trend_layer is not None and trend_layer not in adata.layers:
+        raise ValueError(f"Layer '{trend_layer}' not found in adata.layers.")
+
+    # Trend curves and cell values are on one numeric scale only if both come from the
+    # same layer; a shared axis for different layers would suggest a false agreement.
+    share_y_scale = trend_layer is not None and trend_layer == position_layer
+    if trend_layer is not None and not share_y_scale:
+        logger.warning(
+            "trend_layer '%s' differs from position_layer '%s'; trends and cells keep separate y-scales.",
+            trend_layer,
+            position_layer,
+        )
+
     if masks_key is not None and masks_key not in adata.obsm:
         raise ValueError(f"Branch masks '{masks_key}' not found in adata.obsm.")
     if pseudotime_key not in adata.obs:
@@ -3574,6 +3723,18 @@ def plot_branch_gene_trend_panels(  # noqa: C901
             )
 
             fig = plt.gcf()
+
+            if share_y_scale:
+                # Palantir draws the cells on a twin axis at the trend axis' position.
+                trend_ax = fig.axes[0]
+                cell_axes = [
+                    axis for axis in fig.axes[1:]
+                    if axis.collections and axis.get_position().bounds == trend_ax.get_position().bounds
+                ]
+                if cell_axes:
+                    _share_trend_and_cell_scale(trend_ax, cell_axes[0])
+                    trend_ax.set_ylabel(f"{gene} ({trend_layer})")
+
             axes = np.array(fig.axes, dtype=object)
 
             _save_branch_figure(fig, save, branch, report=False)
@@ -3693,6 +3854,10 @@ def plot_branch_gene_trend_panels(  # noqa: C901
                 cell_ax.set_title("")
                 cell_ax.set_ylabel("Feature value" if col == ncols_eff - 1 else "")
 
+                if share_y_scale:
+                    _share_trend_and_cell_scale(ax, cell_ax)
+                    ax.set_ylabel(f"Feature value ({trend_layer})" if col == 0 else "")
+
                 if has_numeric_color and numeric_mappable is None and cell_ax.collections:
                     numeric_mappable = cell_ax.collections[0]
 
@@ -3706,15 +3871,32 @@ def plot_branch_gene_trend_panels(  # noqa: C901
         for i in range(len(branch_genes), len(axes)):
             axes[i].axis("off")
 
-        # Reserve space for the suptitle; fewer rows need a larger share of the height.
-        if nrows_eff == 1:
-            layout_top = 0.85
-        elif nrows_eff == 2:
-            layout_top = 0.90
-        else:
-            layout_top = 0.96
+        # Reserve a fixed height (in inches) above the panels for the suptitle and the
+        # panel titles; a fixed fraction of the figure is too little for tall grids.
+        title_space_inches = 0.8
+        layout_top = 1.0 - title_space_inches / figure_height
 
-        fig.suptitle(f"Branch '{branch}' — Palantir feature trends", fontsize=14, y=0.99)
+        fig.suptitle(
+            f"Branch '{branch}' — Palantir feature trends",
+            fontsize=14,
+            y=1.0 - 0.15 / figure_height,
+            va="top",
+        )
+
+        # List only the categories of the cells that are actually drawn (the branch
+        # cells); handles and their colors are kept as Palantir created them.
+        if legend_handles and legend_labels and masks_key is not None:
+            masks = adata.obsm[masks_key]
+            if isinstance(masks, pd.DataFrame) and branch in masks.columns:
+                branch_cells = masks[branch].to_numpy(dtype=bool)
+                drawn = set(adata.obs.loc[branch_cells, color].astype(str))
+                kept = [
+                    (handle, label)
+                    for handle, label in zip(legend_handles, legend_labels)
+                    if label in drawn
+                ]
+                legend_handles = [handle for handle, _ in kept]
+                legend_labels = [label for _, label in kept]
 
         if legend_ax is not None and legend_handles and legend_labels:
             n_categories = len(legend_labels)
@@ -3780,6 +3962,7 @@ def plot_palantir_results(
     save: str | None = None,
     report_save: str | None = None,
     show: bool = True,
+    cmap: str = "viridis",
 ) -> np.ndarray:
     """Plot Palantir pseudotime, entropy and per-fate probabilities on one embedding.
 
@@ -3810,6 +3993,10 @@ def plot_palantir_results(
         Path and filename appended to ``settings.report_dir``.
     show : bool, default=True
         Whether to display the figure.
+    cmap : str, default="viridis"
+        Continuous colormap for all panels. The embedding default would draw the
+        lowest values in grey, which reads as "no data" for pseudotime, entropy and
+        probabilities.
 
     Returns
     -------
@@ -3852,6 +4039,7 @@ def plot_palantir_results(
             show_title=True,
             size=point_size,
             frameon=False,
+            color_map=cmap,
             save=save,
             report=report_save,
         )
