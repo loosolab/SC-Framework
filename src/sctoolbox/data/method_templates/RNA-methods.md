@@ -82,6 +82,10 @@ The analysis was performed with the SC-Framework (Schultheis et al., doi: 10.101
 {%- if args["proportion_analysis"] -%}
     Proportional changes in cell numbers of {{ args["proportion_analysis"].cluster }} over {{ args["proportion_analysis"].condition }} were detected using Scanpro (Alayoubi et al., doi: 10.1038/s41598-024-66381-7). {##}
 {%- endif -%}
+{#- ----- Hotspot notebook -#}
+{%- if args["hotspot"] -%}
+    Gene modules were identified with Hotspot (DeTomaso & Yosef, doi: 10.1016/j.cels.2021.04.005). For every gene, Hotspot tests whether neighboring cells show similar expression (autocorrelation) on a k-nearest-neighbor graph built from {{ args["hotspot"].latent }} with {{ args["hotspot"].n_neighbors }} neighbors, using the "{{ args["hotspot"].model }}" null model. The {{ args["hotspot"].n_selected_genes }} most informative genes were grouped into {{ args["hotspot"].n_modules }} gene modules based on their pairwise local correlations, and a per-cell score was computed for each module. Modules were characterized by gene set enrichment analysis with Enrichr (Kuleshov et al., doi: 10.1093/nar/gkw377) via GSEApy (Fang et al., doi: 10.1093/bioinformatics/btac757). {##}
+{%- endif -%}
 {#- ----- Pseudotime trajectory notebook -#}
 {%- if args["pseudotime_analysis"] -%}
     Trajectory (pseudotime) analysis was done through the scFates package (Faure et al., doi: 10.1093/bioinformatics/btac746).
