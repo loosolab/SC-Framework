@@ -91,6 +91,9 @@ def ensure_pca(
         )
         return pca_key
 
+    if pca_key in adata.obsm:
+        logger.warning(f"Overwriting existing PCA in adata.obsm['{pca_key}'].")
+
     logger.info(f"Computing PCA and storing it in adata.obsm['{pca_key}'].")
 
     key_added = None if pca_key == "X_pca" else pca_key
@@ -162,6 +165,9 @@ def ensure_harmony(
 
     if basis not in adata.obsm:
         raise KeyError(f"Basis '{basis}' not found in adata.obsm. Run ensure_pca first.")
+
+    if adjusted_basis in adata.obsm:
+        logger.warning(f"Overwriting existing Harmony representation in adata.obsm['{adjusted_basis}'].")
 
     logger.info(f"Computing Harmony (batch_key='{batch_key}', basis='{basis}').")
 
@@ -446,10 +452,7 @@ def ensure_umap_for_visualization(
     adata: sc.AnnData,
     use_rep: str = "X_pca",
     batch_key: Optional[str] = None,
-    is_subset: bool = False,
-    recompute_if_subset: bool = True,
-    force_recompute_umap: bool = False,
-    force_recompute_rep: bool = False,
+    force_recompute: bool = False,
     pca_key: str = "X_pca",
     harmony_key: str = "X_pca_harmony",
     n_comps: int = 50,
@@ -475,8 +478,10 @@ def ensure_umap_for_visualization(
     """
     Ensure that UMAP exists for visualization.
 
-    This function only computes PCA/Harmony/neighbors/UMAP if needed.
-    It does not plot.
+    The representation use_rep is only computed if it is missing and is
+    never recomputed here; after subsetting cells or filtering genes this is
+    done by ensure_representation. Only the neighbor graph and the UMAP are
+    recomputed if force_recompute is True. This function does not plot.
 
     Parameters
     ----------
@@ -486,22 +491,25 @@ def ensure_umap_for_visualization(
         Representation used to build the neighbor graph.
     batch_key : Optional[str], default None
         Batch column used for Harmony. Required if use_rep is harmony_key.
-    is_subset : bool, default False
-        Whether adata is a subset of a larger object.
-    recompute_if_subset : bool, default True
-        Whether representation and UMAP are recomputed when is_subset is True.
-    force_recompute_umap : bool, default False
-        Whether to recompute the UMAP regardless of is_subset.
-    force_recompute_rep : bool, default False
-        Whether to recompute the representation regardless of is_subset.
+    force_recompute : bool, default False
+        Whether to recompute the neighbor graph and the UMAP even if a UMAP
+        already exists under umap_key, e.g. after subsetting cells or
+        filtering genes. The representation itself is not recomputed.
     pca_key : str, default "X_pca"
-        Key of the PCA representation.
+        Name under which the PCA is stored. Does not select anything: if
+        use_rep equals pca_key and it is missing, a PCA is computed and
+        stored under this name. Only change it if the PCA lives under a
+        different key.
     harmony_key : str, default "X_pca_harmony"
-        Key of the Harmony representation.
+        Name under which the Harmony representation is stored. If use_rep
+        equals harmony_key and it is missing, Harmony is computed on pca_key
+        and stored under this name.
     n_comps : int, default 50
-        Number of principal components, forwarded to ensure_pca.
+        Number of principal components, forwarded to ensure_pca. Only used
+        if the PCA is missing.
     use_highly_variable : bool, default True
-        Whether to restrict the PCA to highly variable genes.
+        Whether to restrict the PCA to highly variable genes. Only used if
+        the PCA is missing.
     layer : Optional[str], default None
         Layer used for the PCA. If None, adata.X is used.
     svd_solver : Optional[str], default None
@@ -529,14 +537,10 @@ def ensure_umap_for_visualization(
         Key in adata.obsm the UMAP is stored under.
     """
 
-    force_rep_effective = force_recompute_rep or (is_subset and recompute_if_subset)
-    force_umap_effective = force_recompute_umap or (is_subset and recompute_if_subset)
+    logger.debug(f"UMAP: use_rep={use_rep}, force_recompute={force_recompute}")
 
-    logger.debug(
-        f"UMAP: use_rep={use_rep}, is_subset={is_subset}, "
-        f"force_rep={force_rep_effective}, force_umap={force_umap_effective}"
-    )
-
+    # only computed if missing; recomputing after subsetting is done by
+    # ensure_representation in the notebook, so the PCA is not computed twice
     use_rep = ensure_representation(
         adata,
         use_rep=use_rep,
@@ -548,7 +552,7 @@ def ensure_umap_for_visualization(
         layer=layer,
         svd_solver=svd_solver,
         random_state=random_state,
-        force_recompute=force_rep_effective,
+        force_recompute=False,
     )
 
     ensure_umap(
@@ -563,7 +567,7 @@ def ensure_umap_for_visualization(
         n_components=n_components,
         random_state=random_state,
         umap_key=umap_key,
-        force_recompute=force_umap_effective,
+        force_recompute=force_recompute,
     )
 
 
@@ -861,7 +865,7 @@ def filter_genes_by_cell_detection(
 @beartype
 def run_hotspot(  # noqa: C901
     adata: sc.AnnData,
-    layer_key: str = "raw",
+    layer_key: Optional[str] = "raw",
     latent_obsm_key: Optional[str] = None,
     umi_counts_obs_key: str = "total_counts",
     model: Literal["danb", "bernoulli", "normal", "none"] = "danb",
@@ -897,8 +901,8 @@ def run_hotspot(  # noqa: C901
     ----------
     adata : sc.AnnData
         sc.AnnData object containing expression data and embeddings.
-    layer_key : str, default "raw"
-        Layer used as count input for Hotspot.
+    layer_key : Optional[str], default "raw"
+        Layer used as count input for Hotspot. If None, adata.X is used.
     latent_obsm_key : Optional[str], default None
         Embedding key in adata.obsm. If None, "X_pca_harmony" and "X_pca" are
         tried in that order.
@@ -919,8 +923,8 @@ def run_hotspot(  # noqa: C901
         - "none": no null model; values are only centered and scaled. Use when
           the data is already variance-stabilised.
 
-        See https://hotspot.readthedocs.io/en/latest/ for the underlying
-        statistics.
+        See https://hotspot.readthedocs.io/en/latest/#alternative-choices-for-model
+        for the underlying statistics.
     n_neighbors : int, default 30
         Number of neighbors for KNN graph construction.
     weighted_graph : bool, default False
@@ -978,7 +982,7 @@ def run_hotspot(  # noqa: C901
     if jobs is None:
         jobs = settings.get_threads()
 
-    if layer_key not in adata.layers:
+    if layer_key is not None and layer_key not in adata.layers:
         # sc.AnnData >= 0.13 stores .X in layers under the None key, which is not
         # a layer name the user can pass here
         available = [k for k in adata.layers if k is not None]
@@ -999,11 +1003,11 @@ def run_hotspot(  # noqa: C901
             "or ensure one of ['X_pca_harmony', 'X_pca'] exists in adata.obsm."
         )
 
-    if umi_counts_obs_key not in adata.obs or overwrite_obs_key:
-        adata.obs[umi_counts_obs_key] = np.asarray(adata.layers[layer_key].sum(axis=1)).ravel()
+    # None means adata.X, as in hotspot.Hotspot itself
+    X = adata.X if layer_key is None else adata.layers[layer_key]
 
-    # Remove genes with zero variance in the selected layer
-    X = adata.layers[layer_key]
+    if umi_counts_obs_key not in adata.obs or overwrite_obs_key:
+        adata.obs[umi_counts_obs_key] = np.asarray(X.sum(axis=1)).ravel()
 
     # scipy sparse has no .var(), so Var(X) = E[X²] - E[X]² is computed by hand
     if sp.issparse(X):
