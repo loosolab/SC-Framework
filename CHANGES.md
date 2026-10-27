@@ -59,7 +59,7 @@
 ### Changes to notebooks
 - General/group_marker: Add gene expression scaling option for planet plots
 - General/GSEA: Additional parameters for gsea_dot
-- RNA: Add Hotspot notebook (#142)
+- RNA: Add Hotspot notebook (0D_hotspot.ipynb) (#142)
 - RNA/99-report: Add Hotspot slides (#142)
 
 ## 0.15.1 (15-05-2026)
