@@ -208,7 +208,7 @@ def ensure_umap(
     """
     Ensure that a UMAP representation exists in adata.obsm.
 
-    Builds and potentially overwrites a neighbor graph and UMAP from the given representation. UMAP is used for visualization, not as      the main Hotspot input.
+    Builds and potentially overwrites a neighbor graph and UMAP from the given representation. UMAP is used for visualization, not as the main Hotspot input.
 
     Parameters
     ----------
@@ -600,7 +600,7 @@ def inspect_gene_detection(
         both spellings refer to the same matrix.
     thresholds_to_show : Optional[Sequence[int]], default None
         Minimum numbers of cells (absolute counts, not percentages) a gene
-        must be detected in, one table row per value. For each value the
+        must be detected in, one row per value. For each value the
         overview table reports how many genes would be kept, and also gives
         the value as a percentage of adata.n_obs in the "pct_of_cells"
         column. If None, the counts are derived from the current number of
