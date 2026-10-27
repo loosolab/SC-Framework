@@ -61,15 +61,6 @@
   overwrite_log: True
   report_dir: "../report/group_markers/"
 
-"hotspot":
-  adata_input_dir: "../adatas/"
-  adata_output_dir: "../adatas/"
-  figure_dir: "../figures/hotspot/"
-  table_dir: "../tables/hotspot/"
-  log_file: "../logs/hotspot_log.txt"
-  overwrite_log: True
-  report_dir: "../report/hotspot/"
-
 "prepare_for_cellxgene":
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/cellxgene/"
