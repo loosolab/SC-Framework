@@ -1168,6 +1168,20 @@ def run_hotspot(  # noqa: C901
         "n_genes_used": adata_hs.n_vars,
     })
 
+    # values for the method text of the report (method_templates/RNA-methods.md)
+    if settings.report_dir:
+        utils.io.update_yaml(
+            {
+                "model": model,
+                "n_neighbors": n_neighbors,
+                "latent": latent_obsm_key,
+                "n_selected_genes": None if selected_genes is None else int(len(selected_genes)),
+                "n_modules": None if n_modules is None else int(n_modules),
+            },
+            yml="method.yml",
+            path_prefix="report",
+        )
+
     return results
 
 
