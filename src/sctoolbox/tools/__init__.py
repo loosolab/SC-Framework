@@ -18,6 +18,7 @@ __all__ = [
     "gene_correlation",
     "gsea",
     "highly_variable",
+    "hotspot",
     "insertsize",
     "marker_genes",
     "multiomics",

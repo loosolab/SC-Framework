@@ -49,10 +49,18 @@
 - run_scsa: move the SCSA results from adata.uns["SCSA"] to adata.uns["sctoolbox"]["SCSA"]
 - run_scsa: refresh the stale pandas downgrade note
 - unpin docutils (#421)
+- add `sctoolbox.tools.hotspot` for Hotspot gene module analysis: representation/UMAP helpers, gene detection filter, `run_hotspot`, result plots, per-cell module assignment and Enrichr-based module enrichment (#142, !527)
+- add `utils.adata.obs_subset` to subset an AnnData object by one or more obs column values (!527)
+- save_h5ad: convert values in `adata.uns` that h5ad cannot write into strings before saving (!527)
+- get_version_report: map import names to distribution names so packages installed under a different name (e.g. hotspot as hotspotsc) are reported correctly (!527)
+- add Hotspot to the RNA method template (!527)
+- add hotspotsc and harmonypy as dependencies (!527)
 
 ### Changes to notebooks
 - General/group_marker: Add gene expression scaling option for planet plots
 - General/GSEA: Additional parameters for gsea_dot
+- RNA: Add Hotspot notebook (0D_hotspot.ipynb) (#142)
+- RNA/99-report: Add Hotspot slides (#142)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
