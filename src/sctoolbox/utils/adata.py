@@ -62,7 +62,7 @@ def add_expr_to_obs(adata: sc.AnnData,
                     gene: Union[str, List[str]],
                     obs_name: Optional[str] = None,
                     fun: Callable = np.mean,
-                    fun_kwargs: Optional[dict] = None,
+                    fun_kwargs: Optional[dict] = {"axis": 1},
                     layer: Optional[str] = None,
                     gene_symbols: Optional[str] = None,
                     overwrite: bool = False) -> None:
@@ -81,8 +81,8 @@ def add_expr_to_obs(adata: sc.AnnData,
         Name of the new adata.obs column. Defaults to `gene` if a single gene is given; required for a list of genes.
     fun : Callable, default np.mean
         Function to aggregate the expression of a list of genes per cell. Not used for a single gene given as str.
-    fun_kwargs : Optional[dict], default None
-        Keyword arguments for `fun`. Defaults to `{"axis": 1}`.
+    fun_kwargs : Optional[dict], default {"axis": 1}
+        Keyword arguments for `fun`.
     layer : Optional[str], default None
         Name of the layer to take the expression from. Uses adata.X if None.
     gene_symbols : Optional[str], default None
@@ -134,7 +134,7 @@ def add_expr_to_obs(adata: sc.AnnData,
     if isinstance(gene, str):
         adata.obs[obs_name] = matrix[:, 0]
     else:
-        adata.obs[obs_name] = np.asarray(fun(matrix, **({"axis": 1} if fun_kwargs is None else fun_kwargs))).flatten()
+        adata.obs[obs_name] = np.asarray(fun(matrix, **({} if fun_kwargs is None else fun_kwargs))).flatten()
 
 
 @deco.log_anndata
