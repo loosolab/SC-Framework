@@ -12,7 +12,7 @@ import pandas as pd
 from pathlib import Path
 import yaml
 
-from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tuple, List, Literal
+from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tuple, List, Literal, Callable
 from beartype import beartype
 
 import sctoolbox.tools.qc_filter as qc_filter
@@ -205,30 +205,83 @@ def was_subsetted(original: sc.AnnData, current: sc.AnnData) -> bool:
 
 @deco.log_anndata
 @beartype
-def add_expr_to_obs(adata: sc.AnnData, gene: str) -> None:
+def add_expr_to_obs(adata: sc.AnnData,
+                    gene: Union[str, List[str]],
+                    obs_name: Optional[str] = None,
+                    fun: Callable = np.mean,
+                    fun_kwargs: Optional[dict] = {"axis": 1},
+                    layer: Optional[str] = None,
+                    gene_symbols: Optional[str] = None,
+                    overwrite: bool = False) -> None:
     """
-    Add expression of a gene from adata.X to adata.obs as a new column.
+    Add expression of a gene or an aggregated score of multiple genes to adata.obs as a new column.
+
+    The column is added in-place.
 
     Parameters
     ----------
     adata : sc.AnnData
         Anndata object to add expression to.
-    gene : str
-        Gene name to add expression of.
+    gene : Union[str, List[str]]
+        Gene name to add expression of, or a list of gene names to aggregate with `fun`.
+    obs_name : Optional[str], default None
+        Name of the new adata.obs column. Defaults to `gene` if a single gene is given; required for a list of genes.
+    fun : Callable, default np.mean
+        Function to aggregate the expression of a list of genes per cell. Not used for a single gene given as str.
+    fun_kwargs : Optional[dict], default {"axis": 1}
+        Keyword arguments for `fun`.
+    layer : Optional[str], default None
+        Name of the layer to take the expression from. Uses adata.X if None.
+    gene_symbols : Optional[str], default None
+        Column in adata.var to match the gene names against. Uses adata.var.index if None.
+    overwrite : bool, default False
+        Whether to overwrite an existing adata.obs column named `obs_name`.
 
     Raises
     ------
-    Exception
-        If the gene is not found in the adata object.
+    ValueError
+        1. If a list of genes is given without `obs_name`.
+        2. If any gene is not found in adata.var.index or adata.var[gene_symbols].
+        3. If a single gene given as str matches more than one entry in adata.var[gene_symbols]. For duplicated entries in adata.var.index the first match is used and a warning is logged.
+        4. If `obs_name` already exists in adata.obs and `overwrite` is False.
     """
 
-    boolean = adata.var.index == gene
-    if sum(boolean) == 0:
-        raise Exception(f"Gene {gene} not found in adata.var.index")
+    genes = [gene] if isinstance(gene, str) else list(gene)
 
+    if obs_name is None:
+        if not isinstance(gene, str):
+            raise ValueError("obs_name is required when a list of genes is given.")
+        obs_name = gene
+
+    # find the genes
+    location = f"adata.var[{gene_symbols}]" if gene_symbols else "adata.var.index"
+    names = np.asarray(adata.var[gene_symbols] if gene_symbols else adata.var.index)
+    available = set(names)
+    missing = [g for g in genes if g not in available]
+    if missing:
+        raise ValueError(f"Features {missing} are not found in {location}!")
+
+    idx = np.concatenate([np.flatnonzero(names == g) for g in genes])
+    if isinstance(gene, str) and len(idx) > 1:
+        if gene_symbols:
+            raise ValueError(f"Gene {gene} matches {len(idx)} entries in {location}. Select a unique gene name.")
+        logger.warning(f"Gene {gene} matches {len(idx)} entries in {location}. Using the first match.")
+        idx = idx[:1]
+
+    # make sure to not overwrite an existing obs column
+    if obs_name in adata.obs.columns and not overwrite:
+        raise ValueError(f"{obs_name} already exists in adata.obs.columns. Select a different name, remove the column or set overwrite=True.")
+
+    # select layer and genes
+    matrix = adata.layers[layer] if layer else adata.X
+    matrix = matrix[:, idx]
+    if issparse(matrix):
+        matrix = matrix.toarray()
+
+    if isinstance(gene, str):
+        adata.obs[obs_name] = matrix[:, 0]
     else:
-        idx = np.argwhere(boolean)[0][0]
-        adata.obs[gene] = adata.X[:, idx].todense().A1
+        adata.obs[obs_name] = np.asarray(fun(matrix, **({} if fun_kwargs is None else fun_kwargs))).flatten()
 
 
 @deco.log_anndata

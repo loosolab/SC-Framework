@@ -49,6 +49,11 @@
 - run_scsa: move the SCSA results from adata.uns["SCSA"] to adata.uns["sctoolbox"]["SCSA"]
 - run_scsa: refresh the stale pandas downgrade note
 - unpin docutils (#421)
+- add_expr_to_obs: aggregate gene lists; raise on an existing column unless overwrite=True (#444)
+- deprecate marker_genes.add_gene_expression in favour of add_expr_to_obs (#444)
+- agg_feature_embedding: add overwrite parameter; keep an existing obs column when the name check fails (#444)
+- agg_feature_embedding: store keep_score results on the input adata when gene_symbols is set (#444)
+- plot_embedding, agg_feature_embedding: fix gene_symbols AttributeError (use anndata.utils.make_index_unique) (#444)
 - add `sctoolbox.tools.hotspot` for Hotspot gene module analysis: representation/UMAP helpers, gene detection filter, `run_hotspot`, result plots, per-cell module assignment and Enrichr-based module enrichment (#142, !527)
 - add `utils.adata.obs_subset` to subset an AnnData object by one or more obs column values (!527)
 - save_h5ad: convert values in `adata.uns` that h5ad cannot write into strings before saving (!527)
