@@ -3087,8 +3087,8 @@ def plot_fate_probability_projection(  # noqa: C901
 
     # Palantir projects waypoint probabilities onto cells with a weighted sum
     # (``W.T @ branch_probs``) and does not clip above 1 or renormalize rows,
-    # so genuine results can sit a few ulp outside [0, 1]. Anything beyond the
-    # tolerance is not a probability matrix and is rejected; the remaining
+    # so floating-point rounding can put valid results slightly outside [0, 1].
+    # Deviations beyond the tolerance are rejected; the remaining
     # within-tolerance excursions are snapped back so the convex weights below
     # are exactly non-negative.
     tolerance = 1e-8
@@ -4162,35 +4162,22 @@ def plot_branch_trajectories(
     """
     fig, axes = plt.subplots(1, 3, figsize=figsize)
 
-    palantir.plot.plot_trajectories(
-        adata,
-        pseudo_time_key=pseudotime_key,
-        cell_color=pseudotime_key,
-        pseudotime_interval=pseudotime_interval,
-        ax=axes[0],
-        scanpy_kwargs={"cmap": cmap},
+    panels = (
+        (pseudotime_key, "Pseudotime", {"cmap": cmap}),
+        (entropy_key, "Entropy", {"cmap": cmap}),
+        (branch_key, "Branch Selection", None),
     )
 
-    axes[0].set_title("Pseudotime", fontsize=16)
-
-    palantir.plot.plot_trajectories(
-        adata,
-        pseudo_time_key=pseudotime_key,
-        cell_color=entropy_key,
-        pseudotime_interval=pseudotime_interval,
-        ax=axes[1],
-        scanpy_kwargs={"cmap": cmap},
-    )
-    axes[1].set_title("Entropy", fontsize=16)
-
-    palantir.plot.plot_trajectories(
-        adata,
-        pseudo_time_key=pseudotime_key,
-        cell_color=branch_key,
-        pseudotime_interval=pseudotime_interval,
-        ax=axes[2],
-    )
-    axes[2].set_title("Branch Selection", fontsize=16)
+    for ax, (cell_color, title, scanpy_kwargs) in zip(axes, panels):
+        palantir.plot.plot_trajectories(
+            adata,
+            pseudo_time_key=pseudotime_key,
+            cell_color=cell_color,
+            pseudotime_interval=pseudotime_interval,
+            ax=ax,
+            scanpy_kwargs=scanpy_kwargs,
+        )
+        ax.set_title(title, fontsize=16)
 
     fig.tight_layout()
     plt.figure(fig.number)

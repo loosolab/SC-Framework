@@ -2094,21 +2094,19 @@ def test_plot_fate_probability_projection_normalizes_rows_without_mutating_input
 
 
 def test_plot_fate_probability_projection_tolerates_rounding_excursions(preprocessed_adata):
-    """Values a few ulp outside [0, 1] are accepted and snapped onto the simplex."""
+    """Small rounding errors outside [0, 1] are accepted and corrected."""
     adata = preprocessed_adata.copy()
     values = np.tile([1.0 + 1e-12, -1e-12, 0.0], (adata.n_obs, 1))
     adata.obsm["palantir_fate_probabilities"] = pd.DataFrame(
         values, index=adata.obs_names, columns=["FateA", "FateB", "FateC"]
     )
 
-    fig, ax = pla.plot_fate_probability_projection(adata, show=False)
+    _, ax = pla.plot_fate_probability_projection(adata, show=False)
 
     # All weight sits on the first fate, which is the top vertex of the triangle.
     np.testing.assert_allclose(
         ax.collections[0].get_offsets(), np.tile([0.0, 1.0], (adata.n_obs, 1)), atol=1e-9
     )
-
-    plt.close(fig)
 
 
 @pytest.mark.parametrize(
@@ -2329,9 +2327,11 @@ def test_plot_branch_cell_selection_saves_both_destinations(monkeypatch, branch_
 def test_plot_branch_trajectories_builds_three_panels(monkeypatch, branch_adata):
     """The trajectory summary should draw pseudotime, entropy and branch panels."""
     plotted_colors = []
+    plotted_kwargs = []
 
     def fake_plot_trajectories(adata, cell_color, **kwargs):
         plotted_colors.append(cell_color)
+        plotted_kwargs.append(kwargs.get("scanpy_kwargs"))
 
     monkeypatch.setattr(pla.palantir.plot, "plot_trajectories", fake_plot_trajectories)
     saved = _record_saves(monkeypatch)
@@ -2342,12 +2342,14 @@ def test_plot_branch_trajectories_builds_three_panels(monkeypatch, branch_adata)
 
     fig, axes = pla.plot_branch_trajectories(
         branch_adata,
+        cmap="magma",
         save="palantir_branch_summary.pdf",
         report_save="03_branch_summary.png",
         show=False,
     )
 
     assert plotted_colors == ["palantir_pseudotime", "palantir_entropy", "branch_selection"]
+    assert plotted_kwargs == [{"cmap": "magma"}, {"cmap": "magma"}, None]
     assert [ax.get_title() for ax in axes] == ["Pseudotime", "Entropy", "Branch Selection"]
     assert branch_adata.uns["palantir_fates_colors"] == fate_colors
     assert saved == [
