@@ -3,6 +3,7 @@
 import multiprocessing as mp
 import warnings
 import scanpy as sc
+import anndata
 import numpy as np
 import pandas as pd
 import scipy.stats
@@ -352,7 +353,7 @@ def plot_embedding(adata: sc.AnnData,  # noqa: C901
     if kwargs.setdefault("gene_symbols") is not None:
         adata = adata.copy()  # ensure the original adata isn't overwritten
         # make the column unique same as .make_var_names_unique
-        adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
+        adata.var[kwargs["gene_symbols"]] = anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
 
     # ---- Plot embedding for chosen colors ---- #
 
@@ -789,7 +790,7 @@ def feature_per_group(adata: sc.AnnData,  # noqa: C901
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, report: Optional[str] = None, layer: Optional[str] = None, **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, report: Optional[str] = None, layer: Optional[str] = None, overwrite: bool = False, **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -812,6 +813,8 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     layer : Optional[str], default None
         Name of the adata layer used for the calculation. Defaults to `adata.X`.
+    overwrite : bool, default False
+        Set to overwrite an existing adata.obs[fname] column. Otherwise an error is raised if the column already exists.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
 
@@ -823,7 +826,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
     Raises
     ------
     ValueError
-        For features not found in adata.var.index or if fname already exists in adata.obs.columns.
+        For features not found in adata.var.index (or adata.var[gene_symbols]) or if fname already exists in adata.obs.columns and overwrite is False.
 
     Examples
     --------
@@ -835,46 +838,34 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
 
         pl.embedding.agg_feature_embedding(adata=adata, features=features, fname=f"Mean expression of {features}")
     """
+    score_added = False
     try:
-        # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
-        # The suffix is equivalent .var_names_make_unique(join="_")
-        if kwargs.setdefault("gene_symbols") is not None:
-            adata = adata.copy()  # ensure the original adata isn't overwritten
-            # make the column unique same as .make_var_names_unique
-            adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
+        # Resolve feature names to adata.var_names without modifying adata.
+        # Duplicated entries in the gene_symbols column get a suffix equivalent to .var_names_make_unique(join="_")
+        col = kwargs.setdefault("gene_symbols")
+        if col is not None:
+            labels = pd.Series(adata.var_names, index=anndata.utils.make_index_unique(adata.var[col].astype(str), join="_"))
 
-        # check for missing features
-        missing = set(features) - set(adata.var[kwargs["gene_symbols"]] if kwargs.setdefault("gene_symbols") else adata.var.index)
-        if missing:
-            col = kwargs.setdefault("gene_symbols")
-            raise ValueError(f"Features {missing} are not found in adata.var{f'[{col}]' if kwargs.setdefault('gene_symbols') else '.index'}!")
+            # check for missing features
+            missing = set(features) - set(labels.index)
+            if missing:
+                raise ValueError(f"Features {missing} are not found in adata.var[{col}]!")
 
-        # create subset of features
-        if kwargs.setdefault("gene_symbols"):
-            var_filter = adata.var.index[adata.var[kwargs.setdefault("gene_symbols")].isin(features)]
+            var_names = list(labels[features])
         else:
-            var_filter = features
-        subset = adata[:, var_filter]
-
-        # select layer
-        if layer:
-            matrix = subset.layers[layer].toarray()
-        else:
-            matrix = subset.X.toarray()
+            # missing features are reported by add_expr_to_obs
+            var_names = list(features)
 
         # TODO https://github.com/scverse/scanpy/issues/532 support sc.tl.score_genes?
 
-        # make sure to not overwrite an existing obs column
-        if fname in adata.obs.columns:
-            raise ValueError(f"{fname} already exists in adata.obs.columns. Select a different name or remove the column before running this function.")
-
         # calculate score and add as obs column
-        adata.obs[fname] = np.array(fun(matrix, **fun_kwargs)).flatten()
+        utils.adata.add_expr_to_obs(adata, var_names, obs_name=fname, fun=fun, fun_kwargs=fun_kwargs, layer=layer, overwrite=overwrite)
+        score_added = True
 
         # plot
         return plot_embedding(adata, color=fname, report=report, **kwargs)
     finally:
-        if not keep_score:
+        if score_added and not keep_score:
             adata.obs.drop(columns=[fname], errors="ignore", inplace=True)
 
 

@@ -1,6 +1,7 @@
 """Test gene marker functions."""
 
 import pytest
+import deprecation
 import os
 import scanpy as sc
 import numpy as np
@@ -93,14 +94,18 @@ def test_label_genes(adata, species, m_genes, r_genes, g_genes):
         assert "is_mito" in adata.var.columns and "is_ribo" in adata.var.columns  # is_gender is not added
 
 
+@deprecation.fail_if_not_removed
 def test_add_gene_expression(adata):
-    """Test add_gene_expression success and failure."""
+    """Test add_gene_expression success, overwrite and failure."""
     gene = adata.var.index[0]
 
     # success
     assert f"{gene}_values" not in adata.obs.columns
     mg.add_gene_expression(adata=adata, gene=gene)
     assert f"{gene}_values" in adata.obs.columns
+
+    # repeated call silently overwrites
+    mg.add_gene_expression(adata=adata, gene=gene)
 
     # failure
     with pytest.raises(ValueError):

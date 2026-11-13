@@ -57,12 +57,19 @@
 - add an `ax` parameter to `plot_fate_probability_projection`, an `eigvec_key` parameter to `select_early_cell`, and raise Palantir test coverage (#443)
 - use modality-neutral titles, axis labels, and legends in the Palantir trend plots (#443)
 - unpin docutils (#421)
+- add_expr_to_obs: aggregate gene lists; raise on an existing column unless overwrite=True (#444)
+- deprecate marker_genes.add_gene_expression in favour of add_expr_to_obs (#444)
+- agg_feature_embedding: add overwrite parameter; keep an existing obs column when the name check fails (#444)
+- agg_feature_embedding: store keep_score results on the input adata when gene_symbols is set (#444)
+- plot_embedding, agg_feature_embedding: fix gene_symbols AttributeError (use anndata.utils.make_index_unique) (#444)
 - add `sctoolbox.tools.hotspot` for Hotspot gene module analysis: representation/UMAP helpers, gene detection filter, `run_hotspot`, result plots, per-cell module assignment and Enrichr-based module enrichment (#142, !527)
 - add `utils.adata.obs_subset` to subset an AnnData object by one or more obs column values (!527)
 - save_h5ad: convert values in `adata.uns` that h5ad cannot write into strings before saving (!527)
 - get_version_report: map import names to distribution names so packages installed under a different name (e.g. hotspot as hotspotsc) are reported correctly (!527)
 - add Hotspot to the RNA method template (!527)
 - add hotspotsc and harmonypy as dependencies (!527)
+- fix `run_hotspot` module creation under pandas >= 3 (#455)
+- fix read-only array in agg_feature_embedding gene_symbols test under pandas 3
 
 ### Changes to notebooks
 - move three verbose Palantir cells into sctoolbox helper functions (#443)

@@ -12,12 +12,14 @@ import warnings
 import anndata
 from pathlib import Path
 import matplotlib.pyplot as plt
+import deprecation
 
 from beartype import beartype
 from beartype.typing import Optional, Tuple, Any, Literal, Sequence
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
+from sctoolbox import __version__
 from sctoolbox._settings import settings
 from sctoolbox.plotting.general import _save_figure
 logger = settings.logger
@@ -290,6 +292,9 @@ def _annotate(genes: pd.Series,
 
 
 @deco.log_anndata
+@deprecation.deprecated(deprecated_in="0.16.0", removed_in="0.18.0",
+                        current_version=__version__,
+                        details="Use sctoolbox.utils.adata.add_expr_to_obs instead.")
 @beartype
 def add_gene_expression(adata: sc.AnnData,
                         gene: str) -> None:
@@ -302,21 +307,9 @@ def add_gene_expression(adata: sc.AnnData,
         Anndata object containing gene expression/counts.
     gene : str
         Name of the gene/feature from the adata.var index to be added to adata.obs.
-
-    Raises
-    ------
-    ValueError
-        If gene is not in adata.var.index.
     """
 
-    # Get expression
-    if gene in adata.var.index:
-        gene_idx = np.argwhere(adata.var.index == gene)[0][0]
-        vals = adata.X[:, gene_idx].todense().A1
-        adata.obs[gene + "_values"] = vals
-
-    else:
-        raise ValueError(f"Gene '{gene}' was not found in adata.var.index")
+    utils.adata.add_expr_to_obs(adata, gene, obs_name=gene + "_values", overwrite=True)
 
 
 ############################################################
