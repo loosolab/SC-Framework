@@ -163,6 +163,7 @@ def test_planet_plot_anndata_preprocess(adata_planet_plot):
     assert np.array_equal(expected_df_array, np.array(plot_vars.values))
 
 
+@pytest.mark.parametrize("expression_scaling", [None, "log", "gene"])
 @pytest.mark.parametrize("mode, output_mode", [("aggregate", 1), ("planet", 2)])
 @pytest.mark.parametrize("size_value", ["count", "percentage"])
 @pytest.mark.parametrize("color_value", ["value", "percentage_max"])
@@ -177,7 +178,8 @@ def test_planet_plot_render(planet_plot_vars,
                             planet_color_schemas,
                             output_mode,
                             output_schemas,
-                            assert_axes_array):
+                            assert_axes_array,
+                            expression_scaling):
     """Test planet plot render for the given adata."""
     axes = pp.planet_plot_render(plot_vars=planet_plot_vars,
                                  x_col=_X_COL,
@@ -186,7 +188,8 @@ def test_planet_plot_render(planet_plot_vars,
                                  size_value=size_value,
                                  color_value=color_value,
                                  planet_columns=planet_columns,
-                                 planet_color_schemas=planet_color_schemas)
+                                 planet_color_schemas=planet_color_schemas,
+                                 expression_scaling=expression_scaling)
 
     # set 0 for output_schemas for aggregate mode
     if mode == "aggregate":

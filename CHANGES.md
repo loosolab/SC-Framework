@@ -28,6 +28,7 @@
 - fix get_variable_features subsampling for pandas 3 (Series positional access via .iloc) and expose subsample_target (!533)
 - fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
 - bump palantir floor to >=1.4.5 for pandas 3 / anndata 0.13 compatibility (!533)
+- Add gene expression scaling for planet plots (#466)
 - save_h5ad: normalise uns '*_colors' to hex so Palantir results are writable (#470)
 - replace `numpy.typing.NDArray` type hints with the expanded `np.ndarray[shape, dtype]` generic to fix beartype PEP 484 errors under numpy 2.5 (#469)
 - document the `dev` dependency group in `development.rst`
@@ -53,9 +54,18 @@
 - agg_feature_embedding: add overwrite parameter; keep an existing obs column when the name check fails (#444)
 - agg_feature_embedding: store keep_score results on the input adata when gene_symbols is set (#444)
 - plot_embedding, agg_feature_embedding: fix gene_symbols AttributeError (use anndata.utils.make_index_unique) (#444)
+- add `sctoolbox.tools.hotspot` for Hotspot gene module analysis: representation/UMAP helpers, gene detection filter, `run_hotspot`, result plots, per-cell module assignment and Enrichr-based module enrichment (#142, !527)
+- add `utils.adata.obs_subset` to subset an AnnData object by one or more obs column values (!527)
+- save_h5ad: convert values in `adata.uns` that h5ad cannot write into strings before saving (!527)
+- get_version_report: map import names to distribution names so packages installed under a different name (e.g. hotspot as hotspotsc) are reported correctly (!527)
+- add Hotspot to the RNA method template (!527)
+- add hotspotsc and harmonypy as dependencies (!527)
 
 ### Changes to notebooks
+- General/group_marker: Add gene expression scaling option for planet plots
 - General/GSEA: Additional parameters for gsea_dot
+- RNA: Add Hotspot notebook (0D_hotspot.ipynb) (#142)
+- RNA/99-report: Add Hotspot slides (#142)
 
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict

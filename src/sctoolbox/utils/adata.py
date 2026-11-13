@@ -15,6 +15,7 @@ import yaml
 from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tuple, List, Literal, Callable
 from beartype import beartype
 
+import sctoolbox.tools.qc_filter as qc_filter
 import sctoolbox.utils.decorator as deco
 from sctoolbox.utils.tables import fill_na
 from sctoolbox.plotting.general import plot_table
@@ -54,6 +55,152 @@ def get_adata_subsets(adata: sc.AnnData, groupby: str) -> dict[str, sc.AnnData]:
     logger.debug("Split adata into {} subsets based on column '{}'".format(len(adata_subsets), groupby))
 
     return adata_subsets
+
+
+@deco.log_anndata
+@beartype
+def obs_subset(  # noqa: C901
+    adata: sc.AnnData,
+    subset_filters: Optional[dict[str, Any]] = None,
+    inplace: bool = False,
+    drop_unused_categories: bool = True,
+    name: str = "obs_subset",
+) -> Optional[sc.AnnData]:
+    """
+    Subset an anndata object based on one or multiple columns in adata.obs.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Anndata object to subset.
+    subset_filters : Optional[dict[str, Any]], default None
+        Dictionary mapping obs column names to one or multiple values. A cell
+        is kept if its value in the column equals one of the given values.
+        Within one column values are combined with OR, across columns with AND.
+        If None or empty no filtering is applied.
+
+        Values are compared as strings, so numerical columns work with exact
+        values: 3 and "3" both match 3. For float columns, give the value as
+        it is stored, e.g. 3.0 (3 does not match 3.0). Ranges such as
+        "column > 5" are not supported. Create a boolean column first, e.g.
+        adata.obs["high_counts"] = adata.obs["total_counts"] > 5000, and
+        filter on {"high_counts": [True]}.
+
+        Example: {"sample": [3, 6], "celltype": ["Epcam+", "Epcam-"]}
+    inplace : bool, default False
+        Whether to subset adata in place instead of returning a subsetted copy.
+    drop_unused_categories : bool, default True
+        Whether to remove unused categories from categorical obs columns.
+    name : str, default "obs_subset"
+        Name the applied filters are logged under in adata.uns. Use a
+        descriptive value when several subsets are applied in one workflow,
+        e.g. "hotspot_subset".
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Subsetted copy if inplace is False, otherwise None.
+
+    Raises
+    ------
+    KeyError
+        If a column given in subset_filters is not found in adata.obs.
+    ValueError
+        If requested values are missing, no values are given for a column, or
+        the subsetting removes all cells.
+    """
+    if not subset_filters:
+        return None if inplace else adata.copy()
+
+    missing_columns = [col for col in subset_filters if col not in adata.obs.columns]
+    if missing_columns:
+        raise KeyError(
+            f"Columns not found in adata.obs: {missing_columns}. "
+            f"Available columns are: {list(adata.obs.columns)}"
+        )
+
+    mask = pd.Series(True, index=adata.obs_names)
+    applied_filters = {}
+
+    for col, values in subset_filters.items():
+        if values is None:
+            continue
+
+        if not isinstance(values, (list, tuple, set, pd.Index, np.ndarray)):
+            values = [values]
+
+        if len(values) == 0:
+            raise ValueError(f"No values were provided for subset column '{col}'.")
+
+        # compare as strings so that e.g. 3 and "3" both match
+        obs_values_str = adata.obs[col].astype(str)
+        requested_values_str = [str(v) for v in values]
+
+        available_values = sorted(obs_values_str.unique().tolist())
+        missing_values = sorted(set(requested_values_str) - set(available_values))
+
+        if missing_values:
+            raise ValueError(
+                f"Values {missing_values} were not found in adata.obs['{col}']. "
+                f"Example available values: {available_values[:20]}"
+            )
+
+        applied_filters[col] = requested_values_str
+        mask &= obs_values_str.isin(requested_values_str)
+
+    if mask.sum() == 0:
+        raise ValueError("Subsetting removed all cells. Please check `subset_filters`.")
+
+    # stored before filtering, since adata shrinks with inplace=True
+    n_obs_before = adata.n_obs
+
+    adata_subset = qc_filter.filter_cells(
+        adata,
+        cells=adata.obs_names[mask].tolist(),
+        invert=True,
+        inplace=inplace,
+        name=name,
+        value={"subset_filters": applied_filters},
+        overwrite=True,
+    )
+
+    if inplace:  # filter_cells returns None in this case
+        adata_subset = adata
+
+    if drop_unused_categories:
+        for col in adata_subset.obs.columns:
+            if isinstance(adata_subset.obs[col].dtype, pd.CategoricalDtype):
+                adata_subset.obs[col] = adata_subset.obs[col].cat.remove_unused_categories()
+
+    logger.info(f"Subsetted adata: {adata_subset.n_obs} of {n_obs_before} cells kept.")
+
+    if not inplace:
+        return adata_subset
+
+
+@beartype
+def was_subsetted(original: sc.AnnData, current: sc.AnnData) -> bool:
+    """
+    Check whether an anndata object lost cells or genes compared to an earlier state.
+
+    Useful to decide whether representations such as PCA, neighbors or UMAP
+    should be recomputed. Those describe the cells they were computed on, and
+    a PCA is a linear combination over genes, so removing either changes them.
+
+    Parameters
+    ----------
+    original : sc.AnnData
+        Anndata object before the potential subsetting.
+    current : sc.AnnData
+        Anndata object after the potential subsetting.
+
+    Returns
+    -------
+    bool
+        True if current holds fewer cells or fewer genes than original,
+        otherwise False.
+    """
+    return current.n_obs < original.n_obs or current.n_vars < original.n_vars
 
 
 @deco.log_anndata
@@ -224,7 +371,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
 @deco.log_anndata
 @beartype
-def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, **kwargs: Any) -> None:
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, **kwargs: Any) -> None:  # noqa: C901
     """
     Save an anndata object to an .h5ad file.
 
@@ -265,6 +412,11 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
     if "compression" not in kwargs:
         kwargs["compression"] = "gzip"
 
+    # AnnData can only write string keys, so convert non-string keys first;
+    # this also lets the "/" replacement below work on integer keys
+    for attr in ["obs", "var", "uns"]:
+        _rec_stringify(getattr(adata, attr), path=[attr])
+
     # check var/obs/uns and replace any "/" with "|" as anndata does not allow "/" in any keys
     # as of anndata>=0.12
     for attr in ["obs", "var", "uns"]:
@@ -276,8 +428,10 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
 
     # generate report
     if settings.report_dir and report:
+
         # filter out a None key: anndata>=0.13 exposes .X as a spurious None-keyed layer (absent on anndata 0.12)
         real_layers = [key for key in adata.layers.keys() if key is not None]
+
         with open(Path(settings.report_dir) / report[0], "w") as f:
             f.write("\n".join([
                 "## Dataset",
@@ -395,6 +549,54 @@ def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str
             # open a nested dict
             if isinstance(v, dict) or isinstance(v, pd.DataFrame):
                 _rec_search(v, repl=repl, path=path + [k])
+
+
+@beartype
+def _rec_stringify(var: Union[Dict, pd.DataFrame], path: List[str]) -> None:
+    """
+    Convert non-string keys in nested dicts and pandas objects to strings.
+
+    AnnData can only write string keys, so integer or tuple keys, as produced
+    for example by pandas groupby operations, make the write fail.
+
+    Note: This is intended to be used on AnnData attributes such as .obs, .var, .uns.
+    Note: The function operates inplace.
+
+    Parameters
+    ----------
+    var : Union[Dict, pd.DataFrame]
+        The variable to convert. Either a dict, whose keys are converted
+        recursively, or a pandas object, whose column names and index are
+        converted.
+    path : List[str]
+        The nesting path as a list. First element should be the name of an
+        AnnData attribute e.g. 'uns'.
+    """
+    if isinstance(var, (pd.DataFrame, pd.Series)):
+        if isinstance(var, pd.DataFrame) and not all(isinstance(c, str) for c in var.columns):
+            var.columns = var.columns.map(str)
+        if not all(isinstance(i, str) for i in var.index):
+            var.index = var.index.map(str)
+        return
+
+    if not isinstance(var, dict):
+        return
+
+    non_string = [k for k in var if not isinstance(k, str)]
+
+    if non_string:
+        tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
+        path_str = f".{path[0]}{tmp_path}"
+
+        logger.warning(f"Found non-string key(s) in {path_str} ({non_string}), which AnnData cannot write. Converting to string.")
+
+        for k in non_string:
+            var[str(k)] = var.pop(k)
+
+    # recurse into nested dicts and pandas objects
+    for k, v in list(var.items()):
+        if isinstance(v, (dict, pd.DataFrame, pd.Series)):
+            _rec_stringify(v, path=path + [k])
 
 
 @beartype
