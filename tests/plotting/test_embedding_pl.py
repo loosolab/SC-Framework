@@ -199,7 +199,7 @@ def test_agg_feature_embedding_overwrite(adata_fun_scope):
 def test_agg_feature_embedding_gene_symbols(adata_fun_scope):
     """Test agg_feature_embedding with gene_symbols."""
     var_names = adata_fun_scope.var_names
-    sym = ("s_" + var_names).to_numpy(dtype=object)
+    sym = ("s_" + var_names).to_numpy(dtype=object, copy=True)
     sym[0] = sym[1] = "dup"
     adata_fun_scope.var["sym"] = sym
     sym_copy = adata_fun_scope.var["sym"].copy()

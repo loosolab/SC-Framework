@@ -60,6 +60,8 @@
 - get_version_report: map import names to distribution names so packages installed under a different name (e.g. hotspot as hotspotsc) are reported correctly (!527)
 - add Hotspot to the RNA method template (!527)
 - add hotspotsc and harmonypy as dependencies (!527)
+- fix `run_hotspot` module creation under pandas >= 3 (#455)
+- fix read-only array in agg_feature_embedding gene_symbols test under pandas 3
 
 ### Changes to notebooks
 - General/group_marker: Add gene expression scaling option for planet plots

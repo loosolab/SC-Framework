@@ -861,6 +861,90 @@ def filter_genes_by_cell_detection(
     return adata_out, summary
 
 
+# Copy of hotspot.modules.compute_modules (hotspotsc 1.1.3), which fails under
+# pandas >= 3 because .values returns a read-only view. Fixed upstream in
+# YosefLab/Hotspot commit c706701. Replaces Hotspot.create_modules until the
+# scviva-tools migration; to be removed with #455.
+@beartype
+def _compute_modules(
+    z_scores: pd.DataFrame,
+    min_gene_threshold: int,
+    fdr_threshold: float,
+    core_only: bool,
+) -> tuple[pd.Series, np.ndarray]:
+    """
+    Assign Hotspot modules from the pairwise local correlation Z-scores.
+
+    Line-for-line copy of hotspot.modules.compute_modules, except that the
+    distance matrix is a writable copy. The z_threshold parameter is dropped,
+    because Hotspot.create_modules never passes it, so the threshold is always
+    derived from fdr_threshold.
+
+    Parameters
+    ----------
+    z_scores : pd.DataFrame
+        Local correlation Z-scores between genes, e.g. hs.local_correlation_z.
+    min_gene_threshold : int
+        Minimum number of genes to create a module.
+    fdr_threshold : float
+        FDR threshold used to determine the minimally significant Z-score.
+    core_only : bool
+        Whether to keep only core module genes instead of also assigning
+        genes at the cluster border.
+
+    Returns
+    -------
+    tuple[pd.Series, np.ndarray]
+        Module id per gene (-1 for unassigned genes) and the linkage matrix in
+        the format of scipy.cluster.hierarchy.linkage.
+    """
+    from scipy.spatial.distance import squareform
+    from scipy.cluster.hierarchy import linkage
+    from scipy.stats import norm
+    from statsmodels.stats.multitest import multipletests
+
+    # Determine Z_Threshold from FDR threshold
+    allZ = squareform(  # just in case slightly not symmetric
+        z_scores.values / 2 + z_scores.values.T / 2
+    )
+    allZ = np.sort(allZ)
+    allP = norm.sf(allZ)
+    allP_c = multipletests(allP, method="fdr_bh")[1]
+    ii = np.nonzero(allP_c < fdr_threshold)[0]
+    if ii.size > 0:
+        z_threshold = allZ[ii[0]]
+    else:
+        z_threshold = allZ[-1] + 1
+
+    # Compute the linkage matrix; to_numpy(copy=True) keeps dd writable under pandas >= 3
+    dd = z_scores.to_numpy(copy=True)
+    np.fill_diagonal(dd, 0)
+    condensed = squareform(dd) * -1
+    offset = condensed.min() * -1
+    condensed += offset
+    Z = linkage(condensed, method="average")
+
+    # Linkage -> Modules
+    if core_only:
+        out_clusters = hotspot.modules.assign_modules_core(
+            Z, offset=offset, MIN_THRESHOLD=min_gene_threshold,
+            leaf_labels=z_scores.index, Z_THRESHOLD=z_threshold)
+    else:
+        out_clusters = hotspot.modules.assign_modules(
+            Z, offset=offset, MIN_THRESHOLD=min_gene_threshold,
+            leaf_labels=z_scores.index, Z_THRESHOLD=z_threshold)
+
+    # Sort the leaves of the linkage matrix (for plotting)
+    mean_dists = np.zeros(Z.shape[0])
+    hotspot.modules.calc_mean_dists(Z, Z.shape[0] - 1, mean_dists)
+    linkage_out = Z.copy()
+    hotspot.modules.sort_linkage(linkage_out, Z.shape[0] - 1, mean_dists)
+
+    out_clusters.name = "Module"
+
+    return out_clusters, linkage_out
+
+
 @deco.log_anndata
 @beartype
 def run_hotspot(  # noqa: C901
@@ -1080,11 +1164,15 @@ def run_hotspot(  # noqa: C901
         local_correlations = hs.compute_local_correlations(selected_genes, jobs=jobs)
 
     if compute_modules:
-        modules = hs.create_modules(
+        # replaces hs.create_modules, which fails under pandas >= 3 (see _compute_modules)
+        modules, linkage = _compute_modules(
+            hs.local_correlation_z,
             min_gene_threshold=min_gene_threshold,
             core_only=core_only,
             fdr_threshold=module_fdr_threshold,
         )
+        hs.modules = modules
+        hs.linkage = linkage
 
     if compute_module_scores:
         if not compute_modules:
