@@ -96,8 +96,14 @@ def get_package_versions() -> dict[str, str]:
     return package_dict
 
 
-_vip_packages = ["sctoolbox", "scanpy", "anndata", "numpy", "pandas", "peakqc", "scFates", "gseapy",
+_vip_packages = ["sctoolbox", "scanpy", "anndata", "numpy", "pandas", "peakqc", "scFates", "gseapy", "hotspot",
                  "pydeseq2", "scvelo", "markerrepo", "scanpro", "uropa", "tobias", "palantir", "muon"]
+
+# import name -> distribution name, for packages installed under a different name
+_distribution_names = {
+    "sctoolbox": "SC-Framework",
+    "hotspot": "hotspotsc",
+}
 
 
 @beartype
@@ -141,7 +147,9 @@ def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"
     -----
     The package version is reported as ``"NA"`` if
     :func:`importlib.metadata.version` raises :class:`importlib.metadata.PackageNotFoundError`
-    (e.g., because no metadata were found).
+    (e.g., because no metadata were found). Packages whose import name differs
+    from their distribution name, e.g. ``hotspot`` (``hotspotsc``), are mapped
+    via ``sctoolbox.utils.general._distribution_names``.
     """
     current_packages = sys.modules.keys() - __cached_modules
 
@@ -161,7 +169,7 @@ def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"
 
     for p in current_packages:
         try:
-            out_dict[p] = version(p if p != "sctoolbox" else "SC-Framework")
+            out_dict[p] = version(_distribution_names.get(p, p))
         except PackageNotFoundError:
             out_dict[p] = "NA"
 
