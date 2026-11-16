@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.16.0 (in progress)
+## 0.16.0 (16-11-2026)
 - add Palantir fate-probability projection, representative gene-trend panels, and report integration (!531)
 - Palantir plots: unclipped gene-program y-limits, optional shared trend/cell y-scale (`trend_layer`), full per-cluster gene ranking, continuous colormap for results, uncluttered equal-probability label (!531)
 - analyze_top_genes_communities: select the most variable HVGs (`highly_variable_rank` / `dispersions_norm`) instead of the first HVGs in `adata.var` order (!531)
