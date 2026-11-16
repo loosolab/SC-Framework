@@ -11,6 +11,7 @@ from beartype import beartype
 
 import sctoolbox.utils as utils
 
+
 @beartype
 def func_repr(func: Callable) -> str:
     """
@@ -34,7 +35,6 @@ def func_repr(func: Callable) -> str:
     module = getattr(func, "__module__", None)
 
     return f"{module}.{name}" if module else name
-
 
 
 @beartype
