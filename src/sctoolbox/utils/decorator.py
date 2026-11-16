@@ -11,6 +11,31 @@ from beartype import beartype
 
 import sctoolbox.utils as utils
 
+@beartype
+def func_repr(func: Callable) -> str:
+    """
+    Get function string representation.
+
+    Tries to return the full module path and name of the function. E.g. "numpy.mean", "sctoolbox.utils.func_repr", etc.
+
+    Parameters
+    ----------
+    func : Callable
+        The function to convert.
+
+    Returns
+    -------
+    str
+        String representation of the function given as module and name. The module will be skipped if not available.
+    """
+    # fetch function name
+    name = getattr(func, "__qualname__", None) or getattr(func, "__name__", None) or type(func).__qualname__
+    # fetch module name
+    module = getattr(func, "__module__", None)
+
+    return f"{module}.{name}" if module else name
+
+
 
 @beartype
 def log_anndata(func: Callable) -> Callable:
@@ -57,11 +82,14 @@ def log_anndata(func: Callable) -> Callable:
         # Convert objects to safe representations, e.g. anndata objects to string representation and tuple to list
         args_repr = {f"arg{i + 1}": element for i, element in enumerate(args)}  # create dict with arg1, arg2, ... as keys instead of list to prevent errors with wrongly shaped arrays
         kwargs_repr = kwargs
-        convert = {sc.AnnData: repr,
-                   mu.MuData: repr,
-                   tuple: list,
-                   matplotlib.axes._axes.Axes: str,
-                   dict: str}  # nested dicts are not allowed
+        convert = {
+            sc.AnnData: repr,
+            mu.MuData: repr,
+            tuple: list,
+            matplotlib.axes._axes.Axes: str,
+            dict: str,  # nested dicts are not allowed
+            Callable:  func_repr  # intended to check for functions but also matches the above classes; keep last!
+        }
         for typ, convfunc in convert.items():
             args_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in args_repr.items()}
             kwargs_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in kwargs_repr.items()}

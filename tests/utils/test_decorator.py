@@ -14,15 +14,25 @@ def test_log_anndata(adata_fun_scope):
 
     # define a function with the decorator
     @deco.log_anndata
-    def test_func(adata, param1, param2, param3, param4, param5, param6):
-        param_array = [param1, param2, param3, param4, param5, param6]
+    def test_func(adata, param1, param2, param3, param4, param5, param6, param7):
+        param_array = [param1, param2, param3, param4, param5, param6, param7]
         adata.uns["test_func"] = param_array
         return adata
 
+    params = {
+        "param1": 1,
+        "param2": None,
+        "param3": "test",
+        "param4": 1.0,
+        "param5": True,
+        "param6": {"nested": {"inner": True}},
+        "param7": lambda x: str(x)
+    }
+
     # run the function
-    adata_fun_scope = test_func(adata_fun_scope, param1=1, param2=None, param3="test", param4=1.0, param5=True, param6={"nested": {"inner": True}})
+    adata_fun_scope = test_func(adata_fun_scope, **params)
     # run the function again
-    adata_fun_scope = test_func(adata_fun_scope, param1=1, param2=None, param3="test", param4=1.0, param5=True, param6={"nested": {"inner": True}})
+    adata_fun_scope = test_func(adata_fun_scope, **params)
 
     # check if log is in adata.uns
     assert "sctoolbox" in adata_fun_scope.uns
@@ -34,6 +44,8 @@ def test_log_anndata(adata_fun_scope):
     assert adata_fun_scope.uns["sctoolbox"]["log"]["test_func"]["run_1"]['kwargs']["param3"] == "test"
     assert adata_fun_scope.uns["sctoolbox"]["log"]["test_func"]["run_1"]['kwargs']["param4"] == 1.0
     assert adata_fun_scope.uns["sctoolbox"]["log"]["test_func"]["run_1"]['kwargs']["param5"] is True
+    assert adata_fun_scope.uns["sctoolbox"]["log"]["test_func"]["run_1"]['kwargs']["param6"] == str({"nested": {"inner": True}})
+    assert isinstance(adata_fun_scope.uns["sctoolbox"]["log"]["test_func"]["run_1"]['kwargs']["param7"], str)
     assert "param6" in adata_fun_scope.uns["sctoolbox"]["log"]["test_func"]["run_1"]['kwargs']
     assert adata_fun_scope.uns["sctoolbox"]["log"]["test_func"]["run_2"]['kwargs']["param1"] == 1
 
