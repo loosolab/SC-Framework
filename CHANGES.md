@@ -1,6 +1,10 @@
 # Changelog
 
 ## 0.16.0 (in progress)
+- add Palantir fate-probability projection, representative gene-trend panels, and report integration (!531)
+- Palantir plots: unclipped gene-program y-limits, optional shared trend/cell y-scale (`trend_layer`), full per-cluster gene ranking, continuous colormap for results, uncluttered equal-probability label (!531)
+- analyze_top_genes_communities: select the most variable HVGs (`highly_variable_rank` / `dispersions_norm`) instead of the first HVGs in `adata.var` order (!531)
+- improve Palantir analysis, testing, reporting, and documentation (#443)
 - replace the bioRxiv preprint badges with the published iScience article DOI, cite the article in the methods templates, and unify the Zenodo links on the all-versions DOI (#459)
 - connectionPlot: Fix colormap by replacing deprecated function get_cmap (#462)
 - document the development environment setup and the testing/linting dependency-groups in `development.rst`
@@ -28,6 +32,7 @@
 - fix get_variable_features subsampling for pandas 3 (Series positional access via .iloc) and expose subsample_target (!533)
 - fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
 - bump palantir floor to >=1.4.5 for pandas 3 / anndata 0.13 compatibility (!533)
+- add robust terminal-state handling, branch gene-program plotting, interactive embedding improvements, and extended Palantir tests (!531)
 - Add gene expression scaling for planet plots (#466)
 - save_h5ad: normalise uns '*_colors' to hex so Palantir results are writable (#470)
 - replace `numpy.typing.NDArray` type hints with the expanded `np.ndarray[shape, dtype]` generic to fix beartype PEP 484 errors under numpy 2.5 (#469)
@@ -48,6 +53,9 @@
 - run_scsa: select the top-scoring celltype row explicitly
 - run_scsa: move the SCSA results from adata.uns["SCSA"] to adata.uns["sctoolbox"]["SCSA"]
 - run_scsa: refresh the stale pandas downgrade note
+- fix Palantir interactive plots, figure formats, and the gene-program Excel export (#443)
+- add an `ax` parameter to `plot_fate_probability_projection`, an `eigvec_key` parameter to `select_early_cell`, and raise Palantir test coverage (#443)
+- use modality-neutral titles, axis labels, and legends in the Palantir trend plots (#443)
 - unpin docutils (#421)
 - add_expr_to_obs: aggregate gene lists; raise on an existing column unless overwrite=True (#444)
 - deprecate marker_genes.add_gene_expression in favour of add_expr_to_obs (#444)
@@ -64,6 +72,8 @@
 - fix read-only array in agg_feature_embedding gene_symbols test under pandas 3
 
 ### Changes to notebooks
+- move three verbose Palantir cells into sctoolbox helper functions (#443)
+- RNA+ATAC/99-report: show the Palantir per-branch program and trend grids in one row (!531)
 - General/group_marker: Add gene expression scaling option for planet plots
 - General/GSEA: Additional parameters for gsea_dot
 - RNA: Add Hotspot notebook (0D_hotspot.ipynb) (#142)
