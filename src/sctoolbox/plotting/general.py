@@ -1097,7 +1097,8 @@ def plot_table(table: pd.DataFrame,  # noqa: C901
     elif col_width == "auto":
         auto_width = []
         for col in table.columns:
-            auto_width.append(max(table[col].astype(str).tolist() + [col], key=len))
+            # .map(str) because https://pandas.pydata.org/docs/user_guide/migration.html#astype-str-preserving-missing-values
+            auto_width.append(max(table[col].map(str).tolist() + [col], key=len))
 
         col_width = []
         for i, txt in enumerate(auto_width):
