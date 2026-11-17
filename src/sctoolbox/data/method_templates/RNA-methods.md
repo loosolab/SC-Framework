@@ -1,5 +1,5 @@
 {#- ---------- Core Analysis ---------- -#}
-The analysis was performed with the SC-Framework (Schultheis et al., doi: 10.5281/zenodo.11065517, version {{ args["sctoolbox"].version }}), utilizing the following tools as part of its integrated analysis environment. {##}
+The analysis was performed with the SC-Framework (Schultheis et al., doi: 10.1016/j.isci.2026.116631, software doi: 10.5281/zenodo.11065517, version {{ args["sctoolbox"].version }}), utilizing the following tools as part of its integrated analysis environment. {##}
 {#- ----- assembly notebook -#}
 {%- if args["01_assembly"] -%}
     Mapped and quantified data was assembled by the SC-Framework, which created an initial dataset of {{ args["01_assembly"].var_count }} genes and {{ args["01_assembly"].obs_count }} cells. {##}
@@ -81,6 +81,10 @@ The analysis was performed with the SC-Framework (Schultheis et al., doi: 10.528
 {#- ----- Proportion analysis notebook -#}
 {%- if args["proportion_analysis"] -%}
     Proportional changes in cell numbers of {{ args["proportion_analysis"].cluster }} over {{ args["proportion_analysis"].condition }} were detected using Scanpro (Alayoubi et al., doi: 10.1038/s41598-024-66381-7). {##}
+{%- endif -%}
+{#- ----- Hotspot notebook -#}
+{%- if args["hotspot"] -%}
+    Gene modules were identified with Hotspot (DeTomaso & Yosef, doi: 10.1016/j.cels.2021.04.005). For every gene, Hotspot tests whether neighboring cells show similar expression (autocorrelation) on a k-nearest-neighbor graph built from {{ args["hotspot"].latent }} with {{ args["hotspot"].n_neighbors }} neighbors, using the "{{ args["hotspot"].model }}" null model. The {{ args["hotspot"].n_selected_genes }} most informative genes were grouped into {{ args["hotspot"].n_modules }} gene modules based on their pairwise local correlations, and a per-cell score was computed for each module. Modules were characterized by gene set enrichment analysis with Enrichr (Kuleshov et al., doi: 10.1093/nar/gkw377) via GSEApy (Fang et al., doi: 10.1093/bioinformatics/btac757). {##}
 {%- endif -%}
 {#- ----- Pseudotime trajectory notebook -#}
 {%- if args["pseudotime_analysis"] -%}

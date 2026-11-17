@@ -5,21 +5,27 @@ import scanpy as sc
 import scipy
 import os
 import numpy as np
-from contextlib import contextmanager
 
 import sctoolbox.utils.adata as utils
 
 # ---------------------------- HELPER ------------------------------- #
 
 
-@contextmanager
-def add_logger_handler(logger, handler):
-    """Temporarily add a handler to the given logger."""
-    logger.addHandler(handler)
-    try:
-        yield
-    finally:
-        logger.removeHandler(handler)
+def color_values(colors):
+    """Return the color values of a dict- or list-shaped '*_colors' uns entry.
+
+    Parameters
+    ----------
+    colors : dict | list | np.ndarray
+        Value of an adata.uns['*_colors'] entry.
+
+    Returns
+    -------
+    list
+        The color values.
+    """
+    return list(colors.values()) if isinstance(colors, dict) else list(colors)
+
 
 # --------------------------- FIXTURES ------------------------------ #
 
@@ -37,20 +43,13 @@ def adata1():
 
 
 @pytest.fixture
-def adata2():
-    """Load scanpy processed pbmc3k adata.
-
-    Returns
-    -------
-    sc.AnnData
-        Processed PBMC3k dataset from scanpy.
-    """
-    return sc.datasets.pbmc3k_processed()
-
-
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
+def adata(random_adata):
     """Return adata object with 3 groups.
+
+    Parameters
+    ----------
+    random_adata : sc.AnnData
+        Shared synthetic-AnnData object from ``tests/conftest.py``.
 
     Returns
     -------
@@ -58,7 +57,7 @@ def adata():
         Random AnnData object with 3 groups (C1, C2, C3) and test layers.
     """
 
-    adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
+    adata = random_adata
     adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
 
     # add some layers for testing
@@ -77,14 +76,94 @@ def test_get_adata_subsets(adata):
     subsets = utils.get_adata_subsets(adata, "group")
 
     for group, sub_adata in subsets.items():
-        assert sub_adata.obs["group"][0] == group
+        assert sub_adata.obs["group"].iloc[0] == group
         assert sub_adata.obs["group"].nunique() == 1
 
 
+@pytest.mark.parametrize("sparse", [True, False])
+def test_add_expr_to_obs(adata, sparse):
+    """Test add_expr_to_obs for single genes, gene lists, layers and gene symbols."""
+
+    if sparse:
+        adata.X = scipy.sparse.csr_matrix(adata.X)
+        adata.layers["layer"] = scipy.sparse.csr_matrix(adata.layers["layer"])
+    X = np.asarray(adata.X.todense()) if sparse else adata.X
+
+    gene = adata.var.index[0]
+    genes3 = list(adata.var.index[:3])
+
+    # single gene: identical to the plain column
+    utils.add_expr_to_obs(adata, gene)
+    expected_single = adata.X[:, 0].todense().A1 if sparse else X[:, 0]
+    assert np.array_equal(adata.obs[gene], expected_single)
+
+    # gene list with default mean
+    utils.add_expr_to_obs(adata, genes3, obs_name="score")
+    assert np.allclose(adata.obs["score"], X[:, :3].mean(axis=1))
+
+    # gene list with custom function
+    utils.add_expr_to_obs(adata, genes3, obs_name="score_sum", fun=np.sum)
+    assert np.allclose(adata.obs["score_sum"], X[:, :3].sum(axis=1))
+
+    # layer
+    utils.add_expr_to_obs(adata, genes3, obs_name="score_layer", layer="layer")
+    assert np.allclose(adata.obs["score_layer"], 2 * adata.obs["score"])
+
+    # gene symbols
+    adata.var["sym"] = "s_" + adata.var.index
+    utils.add_expr_to_obs(adata, "s_" + gene, gene_symbols="sym")
+    assert np.array_equal(adata.obs["s_" + gene], expected_single)
+
+
+@pytest.mark.parametrize("gene,obs_name", [("invalid", None),
+                                           (["invalid"], "score"),
+                                           ("list", None)])
+def test_add_expr_to_obs_invalid(adata, gene, obs_name):
+    """Test add_expr_to_obs raises on missing genes and a list without obs_name."""
+
+    if gene == "list":
+        gene = list(adata.var.index[:2])
+    elif isinstance(gene, list):
+        gene = [adata.var.index[0]] + gene
+
+    with pytest.raises(ValueError):
+        utils.add_expr_to_obs(adata, gene, obs_name=obs_name)
+
+
+def test_add_expr_to_obs_overwrite(adata):
+    """Test add_expr_to_obs keeps existing columns unless overwrite=True."""
+
+    genes = list(adata.var.index[:3])
+    adata.obs["score"] = np.arange(adata.n_obs, dtype=float)
+    original = adata.obs["score"].copy()
+
+    with pytest.raises(ValueError):
+        utils.add_expr_to_obs(adata, genes, obs_name="score")
+    assert adata.obs["score"].equals(original)
+
+    utils.add_expr_to_obs(adata, genes, obs_name="score", overwrite=True)
+    assert np.allclose(adata.obs["score"], adata.X[:, :3].mean(axis=1))
+
+
+def test_add_expr_to_obs_duplicates(adata, caplog, add_logger_handler):
+    """Test add_expr_to_obs warns on duplicated var names and raises on duplicated gene symbols."""
+
+    adata.var["sym"] = ["dup", "dup"] + list(adata.var.index[2:])
+    with pytest.raises(ValueError):
+        utils.add_expr_to_obs(adata, "dup", gene_symbols="sym")
+
+    adata.var.index = ["dup", "dup"] + list(adata.var.index[2:])
+    with add_logger_handler(utils.logger, caplog.handler):
+        utils.add_expr_to_obs(adata, "dup")
+
+    assert np.array_equal(adata.obs["dup"], adata.X[:, 0])
+    assert any(rec.levelname == "WARNING" and "Using the first match" in rec.message for rec in caplog.records)
+
+
 @pytest.mark.parametrize("raw", [True, False])
-def test_save_and_load_h5ad(adata, raw, caplog):
+def test_save_and_load_h5ad(adata, raw, caplog, tmp_path, add_logger_handler):
     """Test if h5ad file is saved correctly. Then test loading."""
-    path = "test.h5ad"
+    path = str(tmp_path / "test.h5ad")
 
     # add raw layer
     adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
@@ -93,22 +172,83 @@ def test_save_and_load_h5ad(adata, raw, caplog):
     else:
         adata.raw = None
 
-    try:
-        with add_logger_handler(utils.logger, caplog.handler):
-            utils.save_h5ad(adata, path)
+    with add_logger_handler(utils.logger, caplog.handler):
+        utils.save_h5ad(adata, path)
 
-            assert os.path.isfile(path)
+        assert os.path.isfile(path)
 
-            loaded = utils.load_h5ad(path)
+        loaded = utils.load_h5ad(path)
 
-            assert isinstance(loaded, sc.AnnData)
+        assert isinstance(loaded, sc.AnnData)
 
-            # assume the last record is the warning
-            log_rec = caplog.records[-1]
-            assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
+        # assume the last record is the warning
+        log_rec = caplog.records[-1]
+        assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
 
-    finally:
-        os.remove(path)  # clean up after tests
+
+@pytest.mark.parametrize("key,value,expected", [
+    # dict of RGB tuples as stored by palantir.plot.plot_trajectories
+    ("palantir_fates_colors", {"2": (0.12156862745098039, 0.4666666666666667, 0.7058823529411765),
+                               "3": (1.0, 0.4980392156862745, 0.054901960784313725)}, ["#1f77b4", "#ff7f0e"]),
+    # list of RGBA tuples as written by scanpy for a categorical .obs column
+    ("group_colors", [(0.1, 0.2, 0.3, 1.0), (0.4, 0.5, 0.6, 1.0)], ["#1a334c", "#668099"]),
+    ("alpha_colors", [(0.1, 0.2, 0.3, 0.5)], ["#1a334c"])  # alpha is dropped
+])
+def test_save_h5ad_colors_to_hex(adata, key, value, expected, tmp_path):
+    """Test if matplotlib color values in adata.uns['*_colors'] are converted to hex."""
+    path = str(tmp_path / "test.h5ad")
+
+    adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
+    adata.uns[key] = value.copy()  # copy to keep the parametrization untouched
+
+    utils.save_h5ad(adata, path)  # raises IORegistryError as long as the values are tuples
+
+    loaded = utils.load_h5ad(path)
+
+    assert isinstance(loaded.uns[key], dict) == isinstance(value, dict)  # the container shape survives the write
+
+    # save_h5ad converts in place, so the in-memory and the written colors are both expected to be hex
+    for colors in [adata.uns[key], loaded.uns[key]]:
+        assert color_values(colors) == expected
+        assert all(len(color) == 7 and color.startswith("#") for color in color_values(colors))  # 6-digit hex
+
+
+@pytest.mark.parametrize("key,value", [
+    ("hex_colors", ["#1f77b4", "#ff7f0e"]),  # canonical hex is left as is
+    ("hexdict_colors", {"a": "#1f77b4"}),
+    ("not_a_color_map", [(0.1, 0.2, 0.3)])  # keys not ending in '_colors' are not converted
+])
+def test_save_h5ad_colors_unchanged(adata, key, value, tmp_path):
+    """Test if canonical hex and non-'*_colors' uns entries are left unchanged."""
+    path = str(tmp_path / "test.h5ad")
+
+    adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
+    adata.uns[key] = value.copy()  # copy to keep the parametrization untouched
+
+    utils.save_h5ad(adata, path)
+
+    assert adata.uns[key] == value
+
+
+@pytest.mark.parametrize("key,value", [
+    ("bad_colors", [(255, 0, 0)]),  # int RGB is not color like
+    ("badstr_colors", {"a": "not-a-color"})
+])
+def test_save_h5ad_colors_not_color_like(adata, key, value, caplog, tmp_path, add_logger_handler):
+    """Test if non-color-like adata.uns['*_colors'] values are skipped with a warning."""
+    path = str(tmp_path / "test.h5ad")
+
+    adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
+    adata.uns[key] = value.copy()  # copy to keep the parametrization untouched
+
+    with add_logger_handler(utils.logger, caplog.handler):
+        utils.save_h5ad(adata, path)  # must not raise a ValueError from the color conversion
+
+    assert adata.uns[key] == value  # non-color-like values are not converted
+
+    # one warning per uns key, naming that key
+    warnings = [log_rec for log_rec in caplog.records if log_rec.levelname == "WARNING"]
+    assert len(warnings) == 1 and key in warnings[0].message
 
 
 @pytest.fixture(scope="session")
@@ -381,10 +521,86 @@ def test_tidy_layer_keep_and_X(adata, keep_X, replace_X, keep):
         if keep == "all":
             assert len(adata.layers) <= len(adata_out.layers)  # assert that no layers are removed
         else:
-            assert len(adata_out.layers) == len(keep) and all(layer in keep for layer in adata_out.layers.keys())  # assert the correct layers are removed
+            # anndata>=0.13 exposes .X as a spurious None-keyed layer; assert only on real layer names
+            real_layers = [layer for layer in adata_out.layers.keys() if layer is not None]
+            assert len(real_layers) == len(keep) and all(layer in keep for layer in real_layers)  # assert the correct layers are removed
 
         if replace_X:
             # assert the original .X is replaced with the right layer
             # this expects dense matrices
             assert not np.array_equal(adata_out.layers[replace_X], adata.X)
             assert np.array_equal(adata_out.layers[replace_X], adata_out.X)
+
+# --------------------------------------------------------------------------
+# Test remove_group
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("table, col_name, value", [
+    ("obs", "group", "C1"),
+    ("obs", "group", ["C1", "C2"]),
+    ("var", "gene_group", "G1"),
+    ("var", "gene_group", ["G1", "G2"]),
+    ("obs", "group", None),
+    ("var", "gene_group", None),
+    ("obs", "group", "nonexistent"),
+    ("var", "gene_group", "nonexistent")
+])
+@pytest.mark.parametrize("inplace, expected_return_type", [
+    (True, type(None)),
+    (False, sc.AnnData),
+])
+def test_remove_group(table, col_name, value, inplace, expected_return_type, adata_fun_scope):
+    """Test removal of None/single/multiple/all groups from obs/var with inplace=True/False."""
+    adata = adata_fun_scope
+
+    # Setup var column if testing var table
+    if table == "var":
+        n_vars = adata.n_vars
+        adata.var["gene_group"] = np.random.choice(["G1", "G2", "G3"], size=n_vars)
+        col = adata.var[col_name]
+        original_n = adata.n_vars
+        value = value if value is not None else adata.var[col_name].unique().tolist()
+    else:
+        col = adata.obs[col_name]
+        original_n = adata.n_obs
+        value = value if value is not None else adata.obs[col_name].unique().tolist()
+
+    # Ensure value is always a list for isin()
+    values_to_remove = value if isinstance(value, (list, tuple)) else [value]
+    n_removed = col.isin(values_to_remove).sum()
+
+    result = utils.remove_group(adata, col_name=col_name, value=value, table=table, inplace=inplace)
+
+    # 1. Check return type
+    assert isinstance(result, expected_return_type)
+
+    # 2. Determine which object to inspect
+    target = adata if inplace else result
+
+    # 3. Verify specified values are removed
+    remaining = getattr(target, table)[col_name].values
+    if isinstance(value, str):
+        assert value not in remaining
+    else:
+        assert not any(v in remaining for v in value)
+
+    # 4. Verify shape changes correctly
+    if inplace:
+        assert (adata.n_obs if table == "obs" else adata.n_vars) == original_n - n_removed
+    else:
+        # Original object should be untouched
+        assert (adata.n_obs if table == "obs" else adata.n_vars) == original_n
+        # Returned object should have reduced dimensions
+        assert (result.n_obs if table == "obs" else result.n_vars) == original_n - n_removed
+
+
+@pytest.mark.parametrize("table, col_name, expected_msg", [
+    ("obs", "nonexistent_col", "not found in 'obs' table"),
+    ("var", "nonexistent_col", "not found in 'var' table"),
+])
+def test_remove_group_invalid_col_raises(table, col_name, expected_msg, adata):
+    """Test that a ValueError is raised when col_name is missing from the specified table."""
+    adata = adata.copy()
+    with pytest.raises(ValueError, match=expected_msg):
+        utils.remove_group(adata, col_name=col_name, value="C1", table=table)

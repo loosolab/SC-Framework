@@ -1,5 +1,84 @@
 # Changelog
 
+## 0.16.0 (16-11-2026)
+- add Palantir fate-probability projection, representative gene-trend panels, and report integration (!531)
+- Palantir plots: unclipped gene-program y-limits, optional shared trend/cell y-scale (`trend_layer`), full per-cluster gene ranking, continuous colormap for results, uncluttered equal-probability label (!531)
+- analyze_top_genes_communities: select the most variable HVGs (`highly_variable_rank` / `dispersions_norm`) instead of the first HVGs in `adata.var` order (!531)
+- improve Palantir analysis, testing, reporting, and documentation (#443)
+- replace the bioRxiv preprint badges with the published iScience article DOI, cite the article in the methods templates, and unify the Zenodo links on the all-versions DOI (#459)
+- connectionPlot: Fix colormap by replacing deprecated function get_cmap (#462)
+- document the development environment setup and the testing/linting dependency-groups in `development.rst`
+- document the doc-string example conventions (`.. plot::` / `.. exec_code::`) and pre-code fixtures in `development.rst`
+- refactor tests: consolidate duplicate fixtures into shared `conftest` files (tools, plotting, utils, settings), migrate RNA test data to `scanpy.datasets` (drop the bundled `adata_rna.rds`), reduce runtime by removing unused t-SNE and sharing expensive fixture builds, and document the fixture/test-data conventions in `development.rst` (#445)
+- fix broken tests (missing scanpy import in multiomics, unbound `peaks_to_bins` result, and batch-label length in the norm_correct fixture)
+- fix gitlab_download: replace the broken throttler rate limiter with a basic time.sleep and remove the throttler dependency
+- reduce test-data size and mock S3 download to reduce runtime and size (#445)
+- enables parallel test execution (#445)
+- reduce test runtime hotspots, right-size fixture scopes, dedup fixtures/orphan data, and fix warnings (#445)
+- pin the conda environment to Python >=3.9,<3.13 (#460)
+- fix SCSA for Python >= 3.13
+- fix gsea_dot top pathway selection (#457)
+- prepare_for_cellxgene: added na check (#458)
+- fix _filter_anndata: replacing eval to allow mathematical symbols in column names (#452)
+- fix cut off slider number (#439)
+- add obs_names_make_unique option to `sctoolbox.utils.assemblers.from_R` (#438)
+- add `utils.adata.remove_group` function
+- add additional parameters to `group_expression_boxplot()` (#456)
+- add compatibility with pandas 3 and anndata 0.13 (!533)
+- make pygenometracks an optional 'genometracks' extra to resolve the matplotlib conflict in .[all] (!533)
+- drop the typing_extensions pin and exclude anndata 0.13.0 (!533)
+- fix estimate_doublets hang when threads exceeds the number of groups (cap pool size) (!533)
+- bump tqdm floor to >=4.68.4 for pandas 3 compatibility (!533)
+- fix get_variable_features subsampling for pandas 3 (Series positional access via .iloc) and expose subsample_target (!533)
+- fix estimate_doublets nulling .X under anndata 0.13 (delete only real layers, not all) (!533)
+- bump palantir floor to >=1.4.5 for pandas 3 / anndata 0.13 compatibility (!533)
+- add robust terminal-state handling, branch gene-program plotting, interactive embedding improvements, and extended Palantir tests (!531)
+- Add gene expression scaling for planet plots (#466)
+- save_h5ad: normalise uns '*_colors' to hex so Palantir results are writable (#470)
+- replace `numpy.typing.NDArray` type hints with the expanded `np.ndarray[shape, dtype]` generic to fix beartype PEP 484 errors under numpy 2.5 (#469)
+- document the `dev` dependency group in `development.rst`
+- migrate to muon 0.1.9's explicit pull_obs for modality obs propagation and raise the muon floor
+- vendor liana's explode_complexes, which is private as of liana 1.10.0
+- add error and verbose parameters to validate_regions, which now owns the coordinate column normalization
+- narrow validate_regions' coordinate_columns from Iterable[str] to np.ndarray | Sequence[str] | pd.Index | None
+- annotate_adata: validate the coordinate columns instead of repairing adata.var
+- rename the adata.var coordinate column stop to end (deprecated, removed in 0.18.0); a pre-rename object gains end alongside its retained stop
+- annotate_adata: raise an explicit error when adata.var has fewer than three columns to infer coordinates from
+- refresh the pytest filterwarnings allowlist (!541)
+- fix the always-true assertion in test_bed_is_sorted (bitwise ~ instead of not) (!541)
+- grouped_violin: implement the missing style="bar" branch (!541)
+- run_scsa: write SCSA input/results to a per-call temp directory
+- run_scsa: call SCSA via an argv list instead of a shell string
+- run_scsa: inplace=False no longer writes adata.uns["SCSA"] on the input object
+- run_scsa: select the top-scoring celltype row explicitly
+- run_scsa: move the SCSA results from adata.uns["SCSA"] to adata.uns["sctoolbox"]["SCSA"]
+- run_scsa: refresh the stale pandas downgrade note
+- fix Palantir interactive plots, figure formats, and the gene-program Excel export (#443)
+- add an `ax` parameter to `plot_fate_probability_projection`, an `eigvec_key` parameter to `select_early_cell`, and raise Palantir test coverage (#443)
+- use modality-neutral titles, axis labels, and legends in the Palantir trend plots (#443)
+- unpin docutils (#421)
+- add_expr_to_obs: aggregate gene lists; raise on an existing column unless overwrite=True (#444)
+- deprecate marker_genes.add_gene_expression in favour of add_expr_to_obs (#444)
+- agg_feature_embedding: add overwrite parameter; keep an existing obs column when the name check fails (#444)
+- agg_feature_embedding: store keep_score results on the input adata when gene_symbols is set (#444)
+- plot_embedding, agg_feature_embedding: fix gene_symbols AttributeError (use anndata.utils.make_index_unique) (#444)
+- add `sctoolbox.tools.hotspot` for Hotspot gene module analysis: representation/UMAP helpers, gene detection filter, `run_hotspot`, result plots, per-cell module assignment and Enrichr-based module enrichment (#142, !527)
+- add `utils.adata.obs_subset` to subset an AnnData object by one or more obs column values (!527)
+- save_h5ad: convert values in `adata.uns` that h5ad cannot write into strings before saving (!527)
+- get_version_report: map import names to distribution names so packages installed under a different name (e.g. hotspot as hotspotsc) are reported correctly (!527)
+- add Hotspot to the RNA method template (!527)
+- add hotspotsc and harmonypy as dependencies (!527)
+- fix `run_hotspot` module creation under pandas >= 3 (#455)
+- fix read-only array in agg_feature_embedding gene_symbols test under pandas 3
+
+### Changes to notebooks
+- move three verbose Palantir cells into sctoolbox helper functions (#443)
+- RNA+ATAC/99-report: show the Palantir per-branch program and trend grids in one row (!531)
+- General/group_marker: Add gene expression scaling option for planet plots
+- General/GSEA: Additional parameters for gsea_dot
+- RNA: Add Hotspot notebook (0D_hotspot.ipynb) (#142)
+- RNA/99-report: Add Hotspot slides (#142)
+
 ## 0.15.1 (15-05-2026)
 - from_mtx: Fix read option when providing str instead of dict
 - Reduce package build size (#448)

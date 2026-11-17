@@ -9,5 +9,6 @@ The advanced notebooks require a clustering and embedding, which is the product 
     Tutorial_annotation
     Tutorial_ligand_receptor
     Tutorial_marker
+    Tutorial_palantir
     Tutorial_proportion
 

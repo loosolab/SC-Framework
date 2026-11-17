@@ -9,7 +9,6 @@ from scipy.stats import zscore
 
 from beartype import beartype
 from beartype.typing import Literal, Optional, Tuple, List, Iterable
-from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
 from sctoolbox.utils.general import remove_suffix
@@ -282,8 +281,9 @@ def join_modalities(adata_list: List[sc.AnnData],
 
     Returns
     -------
-    mudata :
-        Muon mudata object containnig both modalities.
+    mu.MuData
+        Muon mudata object containing both modalities. The obs columns of the
+        modalities are propagated to MuData.obs as `<modality>:<column>`.
 
     Raises
     ------
@@ -298,13 +298,22 @@ def join_modalities(adata_list: List[sc.AnnData],
         adata.obs.index.name = None
         adata.var.index.name = None
 
+    # Check if cells that are not present in both modalities are to be kept or filtered out
+    if not keep_outer:
+        # Keep only cells that exist in all modalities. This reimplements
+        # mu.pp.intersect_obs, which reads anndata's removed private ._X attribute
+        # and therefore fails on newer anndata versions. The intersection of obs_names
+        # (np.intersect1d, matching muon) is used to subset each modality before the
+        # MuData is built; the .isin mask preserves each modality's own cell order.
+        common_obs = reduce(np.intersect1d, [adata.obs_names for adata in adata_list])
+        adata_list = [adata[adata.obs_names.isin(common_obs)].copy() for adata in adata_list]
+
     # Create mudata object from anndata objects for modality 1 and modality 2
     mdata = mu.MuData(dict(zip(modality_list, adata_list)))
 
-    # Check if cells that are not present in both modalities are to be kept or filtered out
-    if not keep_outer:
-        # Filter to keep only cells that exist in both modalities
-        mu.pp.intersect_obs(mdata)
+    # Propagate the modality obs columns to mdata.obs. Since muon 0.1.9 this is no
+    # longer done implicitly when the MuData is built and has to be requested.
+    mdata.pull_obs()
 
     return mdata
 
@@ -407,7 +416,7 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
 
     1. One that can be used to generate the heatmap for visualization.
     2. One for display of cluster comparison between modalities.
-    3. One that can be usedto generate the sankey diagram.
+    3. One that can be used to generate the sankey diagram.
     The second matrix shows per column:
         - Cluster name from modality one as index.
         - Number of cells total assigned to modality 1 cluster.
@@ -427,8 +436,8 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
 
     Returns
     -------
-    TTuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
-        df_final, df_heatmap, df_sankey
+    Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
+        df_heatmap, df_final, df_sankey
         As described above
 
     TODO Dataframes 1 and 3 are almost identical. Merge into one.
@@ -453,7 +462,10 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
     df_sankey = df_tmp.reset_index()
 
     # Group by cluster names of modality 1 clusters
-    df_final = df_heatmap.groupby(index, observed=False).agg(list)
+    # Cast the categorical modality 2 cluster column to object first: pandas 3 tries to cast
+    # the list-valued .agg(list) result back into the categorical dtype, which fails as a list
+    # is not a valid (hashable) category. object works identically on pandas 2 and 3.
+    df_final = df_heatmap.astype({clustercols[1]: object}).groupby(index, observed=False).agg(list)
     # Generate column with modality 2 cluster names as keys and number of cells per modality 2 cluster as values in dictionary
     df_final.insert(3, clusters_mod2,
                     df_final.apply(lambda x: dict(zip(x[clustercols[1]], x["Cells_per_cluster"])), axis=1))
@@ -482,7 +494,9 @@ def cluster_comparison_data_frames(data_frame: pd.DataFrame,
 
 def compare_clusters(mdata: mu.MuData,
                      clusters_mod1: str,
-                     clusters_mod2: str,) -> Tuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]:
+                     clusters_mod2: str,) -> Tuple[np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]],
+                                                   np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]],
+                                                   np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]]]:
     """
     Calculate comparison matrices of clusters between modalities.
 
@@ -502,8 +516,11 @@ def compare_clusters(mdata: mu.MuData,
 
     Returns
     -------
-    Tuple[NDArray[pd.DataFrame], NDArray[pd.DataFrame], NDArray[pd.DataFrame]]
-        Tuple of comparison matrices
+    Tuple[np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]], np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]], np.ndarray[tuple[int, ...], np.dtype[pd.DataFrame]]]
+        Three arrays of comparison matrices: the heatmap array, the modality array and the sankey array.
+        The heatmap and sankey arrays hold one frame per modality. The modality array holds two
+        additional elements: element 2 is the mean percent `Styler` returned by `mean_percent_data_frame`
+        and element 3 repeats the sankey frame of modality 1.
 
     Raises
     ------

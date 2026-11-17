@@ -1,61 +1,40 @@
 """Test gsea plotting functions."""
 
 import pytest
-import scanpy as sc
-import numpy as np
-import sctoolbox.tools as tools
 from sctoolbox.plotting import gsea
 
-
-# ------------------------------ FIXTURES --------------------------------- #
-
-
-@pytest.fixture(scope="session")  # reuse the fixture for all tests
-def adata():
-    """Minimal adata file for testing.
-
-    Returns
-    -------
-    anndata.AnnData
-        AnnData object with GSEA results.
-    """
-    adata = sc.datasets.pbmc68k_reduced()
-    tools.marker_genes.run_rank_genes(adata, "louvain")
-    tools.gsea.gene_set_enrichment(adata,
-                                   marker_key="rank_genes_louvain_filtered",
-                                   organism="human",
-                                   method="prerank",
-                                   inplace=True)
-    return adata
 
 # ------------------------------ TESTS --------------------------------- #
 
 
-def test_term_dotplot(adata):
+def test_term_dotplot(adata_gsea, assert_axes_array):
     """Test term_dotplot success."""
     axes = gsea.term_dotplot(term="Actin Filament Organization (GO:0007015)",
-                             adata=adata,
+                             adata=adata_gsea,
                              groupby="louvain")
 
-    assert isinstance(axes, np.ndarray)
-    ax_type = type(axes[0]).__name__
-    assert ax_type.startswith("Axes")
+    assert_axes_array(axes)
 
 
-def test_gsea_cluster_dotplot(adata):
+def test_gsea_cluster_dotplot(adata_gsea):
     """Test tsea_cluster_dotplot success."""
-    axes_dict = gsea.cluster_dotplot(adata)
+    axes_dict = gsea.cluster_dotplot(adata_gsea, save_figs=False)
     assert isinstance(axes_dict, dict)
 
 
-def test_gsea_network(adata):
+@pytest.mark.parametrize("cutoff", [0.3, 0.5, 0.8])
+def test_gsea_network(adata_gsea, cutoff):
     """Test tsea_network success."""
-    gsea.gsea_network(adata, cutoff=0.5)
+    gsea.gsea_network(adata_gsea, cutoff=cutoff)
 
 
-def test_gsea_network_fail(adata):
-    """Test tsea_network success."""
+def test_gsea_network_cutoff_too_low(adata_gsea):
+    """Test gsea_network fails when no terms survive the cutoff."""
     with pytest.raises(ValueError):
-        gsea.gsea_network(adata, cutoff=0.0000005)
+        gsea.gsea_network(adata_gsea, cutoff=0.0000005)
+
+
+def test_gsea_network_no_results(adata):
+    """Test gsea_network fails when adata has no GSEA results."""
     with pytest.raises(ValueError, match="Could not find gsea results."):
-        gsea.gsea_network(sc.datasets.pbmc68k_reduced())
+        gsea.gsea_network(adata)

@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 name = "SC-Framework"
 dynamic = ["version"]
 description = 'Custom modules for single cell analysis'
-requires-python = ">=3.9,<3.13"  # dict type hints as we use it require python 3.9; 3.13 not supported by cmake # https://github.com/python-cmake-buildsystem/python-cmake-buildsystem/issues/350
+requires-python = ">=3.9,<3.13"  # >=3.9: dict type hints we use require 3.9; <3.13: pygenometracks needs matplotlib<3.9 (no cp313 wheels) — removable once https://github.com/deeptools/pyGenomeTracks/issues/494 ships
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
@@ -80,7 +80,7 @@ dependencies = [
         'matplotlib>=3.8.4',  # to speed up installation
         'matplotlib_venn>=1.1.2',  # to speed up installation
         'scanpy[leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (leiden)
-        'anndata>=0.8',  # anndata 0.7 is not upward compatible
+        'anndata>=0.8,!=0.13.0',  # anndata 0.7 is not upward compatible; 0.13.0 under-pins typing_extensions and is broken (scverse/anndata#2537)
         'numba>=0.57.1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy>=2',
         'kneed',
@@ -88,7 +88,7 @@ dependencies = [
         'plotly',
         'scipy>=1.14',
         'statsmodels>=0.14.5',
-        'tqdm',
+        'tqdm>=4.68.4',  # 4.68.4 adds the pandas-3 fallback for the removed pandas.core.common.is_builtin_func (tqdm.pandas())
         'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn>0.12',
         'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
@@ -103,7 +103,6 @@ dependencies = [
         'pyyaml',
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'packaging',
-        'throttler',
         'upsetplot',
         'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
@@ -120,10 +119,12 @@ converter = [
 atac = [
     'uropa',
     'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
-    'pygenometracks>=3.9',
     'peakqc',
     'tobias>=0.17.2',  # to avoid installation error
     'pyranges'
+]
+genometracks = [
+    'pygenometracks>=3.9'  # add back to atac group once this is resolved: https://github.com/deeptools/pyGenomeTracks/issues/494
 ]
 interactive = [
     'click'
@@ -148,30 +149,35 @@ gsea = [
     'gseapy>=1.2.1'  # https://github.com/zqfang/GSEApy/issues/353
 ]
 deseq2 = [
-    'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
+    'pydeseq2>=0.5.4'  # https://github.com/scverse/PyDESeq2/pull/436
 ]
 annotation = [
     'markerRepo>=0.1.5'
 ]
 proportion = [
-    'scanpro>=0.4.1'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
+    'scanpro>=0.5.0'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
 ]
 velocity = [
     'scvelo>=0.3.4'
 ]
 palantir = [
-    'palantir>=1.4.4'  # to speed up installation
+    'palantir>=1.4.5'  # https://github.com/dpeerlab/Palantir/issues/180
 ]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
 pilot = [
 #   'pilotpy @ git+https://github.com/loosolab/PILOT_scframework.git',  # PyPI doesn't accept git packages
-    'palantir>=1.4.4'
+    'palantir>=1.4.5'
 ]
 multiome = [
-    'muon>=0.1.7',
+    'muon>=0.1.9',
     'mofapy2'
+]
+hotspot = [
+    'hotspotsc',
+    'SC-Framework[gsea]',
+    'harmonypy<=0.0.10'
 ]
 # core and downstream are intended to install commonly used dependencies
 # e.g. scar is deliberately skipped to to save disk space
@@ -179,7 +185,7 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity,palantir,pilot,multiome]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity,palantir,pilot,multiome,hotspot]'
 ]
 # all is intended to install everything
 all = [
@@ -192,17 +198,32 @@ test = [
     "pytest-mock",
     "pytest-cov",
     "pytest-html",
+    "pytest-xdist",
+    "filelock",
     "openpyxl"
+]
+lint = [
+    "ruff"  # lint gate (CI lint job + local binding test command)
+]
+spellcheck = [
+    "codespell[toml]"  # spellcheck gate; [toml] enables --toml pyproject.toml (CI spellcheck job + local gate)
 ]
 docs = [
     "sphinx",
     "sphinx-rtd-theme",
     "sphinx-exec-code",
     "nbsphinx",
-    "nbsphinx_link",
+    "nbsphinx_link>=1.4.1",  # support docutils>0.21 https://github.com/vidartf/nbsphinx-link/issues/25
     "myst-parser",
-    "docutils<=0.21",  # pinned until https://github.com/vidartf/nbsphinx-link/issues/25 is fixed
     "sphinxcontrib-youtube"
+]
+dev = [
+    # Everything needed for local development: all gate tooling plus dev-only extras.
+    {include-group = "test"},
+    {include-group = "lint"},
+    {include-group = "spellcheck"},
+    {include-group = "docs"},
+    "python-gitlab[graphql]"  # GraphQL client for scripts/gitlab_query.py (notes are 401-gated on the REST API)
 ]
 
 [project.scripts]
@@ -238,6 +259,26 @@ addopts = """
 """
 testpaths = [
     "./tests"
+]
+# Curated allowlist for residual, unfixable third-party warning noise — upstream
+# deprecations plus numeric warnings the tiny test data provokes. Each
+# entry is scoped by warning category AND emitting module (narrowly targeted) so
+# sctoolbox-origin warnings stay visible and new ones surface. No broad catch-all
+# ignore and no global `error`. Grouped by source.
+# Periodically check if they are resolved.
+filterwarnings = [
+    # muon: deprecated `__version__` access FutureWarning
+    "ignore::FutureWarning:muon._core.preproc",
+    # scanpy: invalid value encountered in log2 RuntimeWarning when ranking genes
+    # on the tiny test data
+    "ignore::RuntimeWarning:scanpy.tools._rank_genes_groups",
+    # seaborn: deprecated `vert: bool` parameter PendingDeprecationWarning
+    "ignore::PendingDeprecationWarning:seaborn.categorical",
+    # mizani: deprecated numpy timedelta "generic" unit DeprecationWarning
+    "ignore::DeprecationWarning:mizani._datetime.utils",
+    # stdlib multiprocessing: fork()-in-multithreaded-process DeprecationWarning
+    # raised by scanpy's parallel UMAP parameter search
+    "ignore::DeprecationWarning:multiprocessing.popen_fork",
 ]
 
 [tool.ruff]

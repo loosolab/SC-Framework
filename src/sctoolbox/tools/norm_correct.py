@@ -225,7 +225,10 @@ def tfidf(anndata: sc.AnnData,
 
     if sparse.issparse(matrix):
         n_peaks = np.asarray(matrix.sum(axis=1)).reshape(-1)
-        n_peaks = sparse.dia_matrix((1.0 / n_peaks, 0), shape=(n_peaks.size, n_peaks.size))
+        # cells with zero peaks yield inf here (handled downstream); silence the divide-by-zero warning
+        with np.errstate(divide="ignore"):
+            inv_n_peaks = 1.0 / n_peaks
+        n_peaks = sparse.dia_matrix((inv_n_peaks, 0), shape=(n_peaks.size, n_peaks.size))
         # This prevents making TF dense
         tf = np.dot(n_peaks, matrix)
     else:
@@ -236,7 +239,9 @@ def tfidf(anndata: sc.AnnData,
     if log_tf:
         tf = np.log1p(tf)
 
-    idf = np.asarray(adata.shape[0] / matrix.sum(axis=0)).reshape(-1)
+    # peaks with zero total counts yield inf here (handled downstream); silence the divide-by-zero warning
+    with np.errstate(divide="ignore"):
+        idf = np.asarray(adata.shape[0] / matrix.sum(axis=0)).reshape(-1)
     if log_idf:
         idf = np.log1p(idf)
 

@@ -1,6 +1,7 @@
 """Test quality control functions."""
 
 import pytest
+import pandas as pd
 import sctoolbox.tools.qc_filter as qc
 import sctoolbox.utils.adata as utils
 import scanpy as sc
@@ -10,37 +11,28 @@ import tempfile
 import matplotlib.pyplot as plt
 import logging
 from scipy.sparse import csr_matrix
-from contextlib import contextmanager
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
-
-# ---------------------------- HELPER ------------------------------- #
-
-
-@contextmanager
-def add_logger_handler(logger, handler):
-    """Temporarily add a handler to the given logger."""
-    logger.addHandler(handler)
-    try:
-        yield
-    finally:
-        logger.removeHandler(handler)
 
 # --------------------------- FIXTURES ------------------------------ #
 
 
 @pytest.fixture(scope="function")  # create for each test
-def adata():
-    """Load and returns an anndata object.
+def adata(adata_h5ad):
+    """Augment the shared ``adata.h5ad`` fixture with QC variables and cell cycle genes.
+
+    Parameters
+    ----------
+    adata_h5ad : anndata.AnnData
+        Shared base AnnData loaded from ``DATA_DIR/adata.h5ad`` (function-scoped).
 
     Returns
     -------
     anndata.AnnData
         RNA-seq AnnData object with QC variables and cell cycle genes.
     """
-    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
-    adata = sc.read_h5ad(f)
+    adata = adata_h5ad
     adata.obs['sample'] = np.random.choice(["sample1", "sample2"], size=len(adata))
 
     # add random groups
@@ -182,8 +174,7 @@ def norm_dist():
 # --------------------------- TESTS --------------------------------- #
 
 
-# TODO: test with more threads ("sample", 4) (excluded as it runs forever)
-@pytest.mark.parametrize("groupby,threads", [(None, 1), ("sample", 1)])
+@pytest.mark.parametrize("groupby,threads", [(None, 1), ("sample", 1), ("sample", 4)])
 def test_estimate_doublets(adata, groupby, threads):
     """Test whether 'doublet_score' was added to adata.obs."""
 
@@ -197,8 +188,6 @@ def test_adjust_doublet_threshold(adata):
     """Test whether doubet_prediction is updated based on adjusted threshold."""
     threshold = 0.25
     qc.adjust_doublet_threshold(adata, threshold=threshold)
-
-    print(adata.obs["predicted_doublet"])
 
     # Column should exist
     assert "predicted_doublet" in adata.obs.columns
@@ -262,7 +251,7 @@ def test_thresholds_as_table(threshold_dict):
 
     table = qc.thresholds_as_table(threshold_dict)
 
-    assert type(table).__name__ == "DataFrame"
+    assert isinstance(table, pd.DataFrame)
 
 
 def test_apply_qc_thresholds(adata):
@@ -352,7 +341,7 @@ def test_get_thresholds(adata, which, groupby):
 
 
 @pytest.mark.parametrize("which", ["obs", "var"])
-def test_match_columns(adata, which, caplog):
+def test_match_columns(adata, which, caplog, add_logger_handler):
     """Test _match_columns."""
     cols = getattr(adata, which).columns
     # collect valid column names
@@ -405,7 +394,7 @@ def test_filter_object(adata, which, inplace, invert, filter_type):
         assert utils.in_uns(out, ["sctoolbox", "report", "qc", which, "filter"])
 
 
-def test_filter_object_overwrite(adata, caplog):
+def test_filter_object_overwrite(adata, caplog, add_logger_handler):
     """Test _filter_object overwrite."""
     adata_copy = adata.copy()
 
@@ -465,7 +454,7 @@ def test_filter_cells(adata, invert):
 
 
 @pytest.mark.parametrize("threshold", [0.3, 0.0])
-def test_predict_sex(caplog, adata, threshold):
+def test_predict_sex(caplog, adata, threshold, add_logger_handler):
     """Test if predict_sex warns on invalid gene and succeeds."""
     adata = adata.copy()  # copy adata to avoid inplace changes
 
@@ -496,41 +485,46 @@ def test_predict_sex_diff_types(caplog, adata):
     assert 'predicted_sex' in adata_matrix.obs.columns
 
 
-@pytest.mark.parametrize(
-    "species, s_genes, g2m_genes, inplace",
-    [
-        ("mouse", None, None, False),
-        (None, "s_file", "g2m_file", True),
-        (None, "s_list", "g2m_list", True),
-        ("unicorn", None, None, False)
-    ],
-)
-def test_predict_cell_cycle(adata, species, s_genes, g2m_genes, inplace, request):
-    """Test if cell cycle is predicted and added to adata.obs."""
-
-    # Get value of s_genes and g2m_genes fixtures
-    s_genes = request.getfixturevalue(s_genes) if s_genes is not None else None
-    g2m_genes = request.getfixturevalue(g2m_genes) if g2m_genes is not None else None
-
-    # Remove columns if already present
+def test_predict_cell_cycle_species(adata):
+    """Test cell cycle prediction with species parameter."""
     expected_columns = ["S_score", "G2M_score", "phase"]
     adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])
-
     assert not any(c in adata.obs.columns for c in expected_columns)
 
-    if species == "unicorn":
-        with pytest.raises(ValueError):
-            qc.predict_cell_cycle(adata, species=species)
-    else:
-        # For other organisms or if s_genes / g2m_genes are given
-        out = qc.predict_cell_cycle(adata, species=species, s_genes=s_genes, g2m_genes=g2m_genes, inplace=inplace)
+    out = qc.predict_cell_cycle(adata, species="mouse", inplace=False)
 
-        if inplace:
-            assert out is None
-            assert all(c in adata.obs.columns for c in expected_columns)
-        else:
-            assert not any(c in adata.obs.columns for c in expected_columns)
-            assert all(c in out.obs.columns for c in expected_columns)
+    assert not any(c in adata.obs.columns for c in expected_columns)
+    assert all(c in out.obs.columns for c in expected_columns)
+
+
+def test_predict_cell_cycle_from_file(adata, s_file, g2m_file):
+    """Test cell cycle prediction with gene list files."""
+    expected_columns = ["S_score", "G2M_score", "phase"]
+    adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])
+    assert not any(c in adata.obs.columns for c in expected_columns)
+
+    out = qc.predict_cell_cycle(adata, species=None, s_genes=s_file, g2m_genes=g2m_file, inplace=True)
+
+    assert out is None
+    assert all(c in adata.obs.columns for c in expected_columns)
+
+
+def test_predict_cell_cycle_from_list(adata, s_list, g2m_list):
+    """Test cell cycle prediction with gene lists."""
+    expected_columns = ["S_score", "G2M_score", "phase"]
+    adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])
+    assert not any(c in adata.obs.columns for c in expected_columns)
+
+    out = qc.predict_cell_cycle(adata, species=None, s_genes=s_list, g2m_genes=g2m_list, inplace=True)
+
+    assert out is None
+    assert all(c in adata.obs.columns for c in expected_columns)
+
+
+def test_predict_cell_cycle_invalid_species(adata):
+    """Test cell cycle prediction with invalid species."""
+    with pytest.raises(ValueError):
+        qc.predict_cell_cycle(adata, species="unicorn")
 
 
 # Define the test function

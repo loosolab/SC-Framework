@@ -3,6 +3,7 @@
 import multiprocessing as mp
 import warnings
 import scanpy as sc
+import anndata
 import numpy as np
 import pandas as pd
 import scipy.stats
@@ -13,7 +14,7 @@ import seaborn as sns
 from matplotlib import __version__ as mpl_version, rcParams
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
-from matplotlib import cm, colors
+from matplotlib import cm, colors, colormaps
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from matplotlib.collections import PathCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -25,7 +26,6 @@ from numba import errors as numba_errors
 from beartype import beartype
 from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated, Callable
 from beartype.vale import Is
-from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
 import sctoolbox.tools as tools
@@ -50,7 +50,7 @@ def sc_colormap() -> ListedColormap:
     """
 
     # Custom colormap for single cells
-    color_cmap = cm.get_cmap('Reds', 200)
+    color_cmap = colormaps['Reds'].resampled(200)
     newcolors = color_cmap(np.linspace(0.2, 0.9, 200))
     newcolors[0, :] = colors.to_rgba("lightgrey")  # count 0 = grey
     sc_cmap = ListedColormap(newcolors)
@@ -66,7 +66,7 @@ def grey_colormap() -> ListedColormap:
     cmap : ListedColormap
         Grey-scale colormap.
     """
-    color_cmap = cm.get_cmap('Greys', 200)
+    color_cmap = colormaps['Greys'].resampled(200)
     newcolors = color_cmap(np.linspace(0.2, 1, 200))
     cmap = ListedColormap(newcolors)
 
@@ -111,16 +111,16 @@ def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertica
 #####################################################################
 
 @beartype
-def _add_contour(x: NDArray,
-                 y: NDArray,
+def _add_contour(x: np.ndarray,
+                 y: np.ndarray,
                  ax: Axes) -> None:
     """Add contour plot to a scatter plot.
 
     Parameters
     ----------
-    x : NDArray
+    x : np.ndarray
         x-coordinates of the scatter plot.
-    y : NDArray
+    y : np.ndarray
         y-coordinates of the scatter plot.
     ax : Axes
         Axis object to add the contour plot to.
@@ -261,7 +261,7 @@ def plot_embedding(adata: sc.AnnData,  # noqa: C901
                    save: Optional[str] = None,
                    report: Optional[str] = None,
                    rasterize: bool = False,
-                   **kwargs: Any) -> NDArray[Axes]:
+                   **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
 
     Parameters
@@ -301,7 +301,7 @@ def plot_embedding(adata: sc.AnnData,  # noqa: C901
 
     Returns
     -------
-    axes : NDArray[Axes]
+    axes : np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of axis objects
 
     Raises
@@ -353,7 +353,7 @@ def plot_embedding(adata: sc.AnnData,  # noqa: C901
     if kwargs.setdefault("gene_symbols") is not None:
         adata = adata.copy()  # ensure the original adata isn't overwritten
         # make the column unique same as .make_var_names_unique
-        adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
+        adata.var[kwargs["gene_symbols"]] = anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
 
     # ---- Plot embedding for chosen colors ---- #
 
@@ -648,7 +648,7 @@ def feature_per_group(adata: sc.AnnData,  # noqa: C901
                       save: Optional[str] = None,
                       report: Optional[str] = None,
                       rasterize: bool = True,
-                      **kwargs: Any) -> NDArray[Axes]:
+                      **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """
     Plot a grid of embeddings with rows/columns corresponding to adata.obs column(s).
 
@@ -690,7 +690,7 @@ def feature_per_group(adata: sc.AnnData,  # noqa: C901
 
     Returns
     -------
-    axes : NDArray[Axes]
+    axes : np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of axis objects
 
     Raises
@@ -790,7 +790,7 @@ def feature_per_group(adata: sc.AnnData,  # noqa: C901
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, report: Optional[str] = None, layer: Optional[str] = None, **kwargs: Any) -> NDArray[Axes]:
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, report: Optional[str] = None, layer: Optional[str] = None, overwrite: bool = False, **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -813,18 +813,20 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     layer : Optional[str], default None
         Name of the adata layer used for the calculation. Defaults to `adata.X`.
+    overwrite : bool, default False
+        Set to overwrite an existing adata.obs[fname] column. Otherwise an error is raised if the column already exists.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
 
     Returns
     -------
-    axes : NDArray[Axes]
+    axes : np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of axis objects
 
     Raises
     ------
     ValueError
-        For features not found in adata.var.index or if fname already exists in adata.obs.columns.
+        For features not found in adata.var.index (or adata.var[gene_symbols]) or if fname already exists in adata.obs.columns and overwrite is False.
 
     Examples
     --------
@@ -836,46 +838,34 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
 
         pl.embedding.agg_feature_embedding(adata=adata, features=features, fname=f"Mean expression of {features}")
     """
+    score_added = False
     try:
-        # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
-        # The suffix is equivalent .var_names_make_unique(join="_")
-        if kwargs.setdefault("gene_symbols") is not None:
-            adata = adata.copy()  # ensure the original adata isn't overwritten
-            # make the column unique same as .make_var_names_unique
-            adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
+        # Resolve feature names to adata.var_names without modifying adata.
+        # Duplicated entries in the gene_symbols column get a suffix equivalent to .var_names_make_unique(join="_")
+        col = kwargs.setdefault("gene_symbols")
+        if col is not None:
+            labels = pd.Series(adata.var_names, index=anndata.utils.make_index_unique(adata.var[col].astype(str), join="_"))
 
-        # check for missing features
-        missing = set(features) - set(adata.var[kwargs["gene_symbols"]] if kwargs.setdefault("gene_symbols") else adata.var.index)
-        if missing:
-            col = kwargs.setdefault("gene_symbols")
-            raise ValueError(f"Features {missing} are not found in adata.var{f'[{col}]' if kwargs.setdefault('gene_symbols') else '.index'}!")
+            # check for missing features
+            missing = set(features) - set(labels.index)
+            if missing:
+                raise ValueError(f"Features {missing} are not found in adata.var[{col}]!")
 
-        # create subset of features
-        if kwargs.setdefault("gene_symbols"):
-            var_filter = adata.var.index[adata.var[kwargs.setdefault("gene_symbols")].isin(features)]
+            var_names = list(labels[features])
         else:
-            var_filter = features
-        subset = adata[:, var_filter]
-
-        # select layer
-        if layer:
-            matrix = subset.layers[layer].toarray()
-        else:
-            matrix = subset.X.toarray()
+            # missing features are reported by add_expr_to_obs
+            var_names = list(features)
 
         # TODO https://github.com/scverse/scanpy/issues/532 support sc.tl.score_genes?
 
-        # make sure to not overwrite an existing obs column
-        if fname in adata.obs.columns:
-            raise ValueError(f"{fname} already exists in adata.obs.columns. Select a different name or remove the column before running this function.")
-
         # calculate score and add as obs column
-        adata.obs[fname] = np.array(fun(matrix, **fun_kwargs)).flatten()
+        utils.adata.add_expr_to_obs(adata, var_names, obs_name=fname, fun=fun, fun_kwargs=fun_kwargs, layer=layer, overwrite=overwrite)
+        score_added = True
 
         # plot
         return plot_embedding(adata, color=fname, report=report, **kwargs)
     finally:
-        if not keep_score:
+        if score_added and not keep_score:
             adata.obs.drop(columns=[fname], errors="ignore", inplace=True)
 
 
@@ -889,7 +879,7 @@ def search_umap_parameters(adata: sc.AnnData,
                            threads: Optional[int] = 4,
                            save: Optional[str] = None,
                            rasterize: bool = True,
-                           **kwargs: Any) -> NDArray:
+                           **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
     Parameters
@@ -915,7 +905,7 @@ def search_umap_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    NDArray
+    np.ndarray[tuple[int, ...], np.dtype[Axes]]
         2D numpy array of axis objects
 
     Examples
@@ -944,7 +934,7 @@ def search_tsne_parameters(adata: sc.AnnData,
                            threads: int = 4,
                            save: Optional[str] = None,
                            rasterize: bool = True,
-                           **kwargs: Any) -> NDArray:
+                           **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
     Parameters
@@ -969,7 +959,7 @@ def search_tsne_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    NDArray
+    np.ndarray[tuple[int, ...], np.dtype[Axes]]
         2D numpy array of axis objects
 
     Examples
@@ -1000,7 +990,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,  # noqa: C901
                                threads: Optional[int] = 4,
                                save: Optional[str] = None,
                                rasterize: bool = True,
-                               **kwargs: Any) -> NDArray:
+                               **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """Search different combinations of parameters for UMAP or tSNE and plot a grid of the embeddings.
 
     Parameters
@@ -1032,14 +1022,14 @@ def _search_dim_red_parameters(adata: sc.AnnData,  # noqa: C901
 
     Returns
     -------
-    NDArray
+    np.ndarray[tuple[int, ...], np.dtype[Axes]]
         2D numpy array of axis objects
     """
 
     if threads is None:
         threads = settings.get_threads()
 
-    def get_loop_params(r: tuple) -> NDArray:
+    def get_loop_params(r: tuple) -> np.ndarray:
         """Get parameters to loop over.
 
         Parameters
@@ -1049,7 +1039,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,  # noqa: C901
 
         Returns
         -------
-        NDArray
+        np.ndarray
             Array of parameter values to loop over.
 
         Raises
@@ -1183,7 +1173,7 @@ def plot_group_embeddings(adata: sc.AnnData,
                           suptitle: Optional[str] = None,
                           save: Optional[str] = None,
                           report: Optional[str] = None,
-                          **kwargs: Any) -> NDArray:
+                          **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """
     Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
 
@@ -1211,7 +1201,7 @@ def plot_group_embeddings(adata: sc.AnnData,
 
     Returns
     -------
-    NDArray
+    np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Flat numpy array of axis objects
 
     Examples
@@ -1289,7 +1279,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],  # noqa: C901
                        var_list: list[str] | str,
                        embedding: Literal["umap", "tsne", "pca"] = "umap",
                        adata_names: Optional[list[str]] = None,
-                       **kwargs: Any) -> NDArray:
+                       **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """Compare embeddings across different adata objects.
 
     Plots a grid of embeddings with the different adatas on the x-axis, and colored variables on the y-axis.
@@ -1309,7 +1299,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],  # noqa: C901
 
     Returns
     -------
-    NDArray
+    np.ndarray[tuple[int, ...], np.dtype[Axes]]
         2D numpy array of axis objects
 
     Raises
@@ -1692,7 +1682,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],  # noqa: C901
                      dpi: int = 300,
                      report: Optional[str] = None,
                      rasterize: bool = True,
-                     **kwargs: Any) -> NDArray[Axes]:
+                     **kwargs: Any) -> np.ndarray[tuple[int, ...], np.dtype[Axes]]:
     """Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
 
     Parameters
@@ -1728,7 +1718,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],  # noqa: C901
 
     Returns
     -------
-    axes : NDArray[Axes]
+    axes : np.ndarray[tuple[int, ...], np.dtype[Axes]]
         Array of Axes objects created by matplotlib.
 
     Raises

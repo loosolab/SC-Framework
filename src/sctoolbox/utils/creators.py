@@ -4,7 +4,6 @@ import gitlab
 from getpass import getpass
 import warnings
 import re
-from throttler import Throttler
 import time
 from github import Github, Auth
 from pathlib import Path
@@ -76,11 +75,6 @@ def gitlab_download(internal_path: str,  # noqa: C901
         If repository is inaccessible.
     """
 
-    def limited(until: float) -> None:
-        duration = int(round(until - time.time()))
-        print('Rate limited, sleeping for {:d} seconds'.format(duration))
-
-    rate_limiter = Throttler(max_calls=max_calls, period=period, callback=limited)
     token = None
     if commit:
         branch = commit
@@ -116,9 +110,9 @@ def gitlab_download(internal_path: str,  # noqa: C901
             out = Path(out_path) / item["name"]
             if not out.is_file() or overwrite:
                 print(f"Downloading: {item['name']}")
-                with rate_limiter:
-                    with open(out, 'wb') as f:
-                        project.files.raw(file_path=item["path"], ref=branch, streamed=True, action=f.write)
+                time.sleep(period / max_calls)
+                with open(out, 'wb') as f:
+                    project.files.raw(file_path=item["path"], ref=branch, streamed=True, action=f.write)
             else:
                 warnings.warn("File already exists. Use overwrite parameter to overwrite file.")
     except Exception as e:

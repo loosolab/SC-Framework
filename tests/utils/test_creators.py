@@ -2,16 +2,17 @@
 
 import sctoolbox.utils.creators as creator
 import pytest
+import deprecation
 from glob import glob
 from pathlib import Path
-import shutil
 from unittest.mock import patch, Mock
 
 
 # --------------------------- TESTS --------------------------------- #
 
 
-def test_gitlab_download():
+@deprecation.fail_if_not_removed
+def test_gitlab_download(tmp_path):
     """Test gitlab download."""
     def side_effect(search):
 
@@ -27,31 +28,23 @@ def test_gitlab_download():
 
     mock = Mock()
     mock.projects.list = side_effect
-    result_file = Path("./tmp-test_add_analysis/Notebook1.ipynb")
-    missing_file = Path("./tmp-test_add_analysis/FileX.py")
-    result_file.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with patch("creator.gitlab_download", return_value=mock):
-            creator.gitlab_download("notebooks", file_regex=".*.ipynb", out_path="./tmp-test_add_analysis/")
-            assert result_file.is_file()
-            assert not missing_file.is_file()
-    except Exception as e:
-        print(e)
-    finally:
-        if result_file.is_file():
-            result_file.unlink()
-        if missing_file.is_file():
-            missing_file.unlink()
-        if result_file.parent.exists():
-            result_file.parent.rmdir()
+    out_path = tmp_path / "test_add_analysis"
+    out_path.mkdir()
+    result_file = out_path / "Notebook1.ipynb"
+    missing_file = out_path / "FileX.py"
+    with patch("sctoolbox.utils.creators.gitlab.Gitlab", return_value=mock), \
+            patch("sctoolbox.utils.creators.time.sleep"):
+        creator.gitlab_download("notebooks", file_regex=".*.ipynb", out_path=str(out_path))
+        assert result_file.is_file()
+        assert not missing_file.is_file()
 
 
-def test_setup_experiment():
+def test_setup_experiment(tmp_path):
     """Test experiment setup function."""
     dirs = ['raw', 'preprocessing', 'Analysis']
-    creator.setup_experiment("./tmp/exp1", dirs=dirs)
-    f = glob("./tmp/exp1/*/")
-    shutil.rmtree("./tmp/")
+    exp_path = str(tmp_path / "exp1")
+    creator.setup_experiment(exp_path, dirs=dirs)
+    f = glob(str(tmp_path / "exp1" / "*/"))
     assert set([Path(file).name for file in f]) == set(dirs)
 
 

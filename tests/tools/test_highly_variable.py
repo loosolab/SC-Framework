@@ -1,7 +1,6 @@
 """Tests for highly_variable.py."""
 
 import pytest
-import os
 import scanpy as sc
 import sctoolbox.tools.highly_variable as hv
 
@@ -9,76 +8,52 @@ import sctoolbox.tools.highly_variable as hv
 # ------------------------- FIXTURES -------------------------#
 
 
-@pytest.fixture
-def adata_rna():
-    """Load rna anndata.
-
-    Returns
-    -------
-    anndata.AnnData
-        RNA-seq AnnData object.
-    """
-    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
-    return sc.read_h5ad(adata_f)
-
-
-@pytest.fixture
-def adata_atac():
-    """Load atac anndata.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object.
-    """
-    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
-    return sc.read_h5ad(adata_f)
-
-
 # TODO add precalculated qc adata to save runtime
-@pytest.fixture(scope="module")
-def adata_atac_qc():
-    """Add qc to anndata.
+@pytest.fixture()
+def adata_atac_qc(adata_atac):
+    """Add qc to ATAC anndata.
 
     Returns
     -------
     anndata.AnnData
         ATAC-seq AnnData object with QC metrics.
     """
-    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
-    adata = sc.read_h5ad(adata_f)
-    sc.pp.calculate_qc_metrics(adata, inplace=True)
+    sc.pp.calculate_qc_metrics(adata_atac, inplace=True)
 
-    return adata
+    return adata_atac
 
 
 # ------------------------- TESTS ------------------------- #
 
 
 @pytest.mark.parametrize("inplace", [True, False])
-def test_annot_HVG(adata_rna, inplace):
+def test_annot_HVG(adata_fun_scope, inplace):
     """Test if 'highly_variable' column is added to adata.var."""
 
-    sc.pp.log1p(adata_rna)
-    out = hv.annot_HVG(adata_rna, inplace=inplace)
+    out = hv.annot_HVG(adata_fun_scope, inplace=inplace)
 
     if inplace:
         assert out is None
-        assert "highly_variable" in adata_rna.var.columns
+        assert "highly_variable" in adata_fun_scope.var.columns
     else:
         assert "highly_variable" in out.var.columns
 
 
 @pytest.mark.parametrize("inplace", [True, False])
-def test_get_variable_features(adata_atac_qc, inplace):
-    """Test get_variable_features success."""
+# subsample_target=100 is well below the fixture's feature count, so step > 0 and
+# the subsampling branch is exercised; 10000 leaves step == 0 (branch skipped).
+@pytest.mark.parametrize("subsample_target", [10000, 100])
+def test_get_variable_features(adata_atac_qc, inplace, subsample_target):
+    """Test get_variable_features success, including the subsampling branch."""
     adata = adata_atac_qc.copy()
 
     assert "highly_variable" not in adata.var.columns
+    assert adata.n_vars > 100  # guarantees step > 0 for subsample_target=100
 
     output = hv.get_variable_features(adata=adata,
                                       max_cells=None,
                                       min_cells=0,
+                                      subsample_target=subsample_target,
                                       show=True,
                                       inplace=inplace)
 

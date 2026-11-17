@@ -193,14 +193,17 @@ rna_analysis/figures/
 rna_analysis/logs/
 rna_analysis/tables/
 rna_analysis/report/
+rna_analysis/repositories/
 atac_analysis/adatas/
 atac_analysis/figures/
 atac_analysis/logs/
 atac_analysis/tables/
 atac_analysis/report/
 atac_analysis/tobias/
+atac_analysis/repositories/
 
-# Development related artifacts 
-.claude/
-docs/planning/
-CLAUDE.md
+# Agentic workflow artifacts (design.md / plan.md / review-*.md) — local only, not committed
+.work/
+
+# Per-user Claude Code settings (e.g. prefix-env allow rules) — local only, never committed
+.claude/settings.local.json

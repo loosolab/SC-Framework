@@ -1,44 +1,14 @@
 """Test the frip score calculation function."""
-import pytest
-import scanpy as sc
-import os
 import sctoolbox.tools as tools
-
-
-# ----------------------------- FIXTURES ------------------------------- #
-
-
-@pytest.fixture
-def adata():
-    """Fixture for an AnnData object.
-
-    Returns
-    -------
-    anndata.AnnData
-        ATAC-seq AnnData object.
-    """
-    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad'))
-    return adata
-
-
-@pytest.fixture
-def fragments():
-    """Fixture for a fragments object.
-
-    Returns
-    -------
-    str
-        Path to BED file with ATAC-seq fragments.
-    """
-    fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_sorted_fragments.bed')
-    return fragments
 
 
 # ------------------------------ TESTS --------------------------------- #
 
 
-def test_calc_frip_scores(adata, fragments):
+def test_calc_frip_scores(adata_atac, sorted_fragments, tmp_path):
     """Test the calc_frip_scores function."""
-    adata, total_frip = tools.frip.calc_frip_scores(adata, fragments, temp_dir='')
+    assert 'frip' not in adata_atac.obs.columns
 
-    assert 'frip' in adata.obs.columns
+    adata_atac, total_frip = tools.frip.calc_frip_scores(adata_atac, sorted_fragments, temp_dir=str(tmp_path))
+
+    assert 'frip' in adata_atac.obs.columns
