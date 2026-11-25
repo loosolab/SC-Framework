@@ -103,6 +103,8 @@ checklist:
 
 Before merge:
   [ ] MR description: use the "new_release_template" from .gitlab/merge_request_templates/
+  [ ] Authors: maintained in CITATION.cff (incl. ORCID/affiliation) and pyproject.toml —
+      add new contributors in both; Zenodo takes them from CITATION.cff
 
 After merge (~1.5 hrs for the full pipeline):
   GitLab (automated)
@@ -116,7 +118,7 @@ After merge (~1.5 hrs for the full pipeline):
 
   Zenodo  (https://zenodo.org/records/11065517 — triggered by GitHub release)
     [ ] Confirm Zenodo release was triggered
-    [ ] Adjust authors (see prior release for reference)
+    [ ] Confirm Zenodo shows the authors from CITATION.cff (fix them there, not in Zenodo)
 
   PyPI  (final CI stage, ~1.5 hrs)
     [ ] Confirm release published successfully
