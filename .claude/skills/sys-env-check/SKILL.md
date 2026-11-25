@@ -28,7 +28,13 @@ it. Invoked by `/design` (before any `design.md` is written) and by
 2. **Probe dependencies — don't check by hand.** Run
    `conda run <env-spec> python scripts/check_dev_env.py --scope <package|notebooks|docs>`
    (repeat `--scope` to combine; omit for the full `dev` group). Exit 0 = all
-   present; otherwise its report lists the gaps.
+   present and every workflow path writable; otherwise its report lists the gaps.
+   **Write access failed** (`FAILED: … not writable`): the checkout is shared and
+   another user owns those files. You cannot fix this yourself — show the user the
+   report's `find … chmod a+rwX` + `umask 000` lines (session-only, nothing
+   permanent; see `CLAUDE.md`, "Shared-checkout permissions"), ask them to run it
+   with `! <command>`, then re-run the probe. Do not continue the stage until it
+   passes.
 3. **Something missing → offer to install it.** Don't just stop — offer to run
    the dev-setup install from `docs/source/development.rst` yourself, and run it
    only after the user confirms:

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.0 (in progress)
+- add CITATION.cff, full publication reference, project resources, unified project description, repository roles and docs sitemap (#475)
+- maintain software authors in CITATION.cff so they propagate to Zenodo releases (#481)
+
 ## 0.16.0 (16-11-2026)
 - add Palantir fate-probability projection, representative gene-trend panels, and report integration (!531)
 - Palantir plots: unclipped gene-program y-limits, optional shared trend/cell y-scale (`trend_layer`), full per-cluster gene ranking, continuous colormap for results, uncluttered equal-probability label (!531)

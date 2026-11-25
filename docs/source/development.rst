@@ -3,7 +3,7 @@ Development
 
 This section is intended for developers. It contains information about the recommended development setup, design choices and contribution requirements.
 
-**The development takes place on** `GitLab <https://gitlab.gwdg.de/loosolab/software/sc_framework>`_ **!**
+**The development takes place on** `GitLab <https://gitlab.gwdg.de/loosolab/software/sc_framework>`_ **!** Development and CI run on GitLab; `GitHub <https://github.com/loosolab/SC-Framework>`_ is the public mirror and the place for external issues and contributions (`GitHub issues <https://github.com/loosolab/SC-Framework/issues>`_).
 
 **Want to implement something new?** Always check existing functions. The SC-Frameworks package (sctoolbox) contains a lot of functions maybe you are lucky and someone already implemented your desired functionality.
 
@@ -97,7 +97,7 @@ To confirm an environment carries everything the workflow needs, run ``scripts/c
   python scripts/check_dev_env.py                  # full dev environment
   python scripts/check_dev_env.py --scope package  # just the package test/lint/spellcheck tooling
 
-A zero exit status means the environment is complete; otherwise the report lists the gaps and the command to install them.
+It also checks that the files and directories the workflow edits (``CHANGES.md``, ``_version.py``, ``.claude/`` and the scope's source folders) are writable for the current user, which matters on a shared checkout owned by another user; if not, it prints a session-only ``chmod``/``umask`` fix. A zero exit status means the environment is complete; otherwise the report lists the gaps and the command to fix them.
 
 Git
 ---

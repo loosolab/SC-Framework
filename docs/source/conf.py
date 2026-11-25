@@ -44,7 +44,8 @@ extensions = ['matplotlib.sphinxext.plot_directive',  # for plot examples in doc
               "nbsphinx",
               "nbsphinx_link",
               "myst_parser",
-              "sphinxcontrib.youtube"
+              "sphinxcontrib.youtube",
+              "sphinx_sitemap"  # sitemap.xml for search engines
               ]
 
 source_suffix = {
@@ -137,3 +138,8 @@ html_css_files = [
 html_js_files = [
     'js/custom.js',
 ]
+
+# -- Sitemap (sphinx-sitemap) ------------------------------------------------
+
+html_baseurl = "https://loosolab.pages.gwdg.de/software/sc_framework/"  # trailing slash required
+sitemap_url_scheme = "{link}"  # default "{lang}{version}{link}" would add a non-existent "en/" segment

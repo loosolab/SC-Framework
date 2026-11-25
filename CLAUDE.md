@@ -58,6 +58,17 @@ pytest              # unit tests with coverage (target > 90%)
 make -C docs html   # full Sphinx build — the authoritative check for renderable examples
 ```
 
+**Shared-checkout permissions.** Where the checkout lives on a share and Claude runs as a different OS user than the developer (e.g. `claude-user` vs. the developer's uid), files the developer creates with the default `umask 022` are read-only for Claude, which blocks edits, `scripts/add_change.py` (`CHANGES.md`, `_version.py`) and the docs build (`build_api.py` rewrites `docs/source/API/*.rst`). Without admin rights and without changing the shell profile, the developer fixes it from the repo root and keeps it fixed for the working session only:
+
+```bash
+find . -path ./.git -prune -o -exec chmod a+rwX {} +   # make existing files and directories writable for both users
+umask 000                                               # current terminal only — gone when it closes; git checkouts/pulls in it create writable files
+```
+
+For a single command instead of the whole terminal: `(umask 000; git pull)`. If files were created in another terminal, rerun the `find … chmod` line.
+
+Two traps when fixing single files instead: `o+w` does not help if Claude's group owns the file (the group bits apply first), and `Edit` writes through a temp file, so the **directory** must be writable too.
+
 ## Conventions
 
 The rules below are the working digest; `docs/source/development.rst` is the authoritative, fuller treatment (decorators, beartype, docstrings, examples, deprecation, changelog, notebooks, testing). Consult it when a case isn't covered here.
