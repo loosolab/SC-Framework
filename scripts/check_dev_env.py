@@ -27,6 +27,11 @@ gate every change repo-wide, so they — plus an editable ``sctoolbox`` install
 With no ``--scope`` the full ``dev`` group is verified (a complete dev env),
 including every scope's extra checks.
 
+It also checks that the files and directories the workflow edits are writable
+for the current user. On a shared checkout another user may own them (umask
+022), which otherwise only surfaces mid-implementation; the report prints a
+session-only fix for exactly the affected paths.
+
 Examples
 --------
     python3 scripts/check_dev_env.py                      # full dev env
@@ -38,6 +43,7 @@ import argparse
 import importlib.metadata as metadata
 import importlib.util
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -62,6 +68,19 @@ SCOPE_GROUPS = {
     "docs": ("docs",),
     "notebooks": (),  # conda-only tooling (sctoolbox_env.yml); probed via nbconvert
 }
+
+# Paths the workflow writes for every scope (changelog/version via add_change.py,
+# metadata, workflow config edited by /retro).
+ALWAYS_WRITE_PATHS = ("CHANGES.md", "src/sctoolbox/_version.py", "README.md",
+                      "pyproject.toml", "CLAUDE.md", ".claude")
+# scope -> extra paths it writes (docs/source includes API/*.rst rewritten by the build).
+SCOPE_WRITE_PATHS = {
+    "package": ("src", "tests"),
+    "docs": ("docs/source",),
+    "notebooks": ("rna_analysis/notebooks", "atac_analysis/notebooks", "general_notebooks"),
+}
+# Generated directories that need no write check.
+SKIP_DIRS = {"__pycache__", ".ipynb_checkpoints"}
 
 
 def load_groups(pyproject: Path) -> dict[str, list]:
@@ -289,6 +308,48 @@ def check_editable_install() -> tuple[bool, str]:
     return False, "importable but NOT editable (pip install -e .)"
 
 
+def check_write_access(scopes: list[str]) -> list[str]:
+    """Check the paths the workflow edits are writable; return the failures.
+
+    Directories are checked too, because ``Edit`` and many scripts write through
+    a temporary file next to the target. Symlinks (e.g. tutorial notebooks
+    pointing into the ``tutorials`` submodule) are skipped.
+
+    Parameters
+    ----------
+    scopes : list[str]
+        The requested scopes; empty means every scope.
+
+    Returns
+    -------
+    list[str]
+        The non-writable paths, relative to the repository root.
+    """
+    roots = list(ALWAYS_WRITE_PATHS)
+    for scope in scopes or sorted(SCOPE_WRITE_PATHS):
+        roots.extend(SCOPE_WRITE_PATHS[scope])
+
+    blocked: list[str] = []
+    for root in dict.fromkeys(roots):
+        path = Path(root)
+        if not path.exists() or path.is_symlink():
+            continue
+        candidates = [path]
+        if path.is_dir():
+            for dirpath, dirnames, filenames in os.walk(path):
+                dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+                candidates += [Path(dirpath, name) for name in dirnames + filenames]
+        blocked += [str(p) for p in candidates if not p.is_symlink() and not os.access(p, os.W_OK)]
+
+    print("  write access")
+    print(f"    {'workflow paths':<22} {'ok' if not blocked else f'{len(blocked)} NOT writable'}")
+    for item in blocked[:10]:
+        print(f"      {item}")
+    if len(blocked) > 10:
+        print(f"      ... and {len(blocked) - 10} more")
+    return blocked
+
+
 def main() -> int:
     """Run the verification and return a process exit code.
 
@@ -329,8 +390,15 @@ def main() -> int:
 
     missing += check_groups(group_names, groups_table)
     missing += check_extras(check_nbconvert, check_pandoc, check_scar)
+    blocked = check_write_access(scopes)
 
     print()
+    if blocked:
+        print(f"FAILED: {len(blocked)} workflow path(s) not writable for this user.")
+        print("Fix for this session (run by the owner, from the repository root):")
+        roots = sorted({Path(p).parts[0] for p in blocked})
+        print(f"  find {' '.join(roots)} -exec chmod a+rwX {{}} +")
+        print("  umask 000   # current terminal only, keeps new checkouts/pulls writable\n")
     if missing:
         print(f"FAILED: {len(missing)} required item(s) missing or mismatched:")
         for item in missing:
@@ -340,8 +408,10 @@ def main() -> int:
         print("(pandoc and notebook tooling come from conda / sctoolbox_env.yml;")
         print(" scar from git+https://github.com/Novartis/scar.git.)")
         return 1
+    if blocked:
+        return 1
 
-    print("OK: all required development packages present.")
+    print("OK: all required development packages present and workflow paths writable.")
     return 0
 
 
