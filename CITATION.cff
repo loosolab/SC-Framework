@@ -71,6 +71,37 @@ authors:
     orcid: "https://orcid.org/0000-0003-1495-9530"
     affiliation: "Max Planck Institute for Heart and Lung Research"
   - name: "Max Planck Institute for Heart and Lung Research"
+abstract: "SC-Framework is a FAIR-oriented, semi-interactive Python environment for reproducible single-cell analysis. It combines reusable analysis functions with structured Jupyter notebook workflows for single-cell RNA and ATAC data in general (e.g. scRNA-seq and scATAC-seq) as well as multi-omics data, supporting transparent, configurable and scalable analyses from data preparation to downstream interpretation."
+keywords:
+  - single-cell
+  - single-cell analysis
+  - scRNA-seq
+  - scATAC-seq
+  - snATAC-seq
+  - multi-omics
+  - transcriptomics
+  - epigenomics
+  - chromatin accessibility
+  - gene expression
+  - peak calling
+  - dimensionality reduction
+  - clustering
+  - cell type annotation
+  - differential expression
+  - trajectory
+  - pseudotime
+  - quality control
+  - normalization
+  - integration
+  - batch correction
+  - workflow
+  - reproducibility
+  - FAIR
+  - Jupyter notebooks
+  - Scanpy
+  - AnnData
+  - visualization
+  - Python
 license: MIT
 doi: 10.5281/zenodo.11065517
 repository-code: "https://github.com/loosolab/SC-Framework"
