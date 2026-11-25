@@ -10,9 +10,18 @@
 
 # SC Framework
 
-A python framework for single cell analysis. It provides a plethora of functions for conducting common analysis tasks and respective visualization. It also includes a number of jupyter notebooks to further streamline the analysis process, making it easy to follow and reproduce analysis results.
+SC-Framework is a FAIR-oriented, semi-interactive Python environment for reproducible single-cell analysis. It combines reusable analysis functions with structured Jupyter notebook workflows for single-cell RNA and ATAC data in general (e.g. scRNA-seq and scATAC-seq) as well as multi-omics data, supporting transparent, configurable and scalable analyses from data preparation to downstream interpretation.
 
 ![](image/sc_framework_overview.png)
+
+# Scientific publication
+Schultheis H, Detleffsen J, Wiegandt R, Bentsen M, Alayoubi Y, Valente G, Keßler MF, Bruns B, Mirza D, Usanayo A, Mueller K, Walter J, Goymann P, Hobein M, Kuenne C, Looso M. SC-framework: A robust and FAIR semi-interactive environment for single-cell resolution datasets. *iScience*. 2026;29(7):116631.
+
+- DOI: [10.1016/j.isci.2026.116631](https://doi.org/10.1016/j.isci.2026.116631)
+- PubMed: [42491580](https://pubmed.ncbi.nlm.nih.gov/42491580/)
+- PMC: [PMC13378351](https://pmc.ncbi.nlm.nih.gov/articles/PMC13378351/)
+
+Please cite the publication when using SC-Framework in scientific research.
 
 # Readthedocs
 The SC framework is accompanied by an extensive documentation where detailed information regarding available notebooks, functions and a multitude of examples can be found. It can be accessed using the following link:
@@ -23,11 +32,11 @@ https://loosolab.pages.gwdg.de/software/sc_framework/
 ## 1. Environment & Package installation
 1. Download the repository. This will download the repository to your current folder.
 ```
-git clone https://gitlab.gwdg.de/loosolab/software/sc_framework.git
+git clone https://github.com/loosolab/SC-Framework.git
 ```
 2. Change the working directory to the newly created repository directory.
 ```
-cd sc_framework
+cd SC-Framework
 ```
 3. Install analysis environment. Note: using `mamba` is faster than `conda`, but this requires mamba to be installed.
 ```
@@ -59,6 +68,8 @@ python -m ipykernel install --user --name sctoolbox --display-name "sctoolbox"
 ```
 
 ## 3. Git setup (for developers)
+Developers clone the GitLab repository (`git clone https://gitlab.gwdg.de/loosolab/software/sc_framework.git`) and follow the [development guide](https://loosolab.pages.gwdg.de/software/sc_framework/development.html).
+
 If you want to push changes to notebooks, you need to add the custom .gitconfig to the local .git config-file in order to enable clearing of notebook outputs:
 ```
 git config --replace-all include.path "../.gitconfig"
@@ -137,6 +148,9 @@ While going through the analysis notebooks, a folder structure is created to sto
 
 The `*_analysis` directory contains up to five subdirectories. In the beginning, there is only the `notebooks` directory it contains all of the analysis notebooks and a `config.yml`. The `config.yml` holds general settings (e.g. paths) for each notebook. It is loaded earlier in the execution of a notebook and can be adjusted as needed. The rest of the subdirectories are created during the execution of the notebooks as they are needed. `adatas/` contains intermediate `.h5ad` files created at the end of each notebook. `figures/` contains all of the plots created during analysis. `logs/` contains log-files and `tables/` stores additional result tables. The directories `figures/` and `tables/` are divided into one directory per notebook.
 
+# Contributing / issues
+Development and CI take place on [GitLab](https://gitlab.gwdg.de/loosolab/software/sc_framework). [GitHub](https://github.com/loosolab/SC-Framework) is the public mirror and the place for external issues and contributions. Please open issues at https://github.com/loosolab/SC-Framework/issues.
+
 # FAQ
 ### Q: I have an old/ already started analysis. How do I find out what was done or who was responsible?
 
@@ -148,4 +162,4 @@ The `*_analysis` directory contains up to five subdirectories. In the beginning,
 
 ### Q: I have encountered a bug, I have a feature request, there is something I need help with or want to discuss.
 
-**A:** We are always happy to help. If you encounter something that needs attention open an issue with a detailed explanation and if possible a small code example. Thank you!
+**A:** We are always happy to help. If you encounter something that needs attention [open an issue](https://github.com/loosolab/SC-Framework/issues) with a detailed explanation and if possible a small code example. Thank you!
