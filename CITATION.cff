@@ -1,0 +1,119 @@
+cff-version: 1.2.0
+message: "If you use SC-Framework, please cite the associated publication."
+title: "SC-Framework"
+type: software
+authors:
+  - given-names: Hendrik
+    family-names: Schultheis
+    orcid: "https://orcid.org/0000-0001-8447-813X"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Jan
+    family-names: Detleffsen
+    orcid: "https://orcid.org/0000-0003-2401-1444"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: René
+    family-names: Goldstein
+    orcid: "https://orcid.org/0000-0002-5921-8413"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Mette
+    family-names: Bentsen
+    orcid: "https://orcid.org/0000-0002-8016-0199"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Yousef
+    family-names: Alayoubi
+    orcid: "https://orcid.org/0000-0003-4119-3577"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Guilherme
+    family-names: Valente
+    orcid: "https://orcid.org/0000-0001-5355-3424"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Micha Frederick
+    family-names: Keßler
+    orcid: "https://orcid.org/0009-0004-4027-2331"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Brenton Joey
+    family-names: Bruns
+    orcid: "https://orcid.org/0009-0001-1832-026X"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Dlnija
+    family-names: Mirza
+    orcid: "https://orcid.org/0009-0001-7350-4491"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Angeline
+    family-names: Usanayo
+    orcid: "https://orcid.org/0009-0000-8201-3603"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Boshra
+    family-names: Taiebi
+    orcid: "https://orcid.org/0009-0006-4722-2243"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Kristina
+    family-names: Müller
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Jasmin
+    family-names: Walter
+    orcid: "https://orcid.org/0000-0003-3279-5955"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Philipp
+    family-names: Goymann
+    orcid: "https://orcid.org/0000-0001-5640-9356"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Moritz
+    family-names: Hobein
+    orcid: "https://orcid.org/0000-0002-5561-1912"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Carsten
+    family-names: Kuenne
+    orcid: "https://orcid.org/0000-0001-8013-5906"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - given-names: Mario
+    family-names: Looso
+    orcid: "https://orcid.org/0000-0003-1495-9530"
+    affiliation: "Max Planck Institute for Heart and Lung Research"
+  - name: "Max Planck Institute for Heart and Lung Research"
+license: MIT
+doi: 10.5281/zenodo.11065517
+repository-code: "https://github.com/loosolab/SC-Framework"
+url: "https://loosolab.pages.gwdg.de/software/sc_framework/"
+preferred-citation:
+  type: article
+  title: "SC-framework: A robust and FAIR semi-interactive environment for single-cell resolution datasets"
+  journal: iScience
+  year: 2026
+  volume: 29
+  issue: 7
+  start: 116631
+  doi: 10.1016/j.isci.2026.116631
+  authors:
+    - given-names: Hendrik
+      family-names: Schultheis
+    - given-names: Jan
+      family-names: Detleffsen
+    - given-names: René
+      family-names: Wiegandt
+    - given-names: Mette
+      family-names: Bentsen
+    - given-names: Yousef
+      family-names: Alayoubi
+    - given-names: Guilherme
+      family-names: Valente
+    - given-names: Micha Frederick
+      family-names: Keßler
+    - given-names: Brenton
+      family-names: Bruns
+    - given-names: Dlnija
+      family-names: Mirza
+    - given-names: Angeline
+      family-names: Usanayo
+    - given-names: Kristina
+      family-names: Mueller
+    - given-names: Jasmin
+      family-names: Walter
+    - given-names: Philipp
+      family-names: Goymann
+    - given-names: Moritz
+      family-names: Hobein
+    - given-names: Carsten
+      family-names: Kuenne
+    - given-names: Mario
+      family-names: Looso
