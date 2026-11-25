@@ -34,12 +34,12 @@ Welcome to the documentation of the single cell framework!
    :target: https://pypi.python.org/pypi/SC-Framework/
    :alt: PyPI download month
 
-**Visit the SC-Framework on** `GitHub <https://github.com/loosolab/SC-Framework>`_ **!**
+**Visit the SC-Framework on** `GitHub <https://github.com/loosolab/SC-Framework>`_ **!** Development and CI take place on `GitLab <https://gitlab.gwdg.de/loosolab/software/sc_framework>`_; GitHub is the public mirror and the place for external issues and contributions (`GitHub issues <https://github.com/loosolab/SC-Framework/issues>`_).
 
 SC-Framework
 ------------
 
-The SC-Framework provides a full environment for single cell analysis. It is split into a python package, aimed to conduct common tasks and visualization, and Jupyter notebooks to streamline the individual analysis steps. This in combination with extensive documentation, tutorials, logging, etc. provides a FAIR framework to analyze single cell data in a rapid, comprehensible and reproducible manner.
+SC-Framework is a FAIR-oriented, semi-interactive Python environment for reproducible single-cell analysis. It combines reusable analysis functions with structured Jupyter notebook workflows for single-cell RNA and ATAC data in general (e.g. scRNA-seq and scATAC-seq) as well as multi-omics data, supporting transparent, configurable and scalable analyses from data preparation to downstream interpretation.
 
 Quickstart
 ----------
