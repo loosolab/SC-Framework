@@ -11,14 +11,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "SC-Framework"
 dynamic = ["version"]
-description = 'Custom modules for single cell analysis'
+description = 'SC-Framework is a FAIR-oriented, semi-interactive Python environment for reproducible single-cell analysis. It combines reusable analysis functions with structured Jupyter notebook workflows for single-cell RNA and ATAC data in general (e.g. scRNA-seq and scATAC-seq) as well as multi-omics data, supporting transparent, configurable and scalable analyses from data preparation to downstream interpretation.'
 requires-python = ">=3.9,<3.13"  # >=3.9: dict type hints we use require 3.9; <3.13: pygenometracks needs matplotlib<3.9 (no cp313 wheels) — removable once https://github.com/deeptools/pyGenomeTracks/issues/494 ships
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
     { name = "Hendrik Schultheis" },
     { name = "Jan Detleffsen" },
-    { name = "René Wiegandt" },
+    { name = "René Goldstein" },
     { name = "Mette Bentsen" },
     { name = "Yousef Alayoubi" },
     { name = "Guilherme Valente" },
@@ -26,6 +26,8 @@ authors = [
     { name = "Brenton Joey Bruns" },
     { name = "Dlnija Mirza" },
     { name = "Angeline Usanayo" },
+    { name = "Boshra Taiebi" },
+    { name = "Kristina Müller" },
     { name = "Jasmin Walter" },
     { name = "Philipp Goymann" },
     { name = "Moritz Hobein" },
@@ -74,6 +76,11 @@ keywords = [
     "Scanpy",
     "AnnData",
     "visualization",
+    "snATAC-seq",
+    "multi-omics",
+    "FAIR",
+    "Python",
+    "reproducibility",
 ]
 dependencies = [
         'pysam',
@@ -215,7 +222,8 @@ docs = [
     "nbsphinx",
     "nbsphinx_link>=1.4.1",  # support docutils>0.21 https://github.com/vidartf/nbsphinx-link/issues/25
     "myst-parser",
-    "sphinxcontrib-youtube"
+    "sphinxcontrib-youtube",
+    "sphinx-sitemap"
 ]
 dev = [
     # Everything needed for local development: all gate tooling plus dev-only extras.
