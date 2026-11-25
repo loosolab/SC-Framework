@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.17.0 (in progress)
-- add CITATION.cff, full publication reference, unified project description, repository roles and docs sitemap (#475)
+- add CITATION.cff, full publication reference, project resources, unified project description, repository roles and docs sitemap (#475)
 - maintain software authors in CITATION.cff so they propagate to Zenodo releases (#481)
 
 ## 0.16.0 (16-11-2026)
