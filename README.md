@@ -23,6 +23,25 @@ Schultheis H, Detleffsen J, Wiegandt R, Bentsen M, Alayoubi Y, Valente G, Keßle
 
 Please cite the publication when using SC-Framework in scientific research.
 
+# Project resources
+- Source code (public mirror): https://github.com/loosolab/SC-Framework
+- Development: https://gitlab.gwdg.de/loosolab/software/sc_framework
+- Documentation: https://loosolab.pages.gwdg.de/software/sc_framework/
+- Releases: https://github.com/loosolab/SC-Framework/releases
+- PyPI: https://pypi.org/project/SC-Framework/
+- Software archive (Zenodo, all versions): https://doi.org/10.5281/zenodo.11065517
+- License: MIT (see [LICENSE](LICENSE))
+
+Interested in our group and our other projects?
+- [Homepage](https://github.molgen.mpg.de/pages/loosolab/www/index.html)
+- [GitHub](https://github.com/loosolab)
+- [CPI Repository](https://bioinformatics.mpi-bn.mpg.de/bcu-repository-bn/home)
+- [Bulk Pipelines](https://loosolab.pages.gwdg.de/software/bulk_pipelines/)
+- [Bluesky](https://web-cdn.bsky.app/profile/did:plc:lsrycjv2xlemztqd5ayi3jho)
+- [X](https://x.com/loosolab)
+- [YouTube](https://www.youtube.com/@loosolab)
+- [Contact](https://github.molgen.mpg.de/pages/loosolab/www/contact/)
+
 # Readthedocs
 The SC framework is accompanied by an extensive documentation where detailed information regarding available notebooks, functions and a multitude of examples can be found. It can be accessed using the following link:
 
